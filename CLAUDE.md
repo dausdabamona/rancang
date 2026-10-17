@@ -23,7 +23,7 @@ Lihat bagian Pengembangan di README.md.
 - uji: `npm test` (tambahkan `RANCANG_UJI_ELECTRON=1` untuk uji MCP ↔ aplikasi; di Linux jalankan dengan `xvfb-run -a`)
 - uji asap: `npm run uji-asap` (Linux: `xvfb-run -a npx electron . --uji-asap --no-sandbox`)
 - build: `npm run build`, `npm run dist:win`, `npm run pack:mcpb`
-- rilis: tag `vX.Y.Z` sama dengan `version` di package.json
+- rilis: naikkan `version` di package.json lewat PR; merge ke main → Release `vX.Y.Z` otomatis (sesi Claude tidak bisa push tag)
 
 ## Catatan Khusus
 - Versi artifact menyimpan ke database artifact (`window.claude.use('db')`); versi desktop memakai `electron/renderer/claude-shim.js` yang meniru API yang sama di atas berkas `.rancang`.

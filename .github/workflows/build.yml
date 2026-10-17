@@ -74,7 +74,8 @@ jobs:
 
   release:
     name: Terbitkan Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Release otomatis saat versi package.json di main belum punya Release (atau saat tag v* didorong manual)
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -82,25 +83,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cocokkan tag dengan versi package.json
+      - name: Tentukan versi dan cek Release yang sudah ada
+        id: versi
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSI=$(node -p "require('./package.json').version")
-          if [ "v$VERSI" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME tidak sama dengan versi package.json (v$VERSI)."
+          TAG="v$VERSI"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME tidak sama dengan versi package.json ($TAG)."
             exit 1
           fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG sudah ada; tidak ada yang diterbitkan. Naikkan version di package.json untuk rilis baru."
+            echo "terbit=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "terbit=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - uses: actions/download-artifact@v4
+        if: steps.versi.outputs.terbit == 'true'
         with:
           name: RANCANG-windows
           path: rilis
 
       - name: Buat Release
+        if: steps.versi.outputs.terbit == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.versi.outputs.tag }}
         run: |
-          gh release create "$GITHUB_REF_NAME" rilis/* \
+          gh release create "$TAG" rilis/* \
             --repo "$GITHUB_REPOSITORY" \
-            --title "RANCANG $GITHUB_REF_NAME" \
+            --target "$GITHUB_SHA" \
+            --title "RANCANG $TAG" \
             --notes-file docs/catatan-rilis.md \
             --generate-notes
