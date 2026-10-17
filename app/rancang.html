@@ -3705,6 +3705,16 @@ const alatDorong = {
   },
   hitung(e) {
     const a = this.aktif, v = V();
+    // seperti SketchUp: sentuh ujung/titik tengah/tepi benda lain → jarak tarik = jarak bidang yang ditarik ke titik itu
+    const sn = titikSnap(e, new Set([a.id]), {atas: true, tengah: true, tepi: true});
+    if (sn && sn.jenis !== 'grid') {
+      const dq = [sn.x - a.p.x, sn.y - a.p.y, (sn.z || 0) - a.p.z];
+      const jr = a.garis ? dq[0] * a.garis.x + dq[1] * a.garis.y + dq[2] * a.garis.z
+        : a.face === 'atas' ? dq[2] : dq[0] * a.n[0] + dq[1] * a.n[1];
+      S.snap = sn; a.acuan = sn;
+      return r2(jr);
+    }
+    S.snap = null; a.acuan = null;
     arahkan(e);
     if (a.garis) {
       // bidang dan batang: jarak diukur sepanjang garis 3D (normal bidang / sumbu batang) yang paling dekat dengan sinar kursor
@@ -3729,7 +3739,8 @@ const alatDorong = {
     if (!baru) return;
     a.d = jarak; a.baru = baru;
     pasang(a.id, baru);
-    S.label = [{x: a.p.x, y: a.p.y, z: a.p.z, t: (jarak >= 0 ? '+' : '') + fmt(jarak) + ' m'}];
+    const ket = a.acuan ? {ujung: ' · sampai ujung', tengah: ' · sampai titik tengah', tepi: ' · sampai tepi'}[a.acuan.jenis] || '' : '';
+    S.label = [{x: a.p.x, y: a.p.y, z: a.p.z, t: (jarak >= 0 ? '+' : '') + fmt(jarak) + ' m' + ket}];
     setVcb(fmtV(jarak));
     minta();
   },
@@ -3822,7 +3833,7 @@ function soroti(mesh) {
 }
 
 const alatPindah = {
-  petunjukDasar: '<b>Pindah:</b> klik titik acuan (kotak hijau = ujung, bulat biru muda = titik tengah, belah ketupat merah = pada tepi), lalu arahkan; gerakan mulus mengikuti zoom. Sentuh sebentar titik benda lain lalu geser menjauh: garis ungu putus-putus muncul saat sejajar titik itu. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Ketik jarak lalu Enter. Ctrl untuk menyalin.',
+  petunjukDasar: '<b>Pindah:</b> klik titik acuan (bila sudah ada pilihan, titik acuan boleh di benda lain; Esc mengosongkan pilihan) (kotak hijau = ujung, bulat biru muda = titik tengah, belah ketupat merah = pada tepi), lalu arahkan; gerakan mulus mengikuti zoom. Sentuh sebentar titik benda lain lalu geser menjauh: garis ungu putus-putus muncul saat sejajar titik itu. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Ketik jarak lalu Enter. Ctrl untuk menyalin.',
   get petunjuk() { return this.salin ? '<b>Pindah + Salin:</b> klik tujuan salinan. Tekan Ctrl lagi untuk kembali ke memindah.' : this.petunjukDasar; },
   vcb: 'Jarak',
   dasar: null, items: null, asli: null, delta: null, salin: false,
@@ -3981,10 +3992,12 @@ const alatPindah = {
     const s0 = titikSnap(e, null, {atas: true, tengah: true, tepi: true, halus: true});
     let h = pilihObjek(e);
     if (!h && s0 && s0.id && s0.jenis !== 'grid') h = {object: {userData: {elemId: s0.id}}, point: V(s0.x, s0.y, s0.z || 0)};
-    if (h) {
+    // seperti SketchUp: bila sudah ada pilihan, titik acuan boleh diklik di mana saja (termasuk di benda lain)
+    // dan pilihan tetap; bila belum ada pilihan, benda yang diklik yang dipindah
+    if (h && !S.sel.size) {
       const t = targetDariKlik(h);
       if (t === null) return toast('Saat mengedit komponen, hanya isi komponen yang bisa dipindah.');
-      if (!S.sel.has(t)) { S.sel.clear(); S.sel.add(t); segarPilihan(); }
+      if (t) { S.sel.add(t); segarPilihan(); }
     }
     if (!S.sel.size) return toast('Klik objek yang mau dipindah.');
     const s = s0 && s0.jenis !== 'grid' ? s0 : h ? {x: r2(h.point.x), y: r2(h.point.y), z: r2(h.point.z), jenis: 'bidang'} : s0;
