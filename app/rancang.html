@@ -327,6 +327,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
       <div class="lembar-kop" id="m-kop"></div>
       <div class="lembar-kaki">
         <button class="tombol utama" type="button" id="m-pdf">Unduh PDF semua lembar</button>
+        <button class="tombol" type="button" id="m-dxf-semua" title="Satu berkas DXF per lembar yang dicentang, dibungkus ZIP">Unduh DXF semua lembar (ZIP)</button>
         <p class="meta" id="m-lembar-info"></p>
       </div>
     </aside>
@@ -414,9 +415,11 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
     </div>
     <div class="modal-kaki">
       <p class="meta" id="m-info"></p>
+      <button class="tombol" type="button" id="m-dae" title="Model 3D COLLADA, dibuka di SketchUp lewat File &gt; Import">Unduh model 3D (DAE)</button>
       <button class="tombol" type="button" id="m-png3d">Unduh tampilan 3D (PNG)</button>
       <button class="tombol" type="button" id="m-png">Unduh PNG</button>
       <button class="tombol" type="button" id="m-svgbtn">Unduh SVG</button>
+      <button class="tombol" type="button" id="m-dxf" title="Lembar ini sebagai DXF (AutoCAD R12), 1 unit = 1 mm kertas">Unduh DXF</button>
     </div>
     </div>
     </div>
@@ -499,8 +502,8 @@ function sah(d) {
   if (d.jenis === 'gambar2d') return typeof d.lembar === 'string' && !!d.lembar && Array.isArray(d.titik) && d.titik.length >= 1 && d.titik.every(titikSah)
     && (d.tempel === 'gambar' || d.tempel === 'kertas') && ['garis', 'polyline', 'persegi', 'lingkaran', 'busur', 'teks', 'arsir', 'rujukan'].includes(d.bentuk)
     && (d.bentuk !== 'teks' || (typeof d.teks === 'string' && d.teks.length > 0)) && (d.bentuk !== 'rujukan' || (typeof d.detail === 'string' && d.titik.length >= 2));
-  if (d.jenis === 'detail') return ['pondasiBatuKali', 'footplat', 'umpak', 'bebas'].includes(d.template) && typeof d.lembar === 'string' && /^det:\d+$/.test(d.lembar)
-    && (d.sumber == null || typeof d.sumber === 'string');
+  if (d.jenis === 'detail') return ['pondasiBatuKali', 'footplat', 'umpak', 'kudaKuda', 'sambunganKayu', 'bebas'].includes(d.template) && typeof d.lembar === 'string' && /^det:\d+$/.test(d.lembar)
+    && (d.sumber == null || typeof d.sumber === 'string') && (d.template !== 'sambunganKayu' || ['tumpuan', 'puncak', 'makelar', 'sokong', 'perpanjangan'].includes(d.sambungan));
   if (d.jenis === 'anotasi') {
     const pt = p => titikSah(p) && (p.z === undefined || Number.isFinite(p.z));
     if (!['teks', 'label', 'ukuran', 'peil'].includes(d.tipe) || !pt(d.titik)) return false;
@@ -5221,7 +5224,7 @@ function htmlRingkasan() {
   </div></section>
   <section><h2>Ringkasan model</h2>${htmlTotal()}<p class="meta">${S.grup.size} grup · ${S.komp.size} komponen</p></section>
   ${htmlRekapBagian([...S.elems.keys()])}
-  <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button></div>
+  <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button><button class="tombol" type="button" data-aksi="ekspor-dae" title="Dibuka di SketchUp lewat File &gt; Import">Unduh model 3D untuk SketchUp (.dae)</button></div>
   <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka.</p></section>
   ${komp ? `<section><h2>Komponen</h2><ul class="daftar-komp">${komp}</ul></section>` : ''}
   <section><h2>Pintasan</h2><dl class="pintasan">
@@ -5358,6 +5361,7 @@ panel.addEventListener('click', e => {
   else if (aksi === 'simpan-proyek') simpanProyek();
   else if (aksi === 'buka-proyek') bukaProyek();
   else if (aksi === 'ekspor-rab') eksporRAB(S.sel.size ? [...S.sel] : [...S.elems.keys()]);
+  else if (aksi === 'ekspor-dae') unduhDAE();
   else if (aksi === 'buat-kusen' && id) {
     const b = S.elems.get(id);
     if (!b || b.jenis !== 'bukaan' || !b.kode || idTipeKusen(b.kode, untukBukaan(b))) return;
@@ -6533,21 +6537,31 @@ function buatSVG(o) {
         return {bag: isiBag, W: u, H: Math.max(...isiBag.map(x => x.za + x.H))};
       };
       const data = grup.map(e => ({e, ...ukur(e)}));
-      const jarakX = 26, jarakY = 30;
-      let s = 50, susun = null;
-      for (const sk of [20, 25, 50]) {
-        s = 1000 / sk; skala = sk;
+      // ukuran petak tiap kusen di kertas: gambar + ukuran kanan (16 mm) atau kotak nama, mana yang lebih lebar;
+      // tinggi baris = gambar + ukuran atas (10 mm) + kotak nama (16 mm) + jarak antarbaris
+      const namaKusen = d => `${d.bag.length > 1 ? 'PINTU JENDELA' : (d.bag[0].tp.nama || (d.bag[0].tp.untuk === 'pintu' ? 'Pintu' : 'Jendela')).toUpperCase()} ${d.e.kode} = ${Math.max(...d.bag.map(x => x.n))} BH`;
+      const jarakX = 12, jarakY = 8, atasY = 10, bawahY = 16;
+      const lebarPetak = (d, sk) => Math.max(d.W * sk + 16, namaKusen(d).length * 1.9 + 6);
+      const tata = sk => {
         const baris = [[]]; let x = 0;
         for (const d of data) {
-          const w = Math.max(d.W * s, 60) + jarakX;
-          if (x > 0 && x + w > area.w) { baris.push([]); x = 0; }
+          const w = lebarPetak(d, sk) + jarakX;
+          if (x > 0 && x + w - jarakX > area.w - 14) { baris.push([]); x = 0; }
           baris[baris.length - 1].push(d); x += w;
         }
-        const tinggi = baris.reduce((t, br) => t + Math.max(...br.map(d => d.H)) * s + jarakY, 0);
-        susun = baris;
-        if (tinggi - jarakY + 24 <= area.h) break;
+        const lebar = Math.max(...baris.map(br => br.reduce((t, d) => t + lebarPetak(d, sk) + jarakX, -jarakX)));
+        const tinggi = baris.reduce((t, br) => t + Math.max(...br.map(d => d.H)) * sk + atasY + bawahY + jarakY, -jarakY);
+        return {baris, muat: lebar <= area.w - 14 && tinggi <= area.h - 6};
+      };
+      let s = 50, susun = null;
+      // skala daftar kusen dipilih otomatis (skala denah tidak dipakai di lembar ini)
+      for (const sk of [20, 25, 30, 40, 50, 75, 100, 150, 200]) {
+        s = 1000 / sk; skala = sk;
+        const t = tata(s);
+        susun = t.baris;
+        if (t.muat) break;
       }
-      let y0 = area.y + 10;
+      let y0 = area.y + atasY;
       for (const br of susun) {
         const hMaks = Math.max(...br.map(d => d.H)) * s;
         let x0 = area.x + 14;
@@ -6564,15 +6578,14 @@ function buatSVG(o) {
             const zz = pola.bt ? [0, x.H - pola.bt, x.H] : [0, x.H];
             for (let i = 0; i + 1 < zz.length; i++) isi.push(ukuranGaris(xr, oz - zz[i] * s, xr, oz - zz[i + 1] * s, fmt(zz[i + 1] - zz[i]), kanan ? 1 : -1));
           }
-          const nama = d.bag.length > 1 ? 'PINTU JENDELA' : (d.bag[0].tp.nama || (d.bag[0].tp.untuk === 'pintu' ? 'Pintu' : 'Jendela')).toUpperCase();
-          const nBh = Math.max(...d.bag.map(x => x.n)), lab = `${nama} ${d.e.kode} = ${nBh} BH`, lw = Math.max(d.W * s, lab.length * 1.9 + 6);
+          const lab = namaKusen(d), lw = Math.max(d.W * s, lab.length * 1.9 + 6);
           isi.push(`<rect x="${n2(x0)}" y="${n2(yDasar + 6)}" width="${n2(lw)}" height="7" fill="none" stroke="#000" stroke-width="0.25"/>`,
             teks(x0 + lw / 2, yDasar + 11, lab, 3, 'text-anchor="middle" font-weight="600"'));
-          x0 += Math.max(d.W * s, lw) + jarakX;
+          x0 += lebarPetak(d, s) + jarakX;
         }
-        y0 += hMaks + jarakY;
+        y0 += hMaks + atasY + bawahY + jarakY;
       }
-      if (y0 - jarakY + 14 - area.y > area.h + 1) info = 'Daftar kusen terlalu banyak untuk satu lembar. Pakai kertas A3 atau skala lebih kecil.';
+      if (y0 - jarakY - atasY - area.y > area.h + 1) info = 'Daftar kusen terlalu banyak untuk satu lembar walau sudah 1 : 200. Pakai kertas A3.';
       else if (beda.length) info = `Kode yang sama dipakai bukaan berukuran berbeda: ${beda.join(', ')}. Yang digambar ukuran terbanyak; sebaiknya beri kode lain.`;
     }
   } else if (o.jenis.startsWith('potongan:')) {
@@ -6847,9 +6860,9 @@ function segar2D() {
   segarPilih2D();
   $('#m-alat2d').hidden = !S.bisaUbah;
   const o = opsi2D();
-  $('#m-info').textContent = o.jenis === 'sampul' ? 'Sampul set gambar. Isi data proyek di panel kiri.' : o.jenis === 'daftar' ? 'Daftar gambar dibuat otomatis dari lembar yang dicentang.' : hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, skala 1 : ${hasil2D.skala}, kertas ${o.kertas} lanskap. Ukuran dalam meter.`;
+  $('#m-info').textContent = o.jenis === 'sampul' ? 'Sampul set gambar. Isi data proyek di panel kiri.' : o.jenis === 'daftar' ? 'Daftar gambar dibuat otomatis dari lembar yang dicentang.' : hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, ${hasil2D.skala === 'TERTERA' ? 'skala tertera di tiap detail, ukuran dalam cm' : `skala 1 : ${hasil2D.skala}`}, kertas ${o.kertas} lanskap.${hasil2D.skala === 'TERTERA' ? '' : ' Ukuran dalam meter.'}`;
   const bisa = !!S.unduh;
-  ['#m-svgbtn', '#m-png', '#m-png3d', '#m-pdf'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? '' : 'Unduhan tidak tersedia di tampilan ini'; });
+  ['#m-svgbtn', '#m-png', '#m-png3d', '#m-pdf', '#m-dxf', '#m-dxf-semua', '#m-dae'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? '' : 'Unduhan tidak tersedia di tampilan ini'; });
 }
 function isiPilihan2D(pilih) {
   const sel = $('#m-jenis'), lama = pilih || sel.value;
@@ -7040,6 +7053,356 @@ $('#m-pdf').addEventListener('click', async () => {
     renderLembar();
   }
 });
+/* ============ Ekspor DXF (lembar 2D) dan DAE (model 3D untuk SketchUp) — v0.25 ============ */
+// DXF R12 ASCII, 1 unit = 1 mm kertas, titik asal di kiri bawah lembar. Isi SVG lembar diterjemahkan ke LINE, POLYLINE,
+// CIRCLE, dan TEXT; lengkung path dipecah menjadi polyline. Layer dipilah menurut tebal garis (warna = pena cetak).
+const DXF_LAPIS = [[0.45, 'GARIS-TEBAL', 1], [0.3, 'GARIS-SEDANG', 3], [0.2, 'GARIS-TIPIS', 5], [0, 'GARIS-HALUS', 8]];
+const DXF_LAPIS_LAIN = [['TEKS', 7], ['ISIAN', 8]];
+const M_ID = [1, 0, 0, 1, 0, 0];
+const kaliM = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+const terapM = (m, x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+function bacaTransform(s) {
+  let m = M_ID;
+  if (!s) return m;
+  for (const [, f, a] of s.matchAll(/(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/g)) {
+    const v = a.trim().split(/[\s,]+/).map(Number);
+    let n = M_ID;
+    if (f === 'matrix' && v.length === 6) n = v;
+    else if (f === 'translate') n = [1, 0, 0, 1, v[0] || 0, v[1] || 0];
+    else if (f === 'scale') n = [v[0], 0, 0, v[1] ?? v[0], 0, 0];
+    else if (f === 'rotate') {
+      const r = v[0] * Math.PI / 180, c = Math.cos(r), sn = Math.sin(r);
+      n = [c, sn, -sn, c, 0, 0];
+      if (v.length > 2) n = kaliM(kaliM([1, 0, 0, 1, v[1], v[2]], n), [1, 0, 0, 1, -v[1], -v[2]]);
+    } else if (f === 'skewX') n = [1, 0, Math.tan(v[0] * Math.PI / 180), 1, 0, 0];
+    else if (f === 'skewY') n = [1, Math.tan(v[0] * Math.PI / 180), 0, 1, 0, 0];
+    m = kaliM(m, n);
+  }
+  return m;
+}
+// busur elips SVG (A) → titik-titik, mengikuti lampiran F.6.5 spesifikasi SVG
+function busurTitik(x1, y1, rx, ry, phi, fa, fs, x2, y2) {
+  rx = Math.abs(rx); ry = Math.abs(ry);
+  if (!rx || !ry || (x1 === x2 && y1 === y2)) return [[x2, y2]];
+  const p = phi * Math.PI / 180, c = Math.cos(p), s = Math.sin(p);
+  const dx = (x1 - x2) / 2, dy = (y1 - y2) / 2, x1p = c * dx + s * dy, y1p = -s * dx + c * dy;
+  const L = x1p * x1p / (rx * rx) + y1p * y1p / (ry * ry);
+  if (L > 1) { rx *= Math.sqrt(L); ry *= Math.sqrt(L); }
+  const den = rx * rx * y1p * y1p + ry * ry * x1p * x1p;
+  let k = Math.sqrt(Math.max(0, (rx * rx * ry * ry - den) / (den || 1)));
+  if (fa === fs) k = -k;
+  const cxp = k * rx * y1p / ry, cyp = -k * ry * x1p / rx, cx = c * cxp - s * cyp + (x1 + x2) / 2, cy = s * cxp + c * cyp + (y1 + y2) / 2;
+  const sudut = (ux, uy, vx, vy) => Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy);
+  const t1 = sudut(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+  let dt = sudut((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+  if (!fs && dt > 0) dt -= 2 * Math.PI; else if (fs && dt < 0) dt += 2 * Math.PI;
+  const n = Math.max(4, Math.ceil(Math.abs(dt) / (Math.PI / 18))), r = [];
+  for (let i = 1; i <= n; i++) { const t = t1 + dt * i / n; r.push([c * rx * Math.cos(t) - s * ry * Math.sin(t) + cx, s * rx * Math.cos(t) + c * ry * Math.sin(t) + cy]); }
+  return r;
+}
+// isian d pada <path> → [{t: [[x, y]…], tutup}]
+function jalurSVG(d) {
+  const tok = String(d).match(/[a-df-zA-DF-Z]|[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/g) || [];
+  const hasil = [];
+  let i = 0, cmd = '', x = 0, y = 0, sx = 0, sy = 0, cur = null, kx = null, ky = null, akhir = '';
+  const ada = () => i < tok.length && !/^[a-zA-Z]$/.test(tok[i]);
+  const n = () => +tok[i++];
+  const ke = (px, py) => { if (!cur) { cur = {t: [[x, y]], tutup: false}; hasil.push(cur); } cur.t.push([px, py]); x = px; y = py; };
+  const bezier = pts => { const N = 12; for (let k = 1; k <= N; k++) { const t = k / N, u = 1 - t; let px, py; if (pts.length === 4) { px = u * u * u * pts[0][0] + 3 * u * u * t * pts[1][0] + 3 * u * t * t * pts[2][0] + t * t * t * pts[3][0]; py = u * u * u * pts[0][1] + 3 * u * u * t * pts[1][1] + 3 * u * t * t * pts[2][1] + t * t * t * pts[3][1]; } else { px = u * u * pts[0][0] + 2 * u * t * pts[1][0] + t * t * pts[2][0]; py = u * u * pts[0][1] + 2 * u * t * pts[1][1] + t * t * pts[2][1]; } ke(px, py); } };
+  let jaga = 0;
+  while (i < tok.length && jaga++ < 200000) {
+    if (/^[a-zA-Z]$/.test(tok[i])) cmd = tok[i++];
+    else if (!cmd) { i++; continue; }
+    const rel = cmd === cmd.toLowerCase(), C = cmd.toUpperCase(), ox = rel ? x : 0, oy = rel ? y : 0;
+    if (C === 'Z') { if (cur) { cur.tutup = true; x = sx; y = sy; } cur = null; akhir = 'Z'; if (!ada()) continue; cmd = ''; continue; }
+    if (!ada()) { cmd = ''; continue; }
+    if (C === 'M') { x = ox + n(); y = oy + n(); sx = x; sy = y; cur = {t: [[x, y]], tutup: false}; hasil.push(cur); cmd = rel ? 'l' : 'L'; akhir = 'M'; continue; }
+    if (C === 'L') ke(ox + n(), oy + n());
+    else if (C === 'H') ke((rel ? x : 0) + n(), y);
+    else if (C === 'V') ke(x, (rel ? y : 0) + n());
+    else if (C === 'C') { const a1 = [ox + n(), oy + n()], a2 = [ox + n(), oy + n()], b = [ox + n(), oy + n()]; bezier([[x, y], a1, a2, b]); kx = a2[0]; ky = a2[1]; }
+    else if (C === 'S') { const a1 = akhir === 'C' || akhir === 'S' ? [2 * x - kx, 2 * y - ky] : [x, y], a2 = [ox + n(), oy + n()], b = [ox + n(), oy + n()]; bezier([[x, y], a1, a2, b]); kx = a2[0]; ky = a2[1]; }
+    else if (C === 'Q') { const a1 = [ox + n(), oy + n()], b = [ox + n(), oy + n()]; bezier([[x, y], a1, b]); kx = a1[0]; ky = a1[1]; }
+    else if (C === 'T') { const a1 = akhir === 'Q' || akhir === 'T' ? [2 * x - kx, 2 * y - ky] : [x, y], b = [ox + n(), oy + n()]; bezier([[x, y], a1, b]); kx = a1[0]; ky = a1[1]; }
+    else if (C === 'A') { const rx = n(), ry = n(), ph = n(), fa = n(), fs = n(), bx = ox + n(), by = oy + n(); for (const q of busurTitik(x, y, rx, ry, ph, fa ? 1 : 0, fs ? 1 : 0, bx, by)) ke(q[0], q[1]); }
+    else { i++; continue; }
+    akhir = C;
+  }
+  return hasil.filter(h => h.t.length > 1);
+}
+function teksDXF(t) {
+  let r = '';
+  for (const ch of String(t)) {
+    const c = ch.codePointAt(0);
+    if (ch === 'Ø' || ch === 'ø' || ch === '⌀') r += '%%c';
+    else if (ch === '°') r += '%%d';
+    else if (ch === '±') r += '%%p';
+    else if (ch === '%') r += '%%%';
+    else if (c >= 32 && c < 127) r += ch;
+    else if (c < 32) r += ' ';
+    else r += '\\U+' + c.toString(16).toUpperCase().padStart(4, '0');
+  }
+  return r;
+}
+const angkaDXF = v => { const s = (Math.round(v * 1000) / 1000).toFixed(3).replace(/\.?0+$/, ''); return s === '-0' ? '0' : s; };
+function warnaGelap(w) {
+  if (!w) return false;
+  w = w.trim().toLowerCase();
+  if (w === 'black') return true;
+  let r, g, b;
+  const h = w.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/), rgb = w.match(/^rgba?\(([^)]+)\)/);
+  if (h) { const x = h[1].length === 3 ? h[1].split('').map(c => c + c).join('') : h[1]; [r, g, b] = [0, 2, 4].map(k => parseInt(x.slice(k, k + 2), 16)); }
+  else if (rgb) [r, g, b] = rgb[1].split(',').map(Number);
+  else return false;
+  return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+}
+// SVG lembar (mm) → teks DXF
+function svgKeDXF(svgTeks, W, H) {
+  const doc = new DOMParser().parseFromString(svgTeks, 'image/svg+xml'), akar = doc.documentElement;
+  const ent = [], Y = y => H - y;
+  const WARIS = ['stroke', 'stroke-width', 'fill', 'stroke-dasharray', 'font-size', 'text-anchor', 'dominant-baseline', 'visibility', 'fill-opacity', 'stroke-opacity'];
+  const lapisDari = w => (DXF_LAPIS.find(([b]) => w >= b - 1e-6) || DXF_LAPIS[DXF_LAPIS.length - 1])[1];
+  const jenisGaris = st => { const da = st['stroke-dasharray']; if (!da || da === 'none') return null; return da.trim().split(/[\s,]+/).length >= 4 ? 'CENTER' : 'DASHED'; };
+  const tambahPoly = (pts, tutup, lap, lt) => {
+    if (pts.length < 2) return;
+    if (pts.length === 2 && !tutup) { ent.push([[0, 'LINE'], [8, lap], ...(lt ? [[6, lt]] : []), [10, pts[0][0]], [20, Y(pts[0][1])], [30, 0], [11, pts[1][0]], [21, Y(pts[1][1])], [31, 0]]); return; }
+    const e = [[0, 'POLYLINE'], [8, lap], ...(lt ? [[6, lt]] : []), [66, 1], [10, 0], [20, 0], [30, 0], [70, tutup ? 1 : 0]];
+    for (const [x, y] of pts) e.push([0, 'VERTEX'], [8, lap], [10, x], [20, Y(y)], [30, 0]);
+    e.push([0, 'SEQEND'], [8, lap]);
+    ent.push(e);
+  };
+  const bentuk = (pts, tutup, st, m) => {
+    const skala = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1, tp = pts.map(([x, y]) => terapM(m, x, y));
+    const garis = st.stroke && st.stroke !== 'none' && st.stroke !== 'transparent' && +(st['stroke-opacity'] ?? 1) > 0;
+    const isi = st.fill && st.fill !== 'none' && !/^url/.test(st.fill) && +(st['fill-opacity'] ?? 1) > 0 && warnaGelap(st.fill);
+    if (garis) tambahPoly(tp, tutup, lapisDari(parseFloat(st['stroke-width'] ?? 1) * skala), jenisGaris(st));
+    else if (isi && tutup) tambahPoly(tp, true, 'ISIAN', null);
+  };
+  const lingkar = (cx, cy, rx, ry, st, m) => {
+    const seragam = Math.abs(m[0] - m[3]) < 1e-9 && Math.abs(m[1] + m[2]) < 1e-9 && rx === ry;
+    const garis = st.stroke && st.stroke !== 'none' && st.stroke !== 'transparent';
+    if (seragam && (garis || warnaGelap(st.fill))) {
+      const [x, y] = terapM(m, cx, cy), sk = Math.hypot(m[0], m[1]);
+      const lap = garis ? lapisDari(parseFloat(st['stroke-width'] ?? 1) * sk) : 'ISIAN', lt = garis ? jenisGaris(st) : null;
+      ent.push([[0, 'CIRCLE'], [8, lap], ...(lt ? [[6, lt]] : []), [10, x], [20, Y(y)], [30, 0], [40, rx * sk]]);
+      return;
+    }
+    const pts = [];
+    for (let k = 0; k < 48; k++) { const t = k / 48 * 2 * Math.PI; pts.push([cx + rx * Math.cos(t), cy + ry * Math.sin(t)]); }
+    bentuk(pts, true, st, m);
+  };
+  const teks = (el, st, m) => {
+    const isi = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!isi || !st.fill || st.fill === 'none') return;
+    const x = parseFloat((el.getAttribute('x') || '0').split(/[\s,]+/)[0]) || 0, y = parseFloat((el.getAttribute('y') || '0').split(/[\s,]+/)[0]) || 0;
+    const fs = parseFloat(st['font-size'] || 3) || 3, sk = Math.hypot(m[0], m[1]) || 1, [px, py] = terapM(m, x, y);
+    const rot = -Math.atan2(m[1], m[0]) * 180 / Math.PI, ah = {middle: 1, end: 2}[st['text-anchor']] || 0, av = {middle: 2, central: 2, hanging: 3}[st['dominant-baseline']] || 0;
+    const e = [[0, 'TEXT'], [8, 'TEKS'], [10, px], [20, Y(py)], [30, 0], [40, fs * sk * 0.7], [1, teksDXF(isi)], [50, ((rot % 360) + 360) % 360], [7, 'STANDARD']];
+    if (ah || av) e.push([72, ah], [11, px], [21, Y(py)], [31, 0], [73, av]);
+    ent.push(e);
+  };
+  const LEWATI = new Set(['defs', 'pattern', 'clipPath', 'mask', 'marker', 'symbol', 'style', 'title', 'desc', 'metadata', 'image', 'foreignObject', 'linearGradient', 'radialGradient']);
+  const kunjungi = (el, m, induk) => {
+    const tag = el.localName;
+    if (LEWATI.has(tag)) return;
+    const st = {...induk};
+    for (const k of WARIS) { const v = el.getAttribute(k); if (v !== null) st[k] = v; }
+    const gaya = el.getAttribute('style');
+    if (gaya) for (const bag of gaya.split(';')) { const [k, v] = bag.split(':').map(s => s && s.trim()); if (k && v) st[k] = v; }
+    if (el.getAttribute('display') === 'none' || /display\s*:\s*none/.test(gaya || '') || st.visibility === 'hidden' || el.getAttribute('opacity') === '0') return;
+    const tr = el.getAttribute('transform'), m2 = tr ? kaliM(m, bacaTransform(tr)) : m;
+    const a = k => parseFloat(el.getAttribute(k) || '0') || 0;
+    if (tag === 'g' || tag === 'a' || tag === 'svg') { for (const c of el.children) kunjungi(c, m2, st); return; }
+    if (tag === 'line') bentuk([[a('x1'), a('y1')], [a('x2'), a('y2')]], false, st, m2);
+    else if (tag === 'polyline' || tag === 'polygon') {
+      const v = (el.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number), pts = [];
+      for (let k = 0; k + 1 < v.length; k += 2) pts.push([v[k], v[k + 1]]);
+      bentuk(pts, tag === 'polygon', st, m2);
+    } else if (tag === 'rect') {
+      const x = a('x'), y = a('y'), w = a('width'), h = a('height');
+      if (w > 0 && h > 0 && !(w >= W - 0.01 && h >= H - 0.01 && x <= 0 && y <= 0)) bentuk([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], true, st, m2);
+    } else if (tag === 'circle') lingkar(a('cx'), a('cy'), a('r'), a('r'), st, m2);
+    else if (tag === 'ellipse') lingkar(a('cx'), a('cy'), a('rx'), a('ry'), st, m2);
+    else if (tag === 'path') for (const j of jalurSVG(el.getAttribute('d') || '')) bentuk(j.t, j.tutup, st, m2);
+    else if (tag === 'text') teks(el, st, m2);
+  };
+  // viewBox lembar = mm kertas
+  const vb = (akar.getAttribute('viewBox') || `0 0 ${W} ${H}`).split(/[\s,]+/).map(Number);
+  const m0 = [1, 0, 0, 1, -vb[0], -vb[1]];
+  for (const c of akar.children) kunjungi(c, m0, {stroke: 'none', fill: '#000', 'stroke-width': '1'});
+  // susun berkas
+  const L = [], k = (c, v) => L.push(String(c), typeof v === 'number' ? angkaDXF(v) : String(v));
+  k(0, 'SECTION'); k(2, 'HEADER');
+  k(9, '$ACADVER'); k(1, 'AC1009');
+  k(9, '$EXTMIN'); k(10, 0); k(20, 0); k(30, 0);
+  k(9, '$EXTMAX'); k(10, W); k(20, H); k(30, 0);
+  k(9, '$LIMMIN'); k(10, 0); k(20, 0);
+  k(9, '$LIMMAX'); k(10, W); k(20, H);
+  k(9, '$LTSCALE'); k(40, 1);
+  k(0, 'ENDSEC');
+  k(0, 'SECTION'); k(2, 'TABLES');
+  k(0, 'TABLE'); k(2, 'LTYPE'); k(70, 3);
+  k(0, 'LTYPE'); k(2, 'CONTINUOUS'); k(70, 0); k(3, 'Solid line'); k(72, 65); k(73, 0); k(40, 0);
+  k(0, 'LTYPE'); k(2, 'DASHED'); k(70, 0); k(3, '__ __ __ __'); k(72, 65); k(73, 2); k(40, 3); k(49, 2); k(49, -1);
+  k(0, 'LTYPE'); k(2, 'CENTER'); k(70, 0); k(3, '____ _ ____ _'); k(72, 65); k(73, 4); k(40, 8); k(49, 5); k(49, -1); k(49, 1); k(49, -1);
+  k(0, 'ENDTAB');
+  const lapis = [...DXF_LAPIS.map(([, n, w]) => [n, w]), ...DXF_LAPIS_LAIN];
+  k(0, 'TABLE'); k(2, 'LAYER'); k(70, lapis.length);
+  for (const [n, w] of lapis) { k(0, 'LAYER'); k(2, n); k(70, 0); k(62, w); k(6, 'CONTINUOUS'); }
+  k(0, 'ENDTAB');
+  k(0, 'TABLE'); k(2, 'STYLE'); k(70, 1);
+  k(0, 'STYLE'); k(2, 'STANDARD'); k(70, 0); k(40, 0); k(41, 0.85); k(50, 0); k(71, 0); k(42, 2.5); k(3, 'txt'); k(4, '');
+  k(0, 'ENDTAB');
+  k(0, 'ENDSEC');
+  k(0, 'SECTION'); k(2, 'ENTITIES');
+  for (const e of ent) for (const [c, v] of e) k(c, v);
+  k(0, 'ENDSEC'); k(0, 'EOF');
+  return {dxf: L.join('\r\n') + '\r\n', jumlah: ent.length};
+}
+// ZIP tanpa kompresi (metode simpan) untuk beberapa berkas sekaligus
+let tabelCRC = null;
+function buatZip(berkas) {
+  if (!tabelCRC) { tabelCRC = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let j = 0; j < 8; j++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; tabelCRC[n] = c >>> 0; } }
+  const crc = u => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = tabelCRC[(c ^ u[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const enc = new TextEncoder(), bag = [], pusat = [], kini = new Date();
+  const tgl = ((kini.getFullYear() - 1980) << 9) | ((kini.getMonth() + 1) << 5) | kini.getDate(), jam = (kini.getHours() << 11) | (kini.getMinutes() << 5) | (kini.getSeconds() >> 1);
+  let off = 0;
+  for (const b of berkas) {
+    const nm = enc.encode(b.nama), d = typeof b.data === 'string' ? enc.encode(b.data) : b.data, c = crc(d);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true); h.setUint16(10, jam, true); h.setUint16(12, tgl, true);
+    h.setUint32(14, c, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true); h.setUint16(26, nm.length, true); h.setUint16(28, 0, true);
+    bag.push(new Uint8Array(h.buffer), nm, d);
+    const p = new DataView(new ArrayBuffer(46));
+    p.setUint32(0, 0x02014b50, true); p.setUint16(4, 20, true); p.setUint16(6, 20, true); p.setUint16(8, 0x0800, true); p.setUint16(10, 0, true); p.setUint16(12, jam, true); p.setUint16(14, tgl, true);
+    p.setUint32(16, c, true); p.setUint32(20, d.length, true); p.setUint32(24, d.length, true); p.setUint16(28, nm.length, true); p.setUint32(42, off, true);
+    pusat.push(new Uint8Array(p.buffer), nm);
+    off += 30 + nm.length + d.length;
+  }
+  const ukPusat = pusat.reduce((s, u) => s + u.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, berkas.length, true); e.setUint16(10, berkas.length, true); e.setUint32(12, ukPusat, true); e.setUint32(16, off, true);
+  return new Blob([...bag, ...pusat, new Uint8Array(e.buffer)], {type: 'application/zip'});
+}
+const slugBerkas = t => String(t).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'lembar';
+const dasarBerkas = () => slugBerkas(S.setel.nama || 'rancang');
+function dxfSemuaLembar(o = opsi2D(), lapor = () => {}) {
+  const lembar = daftarLembar().filter(l => l.masuk);
+  if (!lembar.length) throw new Error('Belum ada lembar yang dicentang.');
+  return lembar.map((l, i) => {
+    lapor(i + 1, lembar.length, l.nama);
+    const h = buatSVG({...o, jenis: l.jenis, lembar: l});
+    return {nama: `${String(i + 1).padStart(2, '0')}_${slugBerkas(l.kode || '')}_${slugBerkas(l.nama)}.dxf`, data: svgKeDXF(h.svg, h.W, h.H).dxf};
+  });
+}
+$('#m-dxf').addEventListener('click', () => {
+  const r = svgKeDXF(hasil2D.svg, hasil2D.W, hasil2D.H);
+  simpanBerkas(namaBerkas('dxf'), new Blob([r.dxf], {type: 'application/dxf'}));
+});
+$('#m-dxf-semua').addEventListener('click', async () => {
+  if (!S.unduh) return toast('Unduhan tidak tersedia di tampilan ini.');
+  const tombol = $('#m-dxf-semua'), info = $('#m-lembar-info');
+  tombol.disabled = true;
+  try {
+    const berkas = [];
+    const lembar = daftarLembar().filter(l => l.masuk);
+    if (!lembar.length) throw new Error('Belum ada lembar yang dicentang.');
+    for (const [i, l] of lembar.entries()) {
+      info.textContent = `Menyusun DXF ${i + 1}/${lembar.length}: ${l.nama}…`;
+      await new Promise(r => setTimeout(r, 0));
+      const h = buatSVG({...opsi2D(), jenis: l.jenis, lembar: l});
+      berkas.push({nama: `${String(i + 1).padStart(2, '0')}_${slugBerkas(l.kode || '')}_${slugBerkas(l.nama)}.dxf`, data: svgKeDXF(h.svg, h.W, h.H).dxf});
+    }
+    await simpanBerkas(`${dasarBerkas()}_dxf_${$('#m-kertas').value}.zip`, buatZip(berkas));
+  } catch (err) { console.error('[dxf]', err); toast(err.message); }
+  finally { tombol.disabled = false; renderLembar(); }
+});
+
+// COLLADA 1.4.1 (.dae): mesh model 3D apa adanya di layar (elemen tersembunyi tidak ikut), satuan meter, Z ke atas.
+// Satu node per elemen di dalam node grupnya; dibuka di SketchUp lewat File > Import.
+function buatDAE() {
+  const pilihLama = new Set(S.sel), kilatLama = new Set(S.kilat);
+  // warna pilihan/kilat tidak ikut terekspor
+  if (pilihLama.size || kilatLama.size) { S.sel.clear(); S.kilat.clear(); bangunSemua(); }
+  root.updateMatrixWorld(true);
+  const xml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const ang = v => { const s = (Math.round(v * 10000) / 10000).toString(); return s === '-0' ? '0' : s; };
+  const bahan = new Map(), geom = [], nodeEl = new Map();
+  const kunciBahan = mt => {
+    const c = mt.color || new THREE.Color(0.8, 0.8, 0.8), op = mt.transparent ? Math.max(0.05, mt.opacity ?? 1) : 1;
+    const k = `${c.getHexString()}_${op.toFixed(2)}`;
+    if (!bahan.has(k)) bahan.set(k, {id: `bahan${bahan.size}`, c, op});
+    return bahan.get(k).id;
+  };
+  let nTri = 0;
+  try {
+    for (const [id, g] of objek) {
+      const d = S.elems.get(id);
+      if (!d || NONFISIK.has(d.jenis) || HANYA2D.has(d.jenis)) continue;
+      const pos = [], per = new Map();
+      g.traverse(o => {
+        if (!o.isMesh || !o.geometry || !o.geometry.attributes || !o.geometry.attributes.position) return;
+        for (let p = o; p && p !== root; p = p.parent) if (!p.visible) return;
+        const P = o.geometry.attributes.position, idx = o.geometry.index, mats = Array.isArray(o.material) ? o.material : [o.material];
+        const kelompok = o.geometry.groups && o.geometry.groups.length ? o.geometry.groups : [{start: 0, count: idx ? idx.count : P.count, materialIndex: 0}];
+        const dasar = pos.length / 3, v = new THREE.Vector3();
+        for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); pos.push(v.x, v.y, v.z); }
+        for (const kg of kelompok) {
+          const mt = mats[kg.materialIndex || 0];
+          if (!mt || mt.visible === false || mt.colorWrite === false || (mt.transparent && (mt.opacity ?? 1) < 0.05)) continue;
+          const kb = kunciBahan(mt), daftar = per.get(kb) || [];
+          const ujung = Math.min(kg.start + kg.count, idx ? idx.count : P.count);
+          for (let i = kg.start; i + 2 < ujung; i += 3) {
+            const a = idx ? idx.getX(i) : i, b = idx ? idx.getX(i + 1) : i + 1, c = idx ? idx.getX(i + 2) : i + 2;
+            if (a === b || b === c || a === c) continue;
+            daftar.push(dasar + a, dasar + b, dasar + c);
+          }
+          if (daftar.length) per.set(kb, daftar);
+        }
+      });
+      if (!per.size) continue;
+      const gid = `geom${geom.length}`;
+      let segi = '';
+      for (const [kb, ix] of per) { segi += `<triangles material="${kb}" count="${ix.length / 3}"><input semantic="VERTEX" source="#${gid}-vtx" offset="0"/><p>${ix.join(' ')}</p></triangles>`; nTri += ix.length / 3; }
+      geom.push(`<geometry id="${gid}" name="${xml(id)}"><mesh><source id="${gid}-pos"><float_array id="${gid}-pos-arr" count="${pos.length}">${pos.map(ang).join(' ')}</float_array><technique_common><accessor source="#${gid}-pos-arr" count="${pos.length / 3}" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source><vertices id="${gid}-vtx"><input semantic="POSITION" source="#${gid}-pos"/></vertices>${segi}</mesh></geometry>`);
+      const ikat = [...per.keys()].map(kb => `<instance_material symbol="${kb}" target="#${kb}"/>`).join('');
+      nodeEl.set(id, `<node id="n-${xml(id)}" name="${xml(id + (d.nama ? ' ' + d.nama : ''))}"><instance_geometry url="#${gid}"><bind_material><technique_common>${ikat}</technique_common></bind_material></instance_geometry></node>`);
+    }
+  } finally {
+    if (pilihLama.size || kilatLama.size) { pilihLama.forEach(i => S.sel.add(i)); kilatLama.forEach(i => S.kilat.add(i)); bangunSemua(); }
+  }
+  // susun node menurut grup (G) agar di SketchUp menjadi grup bersarang
+  const anak = new Map();
+  const tambahAnak = (induk, isi) => { if (!anak.has(induk)) anak.set(induk, []); anak.get(induk).push(isi); };
+  for (const [id, n] of nodeEl) { const gr = S.elems.get(id).grup; tambahAnak(gr && S.grup.has(gr) ? gr : '', {node: n}); }
+  for (const [gid, gr] of S.grup) tambahAnak(gr.induk && S.grup.has(gr.induk) ? gr.induk : '', {grup: gid});
+  const tulis = (kunci, jejak = new Set()) => (anak.get(kunci) || []).map(a => {
+    if (a.node) return a.node;
+    if (jejak.has(a.grup)) return '';
+    const isi = tulis(a.grup, new Set([...jejak, a.grup]));
+    return isi ? `<node id="n-${xml(a.grup)}" name="${xml(S.grup.get(a.grup).nama || a.grup)}">${isi}</node>` : '';
+  }).join('');
+  const kini = new Date().toISOString();
+  const efek = [...bahan.values()].map(b => `<effect id="${b.id}-efek"><profile_COMMON><technique sid="umum"><lambert><diffuse><color>${ang(b.c.r)} ${ang(b.c.g)} ${ang(b.c.b)} 1</color></diffuse>${b.op < 1 ? `<transparent opaque="A_ONE"><color>1 1 1 ${ang(b.op)}</color></transparent><transparency><float>1</float></transparency>` : ''}</lambert></technique></profile_COMMON></effect>`).join('');
+  const mat = [...bahan.values()].map(b => `<material id="${b.id}" name="${b.id}"><instance_effect url="#${b.id}-efek"/></material>`).join('');
+  const dae = `<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+<asset><contributor><authoring_tool>RANCANG</authoring_tool></contributor><created>${kini}</created><modified>${kini}</modified><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis><title>${xml(S.setel.nama || 'RANCANG')}</title></asset>
+<library_effects>${efek}</library_effects>
+<library_materials>${mat}</library_materials>
+<library_geometries>${geom.join('\n')}</library_geometries>
+<library_visual_scenes><visual_scene id="adegan" name="${xml(S.setel.nama || 'RANCANG')}">${tulis('')}</visual_scene></library_visual_scenes>
+<scene><instance_visual_scene url="#adegan"/></scene>
+</COLLADA>
+`;
+  return {dae, elemen: nodeEl.size, segitiga: nTri};
+}
+function unduhDAE() {
+  if (!S.unduh) return toast('Unduhan tidak tersedia di tampilan ini.');
+  const r = buatDAE();
+  if (!r.elemen) return toast('Belum ada benda 3D yang tampak untuk diekspor.');
+  simpanBerkas(`${dasarBerkas()}_model-3d.dae`, new Blob([r.dae], {type: 'model/vnd.collada+xml'}));
+}
+$('#m-dae').addEventListener('click', unduhDAE);
 function buka2D(pilih) { if (S.edit) keluarKomponen(); isiPilihan2D(typeof pilih === 'string' ? pilih : null); $('#modal2d').hidden = false; segar2D(); $('#m-jenis').focus(); }
 function tutup2D() { ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.pilih = null; $('#modal2d').hidden = true; canvas.focus({preventScroll: true}); }
 const namaBerkas = ext => {
@@ -7882,7 +8245,7 @@ function segarPanel2D() {
   sel.hidden = ALAT2D.alat !== 'rujukan';
   if (!sel.hidden) {
     const lama = sel.value, semua = [...S.elems].filter(([, x]) => x.jenis === 'detail' && sah(x)).sort((a2, b2) => kodeNomor(a2[0]) - kodeNomor(b2[0]));
-    sel.innerHTML = semua.length ? semua.map(([id, x]) => { const inf = infoDetail(id); return `<option value="${id}">${esk(`${inf.nomor}/${inf.kode} – ${x.judul || TEMPLATE_DETAIL[x.template].nama}`)}</option>`; }).join('') : '<option value="">(belum ada detail)</option>';
+    sel.innerHTML = semua.length ? semua.map(([id, x]) => { const inf = infoDetail(id); return `<option value="${id}">${esk(`${inf.nomor}/${inf.kode} – ${namaDetail(x)}`)}</option>`; }).join('') : '<option value="">(belum ada detail)</option>';
     if ([...sel.options].some(op => op.value === lama)) sel.value = lama;
   }
   $('#g2-info').textContent = ALAT2D.alat ? petunjuk2D() : ids.length ? `${ids.length} benda 2D terpilih. Seret untuk memindah, Delete menghapus, Ctrl+D menyalin.` : '';
@@ -8014,9 +8377,20 @@ const TEMPLATE_DETAIL = {
   pondasiBatuKali: {nama: 'Detail pondasi batu kali', sumber: d => d.jenis === 'pondasi' && d.tipe === 'batukali', skala: 20},
   footplat: {nama: 'Detail foot plat', sumber: d => d.jenis === 'pondasi' && d.tipe === 'footplat', skala: 20},
   umpak: {nama: 'Detail umpak', sumber: d => d.jenis === 'pondasi' && d.tipe === 'umpak', skala: 20},
+  kudaKuda: {nama: 'Detail kuda-kuda', sumber: d => d.jenis === 'atap' && d.bentuk !== 'datar' && (d.rangka || 'bajaringan') !== 'tanpa', skala: 50},
+  sambunganKayu: {nama: 'Detail sambungan kayu', sumber: d => d.jenis === 'atap' && d.bentuk !== 'datar' && d.rangka === 'kayu', skala: 10},
   bebas: {nama: 'Detail bebas', sumber: null, skala: 10}
 };
-const SKALA_DETAIL = [5, 10, 20, 25, 50];
+// jenis sambungan kayu pada kuda-kuda (template sambunganKayu, isian `sambungan`)
+const SAMBUNGAN_KAYU = {
+  tumpuan: {nama: 'Detail sambungan tumpuan', ket: 'Tumpuan: kaki kuda-kuda – balok tarik (gigi tunggal + baut)'},
+  puncak: {nama: 'Detail sambungan puncak', ket: 'Puncak: kaki kuda-kuda – makelar – balok bubungan'},
+  makelar: {nama: 'Detail sambungan kaki makelar', ket: 'Kaki makelar – balok tarik – sokong (pen + sengkang strip)'},
+  sokong: {nama: 'Detail sambungan sokong', ket: 'Sokong – kaki kuda-kuda (takikan + baut)'},
+  perpanjangan: {nama: 'Detail sambungan perpanjangan', ket: 'Perpanjangan balok tarik (bibir lurus + 2 baut)'}
+};
+const namaDetail = d => d.judul || (d.template === 'sambunganKayu' && SAMBUNGAN_KAYU[d.sambungan] && SAMBUNGAN_KAYU[d.sambungan].nama) || (TEMPLATE_DETAIL[d.template] || {}).nama || 'Detail';
+const SKALA_DETAIL = [5, 10, 20, 25, 50, 75, 100];
 const nomorDet = j => +String(j).slice(4) || 0;
 function lembarDetailAda() {
   const s = new Set();
@@ -8142,6 +8516,233 @@ function susunDetail(d) {
     peil.push(zt, zb - ps);
     return {isi, label, dim, peil, u0: -bw / 2 - 0.45, u1: bw / 2 + 0.32, z0: zb - ps - 0.05, z1: zK1 + 0.05};
   }
+  if (d.template === 'kudaKuda') {
+    const R = rangkaAtap(g), arahA = R.arahA || [1, 0, 0], kayu = g.rangka === 'kayu', sepX = arahA[0] === 1;
+    const aK = q => (sepX ? q[0] : q[1]), bK = q => (sepX ? q[1] : q[0]);
+    const {x0, x1, y0, y1} = batasAtap(g), b0 = sepX ? y0 : x0, b1 = sepX ? y1 : x1, bc = (b0 + b1) / 2, ov = Math.max(0, g.overstek ?? 0.6);
+    // kuda-kuda yang digambar: yang di tengah deretan
+    const deret = [...new Set(R.batang.filter(b => b.jenis === 'kuda' && Math.abs(aK(b.p) - aK(b.q)) < 2e-3).map(b => +aK(b.p).toFixed(3)))].sort((p, q) => p - q);
+    if (!deret.length) return {galat: 'Atap ini belum punya kuda-kuda.'};
+    const a = deret[Math.floor(deret.length / 2)];
+    const ukBaja = [0.04, 0.075];
+    const band = (p, q, h) => { const dx = q[0] - p[0], dz = q[1] - p[1], L = Math.hypot(dx, dz) || 1, nx = -dz / L * h / 2, nz = dx / L * h / 2; return [[p[0] + nx, p[1] + nz], [q[0] + nx, q[1] + nz], [q[0] - nx, q[1] - nz], [p[0] - nx, p[1] - nz]]; };
+    const seg = R.batang.filter(b => b.jenis === 'kuda' && Math.abs(aK(b.p) - a) < 2e-3 && Math.abs(aK(b.q) - a) < 2e-3)
+      .map(b => ({bag: b.bagian || 'rangka', uk: b.ukuran || (kayu ? UKURAN_KAYU.kuda : ukBaja), p: [bK(b.p) - bc, b.p[2]], q: [bK(b.q) - bc, b.q[2]]}));
+    // gabungkan batang segaris yang bersambung (kaki kuda-kuda terpotong di tiap titik buhul)
+    const sama = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1]) < 2e-3;
+    for (let ulang = true; ulang;) {
+      ulang = false;
+      cari: for (let i = 0; i < seg.length; i++) for (let j = i + 1; j < seg.length; j++) {
+        const A = seg[i], B = seg[j];
+        if (A.bag !== B.bag) continue;
+        const da = [A.q[0] - A.p[0], A.q[1] - A.p[1]], db = [B.q[0] - B.p[0], B.q[1] - B.p[1]];
+        if (Math.abs(da[0] * db[1] - da[1] * db[0]) / ((Math.hypot(...da) * Math.hypot(...db)) || 1) > 1e-3) continue;
+        let baru = null;
+        if (sama(A.q, B.p)) baru = [A.p, B.q]; else if (sama(B.q, A.p)) baru = [B.p, A.q]; else if (sama(A.q, B.q)) baru = [A.p, B.p]; else if (sama(A.p, B.p)) baru = [A.q, B.q];
+        if (!baru) continue;
+        seg[i] = {...A, p: baru[0], q: baru[1]}; seg.splice(j, 1); ulang = true;
+        break cari;
+      }
+    }
+    const urut = {tarik: 0, rangka: 1, makelar: 1, tiang: 2, sokong: 3, kaki: 4};
+    seg.sort((m, n) => (urut[m.bag] ?? 1) - (urut[n.bag] ?? 1));
+    for (const m of seg) poly(band(m.p, m.q, m.uk[1]), kayu ? 'kayu' : null, 0.3, kayu ? '' : 'fill="#fff"');
+    // penampang gording, balok bubungan (kayu) atau reng (baja ringan) yang memotong bidang kuda-kuda
+    let titikGording = null, titikBubungan = null;
+    for (const b of R.batang) {
+      if (b.jenis !== 'gording' && b.jenis !== 'reng') continue;
+      const ap = aK(b.p), aq = aK(b.q);
+      if (Math.abs(aq - ap) < 1e-6 || (a - ap) * (a - aq) > 0) continue;
+      const t = (a - ap) / (aq - ap), c = b.p.map((v, k) => v + (b.q[k] - v) * t), pen = penampangKayu(b, arahA);
+      if (!pen) continue;
+      const q = pen.map(o => [bK([c[0] + o.x, c[1] + o.y]) - bc, c[2] + o.z]);
+      poly(q, kayu ? 'kayu' : null, 0.25, kayu ? '' : 'fill="#fff"');
+      const pusat = [q.reduce((s2, v) => s2 + v[0], 0) / 4, q.reduce((s2, v) => s2 + v[1], 0) / 4];
+      if (b.tegak) titikBubungan = pusat; else if (!titikGording || pusat[0] < titikGording[0]) titikGording = pusat;
+    }
+    // garis penutup atap pada stasiun ini
+    const geo = atapGeom(g), muka = geo.permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
+    const bmin = b0 - ov - 0.1, bmax = b1 + ov + 0.1, prof = [];
+    let jalur = [];
+    for (let k = 0; k <= 400; k++) {
+      const bb = bmin + (bmax - bmin) * k / 400, z = zAtapDi(muka, sepX ? a : bb, sepX ? bb : a);
+      if (z === null) { if (jalur.length > 1) prof.push(jalur); jalur = []; } else jalur.push([bb - bc, z]);
+    }
+    if (jalur.length > 1) prof.push(jalur);
+    // rampingkan: buang titik segaris
+    for (const j of prof) {
+      const r2 = [j[0]];
+      for (let k = 1; k + 1 < j.length; k++) { const p = r2[r2.length - 1], q = j[k], n2 = j[k + 1]; if (Math.abs((q[0] - p[0]) * (n2[1] - p[1]) - (q[1] - p[1]) * (n2[0] - p[0])) > 1e-6) r2.push(q); }
+      r2.push(j[j.length - 1]);
+      isi.push({k: 'jalur', q: r2, tebal: 0.5});
+    }
+    const semuaProf = prof.flat();
+    if (!semuaProf.length) return {galat: 'Bidang atap tidak ditemukan pada kuda-kuda ini.'};
+    const uKiri = Math.min(...semuaProf.map(p => p[0])), uKanan = Math.max(...semuaProf.map(p => p[0])), zPuncak = Math.max(...semuaProf.map(p => p[1]));
+    // ring balk sejajar nok di bawah kuda-kuda, dengan potongan dinding di bawahnya
+    const zDudukan = g.z0 || 0;
+    let zBawah = Math.min(zDudukan, ...seg.flatMap(m => [m.p[1], m.q[1]])) - 0.15, adaRing = null;
+    for (const r of S.elems.values()) {
+      if (r.jenis !== 'ringbalk' || !sah(r)) continue;
+      const ra = sepX ? [r.awal.x, r.akhir.x] : [r.awal.y, r.akhir.y], rb = sepX ? [r.awal.y, r.akhir.y] : [r.awal.x, r.akhir.x];
+      if (Math.abs(rb[0] - rb[1]) > 1e-3 || a < Math.min(...ra) - 0.05 || a > Math.max(...ra) + 0.05) continue;
+      const u = rb[0] - bc;
+      if (Math.abs(u) > (b1 - b0) / 2 + 0.3) continue;
+      const zr = r.z0 ?? zDudukan - r.h;
+      kotak(u - r.b / 2, zr - 0.4, u + r.b / 2, zr, 'bata', 0.3);
+      garisM([u - r.b / 2 - 0.03, zr - 0.4], [u + r.b / 2 + 0.03, zr - 0.4], 0.18);
+      kotak(u - r.b / 2, zr, u + r.b / 2, zr + r.h, 'beton-polos', 0.35);
+      zBawah = Math.min(zBawah, zr - 0.4);
+      if (!adaRing) { adaRing = r; label.push([u, zr + r.h / 2, `Ring balk ${Math.round(r.b * 100)}/${Math.round(r.h * 100)}`]); label.push([u, zr - 0.25, 'Dinding pasangan bata']); }
+    }
+    // keterangan batang
+    const NAMA_BAG = {kaki: 'Kaki kuda-kuda', tarik: 'Balok tarik', makelar: 'Makelar (tiang nok)', tiang: 'Tiang penggantung', sokong: 'Sokong (skor)', rangka: 'Rangka baja ringan profil C75 (sesuai pabrikan)'};
+    const sudah = new Set();
+    for (const m of [...seg].sort((p, q) => Math.min(p.p[0], p.q[0]) - Math.min(q.p[0], q.q[0]))) {
+      if (sudah.has(m.bag)) continue;
+      sudah.add(m.bag);
+      const t = m.bag === 'kaki' || m.bag === 'tarik' ? 0.3 : 0.5;
+      label.push([m.p[0] + (m.q[0] - m.p[0]) * t, m.p[1] + (m.q[1] - m.p[1]) * t, kayu ? `${NAMA_BAG[m.bag] || 'Batang'} ${Math.round(m.uk[0] * 100)}/${Math.round(m.uk[1] * 100)}` : NAMA_BAG.rangka]);
+    }
+    const KD = aturKuda(g);
+    if (titikGording) label.push([...titikGording, kayu ? `Gording ${Math.round(KD.gording[0] * 100)}/${Math.round(KD.gording[1] * 100)} jarak ± ${fmt(KD.jarakGording * 100, 0)} cm` : 'Reng baja ringan']);
+    if (titikBubungan) label.push([...titikBubungan, `Balok bubungan ${Math.round(KD.gording[0] * 100)}/${Math.round(KD.gording[1] * 100)}`]);
+    label.push([uKiri + (0 - uKiri) * 0.35, (() => { const j = semuaProf.reduce((p, q) => (Math.abs(q[0] - (uKiri * 0.65)) < Math.abs(p[0] - (uKiri * 0.65)) ? q : p)); return j[1]; })(), `Penutup ${(PENUTUP_ATAP[g.penutup || 'spandek'] || 'atap').toLowerCase()}`]);
+    isi.push({k: 'teks', u: b0 - bc + 0.45, z: zDudukan + 0.1, t: `α = ${fmt(g.kemiringan ?? 30, 0)}°`});
+    // ukuran: overstek, bentang, overstek; tinggi dudukan sampai puncak
+    const zU = zBawah;
+    if (b0 - bc - uKiri > 0.02) dim.push({a: [uKiri, zU], b: [b0 - bc, zU], sisi: 'bawah'});
+    dim.push({a: [b0 - bc, zU], b: [b1 - bc, zU], sisi: 'bawah'});
+    if (uKanan - (b1 - bc) > 0.02) dim.push({a: [b1 - bc, zU], b: [uKanan, zU], sisi: 'bawah'});
+    dim.push({rantai: [zDudukan, zPuncak], sisi: 'kiri', u: uKiri});
+    peil.push(zDudukan, zPuncak);
+    return {isi, label, dim, peil, u0: uKiri - 0.45, u1: uKanan + 0.55, z0: zBawah - 0.1, z1: zPuncak + 0.15};
+  }
+  if (d.template === 'sambunganKayu') {
+    const KD = aturKuda(g), th = batas(g.kemiringan ?? 30, 1, 75) * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th), tn = Math.tan(th);
+    const hk = KD.kaki[1], ht = KD.tarik[1], hm = KD.makelar[1], hs = KD.sokong[1], hg = KD.gording[1], lg = KD.gording[0];
+    const tv = Math.max(0.02, Math.round(ht * 100 / 4) / 100), ukL = u => `${Math.round(u[0] * 100)}/${Math.round(u[1] * 100)}`;
+    const add = (p, v, t) => [p[0] + v[0] * t, p[1] + v[1] * t];
+    const rect = (u0, z0, u1, z1) => [[u0, z0], [u1, z0], [u1, z1], [u0, z1]];
+    const potong = (q, wil) => { try { return polygonClipping.intersection([[...q, q[0]]], [[...wil, wil[0]]]).map(pl => pl[0].slice(0, -1)); } catch { return [q]; } };
+    const pita = (p, dir, L, h) => { const n = [-dir[1], dir[0]], q = add(p, dir, L); return [add(p, n, -h / 2), add(q, n, -h / 2), add(q, n, h / 2), add(p, n, h / 2)]; };
+    const patah = (p, q) => {
+      const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], dx = q[0] - p[0], dz = q[1] - p[1], L = Math.hypot(dx, dz) || 1, e1 = [dx / L, dz / L], n1 = [-e1[1], e1[0]], k = Math.min(0.02, L * 0.15);
+      isi.push({k: 'jalur', q: [add(p, e1, -0.02), add(m, e1, -k), add(add(m, e1, -k / 2), n1, k), add(add(m, e1, k / 2), n1, -k), add(m, e1, k), add(q, e1, 0.02)], tebal: 0.18});
+    };
+    const baut = (p, q) => {
+      garisM(p, q, 0.45);
+      const dx = q[0] - p[0], dz = q[1] - p[1], L = Math.hypot(dx, dz) || 1, n1 = [-dz / L, dx / L];
+      for (const e of [p, q]) garisM(add(e, n1, -0.025), add(e, n1, 0.025), 0.45);
+    };
+    const bautTitik = (u, z) => isi.push({k: 'lingkaran', u, z, r: 0.013, tebal: 0.25}, {k: 'lingkaran', u, z, r: 0.006, tebal: 0.2, isi: '#000'});
+    const kayuPoly = q => poly(q, 'kayu', 0.35);
+    const sudutSokong = () => Math.min(70, Math.max(30, Math.atan(KD.posSokong * tn / Math.max(0.05, 1 - KD.posSokong)) * 180 / Math.PI)) * Math.PI / 180;
+    const rbEl = [...S.elems.values()].find(x => x.jenis === 'ringbalk' && sah(x)), rB = rbEl ? rbEl.b : 0.15, rH = rbEl ? rbEl.h : 0.2;
+    const dwEl = [...S.elems.values()].find(x => x.jenis === 'dinding' && sah(x)), tw = dwEl ? dwEl.tebal : 0.15;
+    const jenisS = SAMBUNGAN_KAYU[d.sambungan] ? d.sambungan : 'tumpuan';
+    if (jenisS === 'tumpuan') {
+      const e = [cs, sn], n = [-sn, cs], zn = ht / 2 - tv;
+      const P2 = [(zn + hk / (2 * cs)) / tn, zn], P1 = [(ht / 2 + hk / (2 * cs)) / tn, ht / 2], P3 = add(P2, n, tv / cs);
+      const uL = -0.25, uR = P1[0] + 0.15, zr = -ht / 2 - rH, Pf = add(P2, e, 0.36);
+      kotak(-tw / 2, zr - 0.2, tw / 2, zr, 'bata', 0.3); patah([-tw / 2, zr - 0.2], [tw / 2, zr - 0.2]);
+      kotak(-rB / 2, zr, rB / 2, -ht / 2, 'beton-polos', 0.35);
+      kayuPoly(rect(uL, -ht / 2, uR, ht / 2)); patah([uL, -ht / 2], [uL, ht / 2]); patah([uR, -ht / 2], [uR, ht / 2]);
+      kayuPoly([P2, Pf, add(Pf, n, hk), add(P2, n, hk)]); patah(Pf, add(Pf, n, hk));
+      const C = [(P2[0] + P1[0]) / 2, (P2[1] + P1[1]) / 2], tB = (C[1] + ht / 2 + 0.02) / cs;
+      baut(add(C, n, hk + 0.02), add(C, n, -tB));
+      label.push([...add(add(P2, e, 0.26), n, hk / 2), `Kaki kuda-kuda ${ukL(KD.kaki)}`]);
+      label.push([...add(C, n, hk * 0.75), 'Baut Ø12 mm + ring plat 4 mm, tegak lurus kaki']);
+      label.push([(P1[0] + P2[0] + P3[0]) / 3, (P1[1] + P2[1] + P3[1]) / 3, `Gigi tunggal, dalam takikan ${fmt(tv * 100, 0)} cm (≤ ¼ tinggi balok)`]);
+      label.push([uR - 0.05, 0, `Balok tarik ${ukL(KD.tarik)}`]);
+      label.push([0, zr + rH / 2, `Ring balk ${Math.round(rB * 100)}/${Math.round(rH * 100)}`]);
+      label.push([0, zr - 0.12, 'Dinding pasangan bata']);
+      isi.push({k: 'teks', u: P1[0] + 0.06, z: ht / 2 + 0.03, t: `α = ${fmt(g.kemiringan ?? 30, 0)}°`});
+      dim.push({rantai: [-ht / 2, zn, ht / 2], sisi: 'kiri', u: uL});
+      dim.push({a: [P3[0] - 0.2, ht / 2], b: [P3[0], ht / 2], sisi: 'atas', geser: 0.03});
+    } else if (jenisS === 'puncak') {
+      const Lk = 0.42, eL = [cs, sn], eR = [-cs, sn], nL = [-sn, cs], nR = [sn, cs], O = [0, 0];
+      const zt = -(hm / 2) * tn + hk / (2 * cs), zb = -0.36, zr = u => -Math.abs(u) * tn + hk / (2 * cs) + hg / cs + 0.003;
+      kayuPoly(rect(-hm / 2, zb, hm / 2, zt)); patah([-hm / 2, zb], [hm / 2, zb]);
+      for (const q of potong(pita(add(O, eL, -Lk), eL, Lk, hk), rect(-3, -3, -hm / 2, 3))) kayuPoly(q);
+      for (const q of potong(pita(add(O, eR, -Lk), eR, Lk, hk), rect(hm / 2, -3, 3, 3))) kayuPoly(q);
+      const Fl = add(O, eL, -Lk), Fr = add(O, eR, -Lk);
+      patah(add(Fl, nL, -hk / 2), add(Fl, nL, hk / 2)); patah(add(Fr, nR, -hk / 2), add(Fr, nR, hk / 2));
+      kotak(-lg / 2, zt, lg / 2, zt + hg, 'kayu', 0.35);
+      const s = 0.24;
+      for (const [sg, e, n] of [[-1, eL, nL], [1, [cs, -sn], nR]]) {
+        const Q = [sg * s, -s * tn + hk / (2 * cs)];
+        kayuPoly([add(Q, e, -lg / 2), add(Q, e, lg / 2), add(add(Q, e, lg / 2), n, hg), add(add(Q, e, -lg / 2), n, hg)]);
+      }
+      const uU = Lk * cs + 0.02;
+      isi.push({k: 'jalur', q: [[-uU, zr(-uU)], [0, zr(0)], [uU, zr(uU)]], tebal: 0.5});
+      isi.push({k: 'jalur', q: [[-0.14, zr(-0.14) + 0.012], [0, zr(0) + 0.03], [0.14, zr(0.14) + 0.012]], tebal: 0.4});
+      const zbt = -0.15 * tn;
+      baut([-0.21, zbt], [0.21, zbt]);
+      const w2 = 0.045, uP = 0.27, mk = hm / 2 + 0.012;
+      poly([[-uP, -uP * tn + w2], [0, w2], [uP, -uP * tn + w2], [uP, -uP * tn - w2], [mk, -mk * tn - w2 - 0.03], [mk, -0.27], [-mk, -0.27], [-mk, -mk * tn - w2 - 0.03], [-uP, -uP * tn - w2]], null, 0.25, 'stroke-dasharray="1.2 0.8" fill="none"');
+      bautTitik(0, -0.2);
+      label.push([...add(Fl, eL, 0.12), `Kaki kuda-kuda ${ukL(KD.kaki)}`]);
+      label.push([0, zb + 0.05, `Makelar ${ukL(KD.makelar)}`]);
+      label.push([0, zt + hg / 2, `Balok bubungan ${ukL(KD.gording)}`]);
+      label.push([-s, -s * tn + hk / (2 * cs) + hg / 2, `Gording ${ukL(KD.gording)}`]);
+      label.push([-0.36, zr(-0.36), `Penutup ${(PENUTUP_ATAP[g.penutup || 'spandek'] || 'atap').toLowerCase()} + nok`]);
+      label.push([0.1, zbt, 'Baut Ø12 mm menembus kaki dan makelar']);
+      label.push([-mk, -0.25, 'Plat strip besi t = 4 mm kedua sisi + baut Ø12']);
+      dim.push({a: [-hm / 2, zb], b: [hm / 2, zb], sisi: 'bawah'});
+    } else if (jenisS === 'makelar') {
+      const phi = sudutSokong(), uE = 0.34, zT1 = 0.48, sk = 0.006, zs1 = 0.34;
+      kayuPoly(rect(-uE, -ht / 2, uE, ht / 2)); patah([-uE, -ht / 2], [-uE, ht / 2]); patah([uE, -ht / 2], [uE, ht / 2]);
+      for (const sg of [-1, 1]) {
+        const dir = [sg * Math.cos(phi), Math.sin(phi)], nn = [-dir[1], dir[0]], F = add([0, 0], dir, 0.4);
+        for (const q of potong(pita([0, 0], dir, 0.4, hs), sg < 0 ? rect(-3, ht / 2, -hm / 2, 3) : rect(hm / 2, ht / 2, 3, 3))) kayuPoly(q);
+        patah(add(F, nn, -hs / 2), add(F, nn, hs / 2));
+      }
+      kayuPoly(rect(-hm / 2, ht / 2, hm / 2, zT1)); patah([-hm / 2, zT1], [hm / 2, zT1]);
+      poly(rect(-hm / 6, ht / 2 - 0.03, hm / 6, ht / 2), null, 0.2, 'stroke-dasharray="1 0.7" fill="none"');
+      isi.push({k: 'jalur', q: [[-hm / 2 - sk, zs1], [-hm / 2 - sk, -ht / 2 - sk], [hm / 2 + sk, -ht / 2 - sk], [hm / 2 + sk, zs1]], tebal: 0.45});
+      bautTitik(0, 0.15); bautTitik(0, 0.28);
+      label.push([-uE + 0.1, 0, `Balok tarik ${ukL(KD.tarik)}`]);
+      label.push([0, 0.42, `Makelar ${ukL(KD.makelar)}`]);
+      label.push([...add([0, 0], [-Math.cos(phi), Math.sin(phi)], 0.32), `Sokong ${ukL(KD.sokong)}`]);
+      label.push([0, ht / 2 - 0.015, `Pen ${fmt(hm * 100 / 3, 0)} × 3 cm masuk balok tarik`]);
+      label.push([hm / 2 + sk, -0.02, 'Sengkang besi strip 4 × 40 mm (beugel U)']);
+      label.push([0, 0.28, 'Baut Ø12 mm, 2 buah']);
+      dim.push({rantai: [-ht / 2, ht / 2], sisi: 'kiri', u: -uE});
+      dim.push({a: [-hm / 2, -ht / 2], b: [hm / 2, -ht / 2], sisi: 'bawah'});
+    } else if (jenisS === 'sokong') {
+      const phi = sudutSokong(), e = [cs, sn], n = [-sn, cs], Lk = 0.4, ds = [Math.cos(phi), -Math.sin(phi)], dalam = 0.02;
+      const Ka = add([0, 0], e, -Lk), Kb = add([0, 0], e, Lk);
+      kayuPoly(pita(Ka, e, 2 * Lk, hk)); patah(add(Ka, n, -hk / 2), add(Ka, n, hk / 2)); patah(add(Kb, n, -hk / 2), add(Kb, n, hk / 2));
+      const O2 = add([0, 0], n, -hk / 2 + dalam), wil = [add(O2, e, -3), add(O2, e, 3), add(add(O2, e, 3), n, -3), add(add(O2, e, -3), n, -3)];
+      for (const q of potong(pita([0, 0], ds, 0.45, hs), wil)) kayuPoly(q);
+      const F = add([0, 0], ds, 0.45), nd = [-ds[1], ds[0]];
+      patah(add(F, nd, -hs / 2), add(F, nd, hs / 2));
+      const sa = Math.sqrt(Math.max(0, 1 - Math.sin(th + phi) ** 2)), tEnd = Math.min(0.25, hs / 2 / Math.max(0.2, sa) + 0.015);
+      baut(add([0, 0], n, hk / 2 + 0.02), add([0, 0], n, -tEnd));
+      label.push([...add(Ka, e, 0.15), `Kaki kuda-kuda ${ukL(KD.kaki)}`]);
+      label.push([...add([0, 0], ds, 0.36), `Sokong ${ukL(KD.sokong)}`]);
+      label.push([...add(add([0, 0], n, -hk / 2 + dalam / 2), e, -0.05), `Takikan sokong dalam ${fmt(dalam * 100, 0)} cm`]);
+      label.push([...add([0, 0], n, hk / 2 - 0.015), 'Baut Ø12 mm + ring plat, tegak lurus kaki']);
+    } else {
+      const L = Math.max(0.4, Math.ceil(ht * 3.5 * 10) / 10), uE = L / 2 + 0.15;
+      kayuPoly([[-uE, -ht / 2], [L / 2, -ht / 2], [L / 2, 0], [-L / 2, 0], [-L / 2, ht / 2], [-uE, ht / 2]]);
+      kayuPoly([[-L / 2, 0], [-L / 2, ht / 2], [uE, ht / 2], [uE, -ht / 2], [L / 2, -ht / 2], [L / 2, 0]]);
+      patah([-uE, -ht / 2], [-uE, ht / 2]); patah([uE, -ht / 2], [uE, ht / 2]);
+      poly(rect(-L / 2 - 0.06, -ht / 2 + 0.012, L / 2 + 0.06, ht / 2 - 0.012), null, 0.25, 'stroke-dasharray="1.2 0.8" fill="none"');
+      for (const u of [-L / 4, L / 4]) baut([u, ht / 2 + 0.015], [u, -ht / 2 - 0.015]);
+      label.push([-uE + 0.06, 0, `Balok tarik ${ukL(KD.tarik)}`]);
+      label.push([0, ht / 4, `Sambungan bibir lurus, panjang ${fmt(L * 100, 0)} cm`]);
+      label.push([L / 4, -ht / 4, 'Baut Ø12 mm + ring plat, 2 buah']);
+      label.push([-L / 2 - 0.04, ht / 2 - 0.02, 'Plat strip besi t = 4 mm kedua sisi']);
+      label.push([uE - 0.06, -ht / 4, 'Letakkan sambungan dekat titik buhul']);
+      dim.push({a: [-L / 2, -ht / 2], b: [L / 2, -ht / 2], sisi: 'bawah'});
+      dim.push({rantai: [-ht / 2, 0, ht / 2], sisi: 'kiri', u: -uE});
+    }
+    const semua = isi.flatMap(e => (e.k === 'poly' || e.k === 'jalur' ? e.q : e.k === 'garis' ? [e.a, e.b] : e.k === 'lingkaran' ? [[e.u, e.z]] : []));
+    const us = semua.map(p => p[0]), zs = semua.map(p => p[1]);
+    return {isi, label, dim, peil, u0: Math.min(...us) - 0.12, u1: Math.max(...us) + 0.05, z0: Math.min(...zs) - 0.09, z1: Math.max(...zs) + 0.06};
+  }
   return {galat: 'Template tidak dikenal.'};
 }
 const POLA_DETAIL_DEF = {
@@ -8158,23 +8759,54 @@ function lembarDetail(o) {
   const semuaPola = {...POLA_2D_DEF, ...POLA_DETAIL_DEF};
   isi.push(`<defs>${Object.entries(semuaPola).map(([k, v]) => `<pattern id="dt-${k}" patternUnits="userSpaceOnUse" width="16" height="16"><rect width="16" height="16" fill="#fff"/>${v}</pattern>`).join('')}</defs>`);
   if (!daftar.length) info = 'Lembar detail ini kosong. Tambah detail dari panel kiri.';
-  const n = daftar.length, kol = n <= 1 ? 1 : n <= 4 ? 2 : 3, baris = Math.max(1, Math.ceil(n / kol));
-  const cw = area.w / kol, ch = area.h / baris;
+  const n = daftar.length, hasil = daftar.map(([, d]) => susunDetail(d)), judulH = 13;
+  // kolom keterangan: dibagi kiri dan kanan gambar bila keterangannya lebih dari satu agar seimbang
+  const petak = (cw, ch, d, r) => {
+    const n = d.template === 'bebas' || !r || !r.label ? 0 : r.label.length;
+    const rh = ch - 8 - judulH, satu = n ? Math.min(62, cw * 0.42) : 0, dua = Math.min(46, cw * 0.23);
+    const bagi = {labL: dua, labR: dua, rw: cw - 8 - 2 * dua, rh}, kanan = {labL: 0, labR: satu, rw: cw - 8 - satu, rh};
+    if (n < 2) return kanan;
+    // keterangan dibagi kiri-kanan bila gambar tetap muat pada skalanya; bila tidak, semua di kanan agar gambar lebih besar
+    const sk = d.skala || TEMPLATE_DETAIL[d.template].skala, muat = pt => (r.u1 - r.u0) * 1000 / sk <= pt.rw + 0.5 && (r.z1 - r.z0) * 1000 / sk <= pt.rh + 0.5;
+    return muat(bagi) || !muat(kanan) ? bagi : kanan;
+  };
+  // susunan petak (kolom × baris) yang membuat gambar paling besar pada skala pilihannya
+  let kol = 1, nilaiTerbaik = -1;
+  for (let k = 1; k <= Math.min(3, Math.max(1, n)); k++) {
+    const b = Math.max(1, Math.ceil(n / k)), cw = area.w / k, ch = area.h / b;
+    let nilai = 0;
+    hasil.forEach((r, i) => {
+      if (r.galat || r.kosong) { nilai += 1; return; }
+      const d = daftar[i][1], sk = d.skala || TEMPLATE_DETAIL[d.template].skala, pt = petak(cw, ch, d, r);
+      nilai += Math.min(1, pt.rw / ((r.u1 - r.u0) * 1000 / sk), pt.rh / ((r.z1 - r.z0) * 1000 / sk));
+    });
+    if (nilai > nilaiTerbaik + 1e-6) { nilaiTerbaik = nilai; kol = k; }
+  }
+  const baris = Math.max(1, Math.ceil(n / kol)), cw = area.w / kol, ch = area.h / baris, diperkecil = [];
   daftar.forEach(([id, d], i) => {
     const cx = area.x + (i % kol) * cw, cy = area.y + Math.floor(i / kol) * ch;
-    const judulH = 13, labW = d.template === 'bebas' ? 0 : Math.min(62, cw * 0.42);
-    const rx = cx + 4, ry = cy + 4, rw = cw - 8 - labW, rh = ch - 8 - judulH;
-    const sk = d.skala || TEMPLATE_DETAIL[d.template].skala, s = 1000 / sk;
-    // judul detail
+    const {labL, labR, rw, rh} = petak(cw, ch, d, hasil[i]);
+    const rx = cx + 4 + labL, ry = cy + 4;
     const ty = cy + ch - 6, nomor = i + 1;
+    const r = hasil[i], skPilih = d.skala || TEMPLATE_DETAIL[d.template].skala;
+    // skala yang dipakai: skala pilihan; bila tidak muat di petaknya, diperkecil ke skala baku berikutnya yang muat
+    let sk = skPilih;
+    if (!r.galat && !r.kosong) {
+      const muat = v => (r.u1 - r.u0) * 1000 / v <= rw + 0.5 && (r.z1 - r.z0) * 1000 / v <= rh + 0.5;
+      if (!muat(sk)) {
+        const cadang = [...SKALA_DETAIL, 150, 200].filter(v => v > sk).find(muat);
+        sk = cadang || Math.ceil(Math.max((r.u1 - r.u0) * 1000 / rw, (r.z1 - r.z0) * 1000 / rh));
+        diperkecil.push(`${nomor} (1 : ${skPilih} → 1 : ${sk})`);
+      }
+    }
+    const s = 1000 / sk;
+    // judul detail
     isi.push(`<circle cx="${n2d(cx + 9)}" cy="${n2d(ty - 3)}" r="4.2" fill="#fff" stroke="#000" stroke-width="0.35"/>`, tk(cx + 9, ty - 1.6, String(nomor), 4, 'text-anchor="middle" font-weight="700"'),
-      tk(cx + 16, ty - 3.6, (d.judul || TEMPLATE_DETAIL[d.template].nama).toUpperCase(), 3, 'font-weight="700"'), gr(cx + 16, ty - 2.4, cx + Math.min(cw - 6, 16 + 90), ty - 2.4, 0.35),
+      tk(cx + 16, ty - 3.6, namaDetail(d).toUpperCase(), 3, 'font-weight="700"'), gr(cx + 16, ty - 2.4, cx + Math.min(cw - 6, 16 + 90), ty - 2.4, 0.35),
       tk(cx + 16, ty + 1, `SKALA 1 : ${sk}`, 2.2));
-    const r = susunDetail(d);
     if (r.galat) { isi.push(tk(rx + 4, ry + 10, r.galat, 2.6, 'fill="#B3261E"')); return; }
     if (r.kosong) { isi.push(`<rect x="${n2d(rx)}" y="${n2d(ry)}" width="${n2d(cw - 8)}" height="${n2d(rh)}" fill="none" stroke="#bbb" stroke-width="0.2" stroke-dasharray="1.5 1"/>`); return; }
     const lebar = (r.u1 - r.u0) * s, tinggi = (r.z1 - r.z0) * s;
-    if (lebar > rw + 0.5 || tinggi > rh + 0.5) info = `Detail ${nomor} tidak muat pada 1 : ${sk}. Pilih skala lebih kecil di panel kiri.`;
     const ox = rx + (rw - lebar) / 2, oy = ry + (rh - tinggi) / 2;
     const X = u => ox + (u - r.u0) * s, Y = z => oy + (r.z1 - z) * s;
     for (const e of r.isi) {
@@ -8183,6 +8815,9 @@ function lembarDetail(o) {
         isi.push(`<polygon points="${e.q.map(([u, z]) => `${n2d(X(u))},${n2d(Y(z))}`).join(' ')}" ${isiPola} stroke="#000" stroke-width="${e.tebal}" stroke-linejoin="round" ${e.extra}/>`);
       } else if (e.k === 'garis') isi.push(gr(X(e.a[0]), Y(e.a[1]), X(e.b[0]), Y(e.b[1]), e.tebal, e.extra));
       else if (e.k === 'besi') isi.push(`<circle cx="${n2d(X(e.u))}" cy="${n2d(Y(e.z))}" r="${n2d(Math.max(0.35, e.r * s))}" fill="#000"/>`);
+      else if (e.k === 'jalur') isi.push(`<polyline points="${e.q.map(([u, z]) => `${n2d(X(u))},${n2d(Y(z))}`).join(' ')}" fill="none" stroke="#000" stroke-width="${e.tebal}" stroke-linejoin="round" ${e.extra || ''}/>`);
+      else if (e.k === 'lingkaran') isi.push(`<circle cx="${n2d(X(e.u))}" cy="${n2d(Y(e.z))}" r="${n2d(Math.max(0.3, e.r * s))}" fill="${e.isi || '#fff'}" stroke="#000" stroke-width="${e.tebal}"/>`);
+      else if (e.k === 'teks') isi.push(tk(X(e.u), Y(e.z), e.t, e.uk || 2.2));
     }
     // ukuran
     const tanda = (x1, y1, x2, y2, t, sisi) => {
@@ -8210,16 +8845,30 @@ function lembarDetail(o) {
       const y = Y(z), lbl = Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z);
       isi.push(`<polygon points="${n2d(xp)},${n2d(y)} ${n2d(xp - 1.1)},${n2d(y - 1.5)} ${n2d(xp + 1.1)},${n2d(y - 1.5)}" fill="#000"/>`, gr(xp - 1.4, y, xp + 9, y, 0.12), tk(xp + 1.6, y - 0.7, lbl, 2));
     }
-    // keterangan bahan dengan garis penunjuk, disusun di kolom kanan
-    const lx = cx + cw - labW - 2, urutL = [...r.label].sort((p, q) => q[1] - p[1]);
-    const jarak = Math.min(7, (rh - 2) / Math.max(1, urutL.length));
-    urutL.forEach(([u, z, t], k) => {
-      const ly = ry + 4 + k * jarak + (rh - urutL.length * jarak) / 2, px = X(u), py = Y(z);
-      const baris2 = bungkusTeks(t, labW - 6, 2.1, 2);
-      isi.push(`<circle cx="${n2d(px)}" cy="${n2d(py)}" r="0.45" fill="#000"/>`, gr(px, py, lx, ly, 0.13), gr(lx, ly, lx + 3, ly, 0.13));
-      baris2.forEach((b, bi) => isi.push(tk(lx + 3.6, ly + 0.7 + bi * 2.6, b, 2.1)));
-    });
+    // keterangan bahan dengan garis penunjuk: separuh di kolom kiri, separuh di kolom kanan (menurut letak titiknya)
+    const tengah = (r.u0 + r.u1) / 2, kiri = [], kanan = [];
+    for (const lb of r.label) (labL > 0 && lb[0] < tengah ? kiri : kanan).push(lb);
+    const dekatTengah = arr => arr.reduce((bi, lb, k) => (Math.abs(lb[0] - tengah) < Math.abs(arr[bi][0] - tengah) ? k : bi), 0);
+    while (labL > 0 && Math.abs(kiri.length - kanan.length) > 1) {
+      const [dari, ke] = kiri.length > kanan.length ? [kiri, kanan] : [kanan, kiri];
+      ke.push(dari.splice(dekatTengah(dari), 1)[0]);
+    }
+    const susunKolom = (daftarL, sisi) => {
+      const lebarK = sisi < 0 ? labL : labR, urutL = [...daftarL].sort((p, q) => q[1] - p[1]);
+      if (!urutL.length) return;
+      const jarak = Math.min(7, (rh - 2) / urutL.length);
+      // tepi kolom yang menghadap gambar, dirapatkan ke gambar bila petaknya lapang
+      const lx = sisi < 0 ? Math.max(cx + 2 + labL, ox - 5) : Math.min(cx + cw - labR - 2, ox + lebar + 5);
+      urutL.forEach(([u, z, t], k) => {
+        const ly = ry + 4 + k * jarak + (rh - urutL.length * jarak) / 2, px = X(u), py = Y(z);
+        const baris2 = bungkusTeks(t, lebarK - 6, 2.1, 2);
+        isi.push(`<circle cx="${n2d(px)}" cy="${n2d(py)}" r="0.45" fill="#000"/>`, gr(px, py, lx, ly, 0.13), gr(lx, ly, lx + sisi * 3, ly, 0.13));
+        baris2.forEach((b, bi) => isi.push(sisi < 0 ? tk(lx - 3.6, ly + 0.7 + bi * 2.6, b, 2.1, 'text-anchor="end"') : tk(lx + 3.6, ly + 0.7 + bi * 2.6, b, 2.1)));
+      });
+    };
+    susunKolom(kiri, -1); susunKolom(kanan, 1);
   });
+  if (diperkecil.length) info = `Diperkecil agar muat: detail ${diperkecil.join(', ')}. Pakai kertas lebih besar atau pindahkan detail ke lembar lain untuk skala aslinya.`;
   isi.push(...svgBenda2D(o, null));
   const kop = kopGambar(o, W, H, 'TERTERA');
   return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`,
@@ -8241,10 +8890,12 @@ function renderDetailPanel() {
   const lembarAda = lembarDetailAda();
   const opsiT = (pilih) => Object.entries(TEMPLATE_DETAIL).map(([k, v]) => `<option value="${k}" ${k === pilih ? 'selected' : ''}>${esk(v.nama)}</option>`).join('');
   const opsiSk = (pilih) => SKALA_DETAIL.map(v => `<option value="${v}" ${v === pilih ? 'selected' : ''}>1 : ${v}</option>`).join('');
+  const opsiSb = (pilih) => Object.entries(SAMBUNGAN_KAYU).map(([k, v]) => `<option value="${k}" ${k === pilih ? 'selected' : ''}>${esk(v.ket)}</option>`).join('');
   let h = '';
   if (det.length) {
     h += '<h4>Detail di lembar ini</h4>' + det.map(([id, d], i) => `<div class="detail-baris" data-detail="${id}">
-      <label>${i + 1}. Judul<input type="text" data-df="judul" value="${esk(d.judul || '')}" placeholder="${esk(TEMPLATE_DETAIL[d.template].nama)}" ${dis()}></label>
+      <label>${i + 1}. Judul<input type="text" data-df="judul" value="${esk(d.judul || '')}" placeholder="${esk(namaDetail({...d, judul: ''}))}" ${dis()}></label>
+      ${d.template === 'sambunganKayu' ? `<label>Sambungan<select data-df="sambungan" ${dis()}>${opsiSb(d.sambungan)}</select></label>` : ''}
       <div class="detail-dua"><label>Skala<select data-df="skala" ${dis()}>${opsiSk(d.skala || TEMPLATE_DETAIL[d.template].skala)}</select></label>
       ${TEMPLATE_DETAIL[d.template].sumber ? `<label>Sumber<select data-df="sumber" ${dis()}>${opsiSumberDetail(d.template, d.sumber)}</select></label>` : ''}</div>
       <button class="tombol bahaya kecil" type="button" data-dhapus="${id}" ${dis()}>Hapus detail</button></div>`).join('');
@@ -8253,6 +8904,7 @@ function renderDetailPanel() {
   h += `<details id="m-detail-tambah" ${tambahDetailTerbuka ? 'open' : ''}><summary>+ Tambah detail</summary><div class="detail-form">
     <label>Template<select id="dt-template">${opsiT(t0)}</select></label>
     <label>Sumber<select id="dt-sumber">${opsiSumberDetail(t0, '')}</select></label>
+    <label id="dt-sambungan-l" ${t0 === 'sambunganKayu' ? '' : 'hidden'}>Sambungan<select id="dt-sambungan">${opsiSb('tumpuan')}</select></label>
     <label>Lembar<select id="dt-lembar">${lembarAda.map(j => `<option value="${j}" ${j === aktif ? 'selected' : ''}>${esk(judulLembar(j))}</option>`).join('')}<option value="baru" ${aktif.startsWith('det:') ? '' : 'selected'}>Lembar detail baru</option></select></label>
     <label>Skala<select id="dt-skala">${opsiSk(TEMPLATE_DETAIL[t0].skala)}</select></label>
     <button class="tombol utama" type="button" id="dt-tambah" ${dis()}>Tambahkan</button></div></details>`;
@@ -8265,8 +8917,10 @@ $('#m-detail').addEventListener('change', e => {
     $('#m-detail').dataset.tmpl = t.value;
     $('#dt-sumber').innerHTML = opsiSumberDetail(t.value, '');
     $('#dt-skala').value = String(TEMPLATE_DETAIL[t.value].skala);
+    $('#dt-sambungan-l').hidden = t.value !== 'sambunganKayu';
     return;
   }
+  if (t.id === 'dt-sambungan' || t.id === 'dt-sumber' || t.id === 'dt-lembar' || t.id === 'dt-skala') return;
   const baris = t.closest('[data-detail]');
   if (!baris || !S.bisaUbah) return;
   const id = baris.dataset.detail, d = S.elems.get(id);
@@ -8275,6 +8929,7 @@ $('#m-detail').addEventListener('change', e => {
   if (f === 'judul') { if (t.value.trim()) b.judul = t.value.trim(); else delete b.judul; }
   else if (f === 'skala') b.skala = +t.value;
   else if (f === 'sumber') b.sumber = t.value || null;
+  else if (f === 'sambungan') b.sambungan = t.value;
   terapkan([{id, sesudah: b}]);
   if (t.tagName === 'SELECT') t.blur();
   segar2D();
@@ -8299,11 +8954,13 @@ $('#m-detail').addEventListener('click', e => {
   else if (detailDiLembar(lembar).length >= 6) return toast('Satu lembar detail berisi paling banyak 6 detail. Pilih lembar detail baru.');
   const id = idBaru('E');
   if (document.activeElement) document.activeElement.blur();
-  terapkan([{id, sesudah: {jenis: 'detail', template: tmpl, sumber, lembar, skala: +$('#dt-skala').value}}]);
+  const baru = {jenis: 'detail', template: tmpl, sumber, lembar, skala: +$('#dt-skala').value};
+  if (tmpl === 'sambunganKayu') baru.sambungan = $('#dt-sambungan').value;
+  terapkan([{id, sesudah: baru}]);
   isiPilihan2D(lembar);
   $('#m-jenis').value = lembar;
   segar2D();
-  toast(`${T.nama} ditambahkan ke ${judulLembar(lembar)}.`);
+  toast(`${namaDetail(baru)} ditambahkan ke ${judulLembar(lembar)}.`);
 });
 $('#m-detail').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur(); e.stopPropagation(); });
 
@@ -8482,6 +9139,8 @@ window.rancangAPI = Object.freeze({
   gambar2DPng,
   tangkap3D,
   daftarLembar: () => daftarLembar(),
+  dxf: (o = {}) => { const opsi = {...opsi2D(), ...o}, l = daftarLembar().find(x => x.jenis === opsi.jenis); const h = buatSVG({...opsi, lembar: l}); return svgKeDXF(h.svg, h.W, h.H); },
+  dae: () => { const r = buatDAE(); return {dae: r.dae, elemen: r.elemen, segitiga: r.segitiga}; },
   pdfSet: async (o = {}) => { const r = await buatPDFSet({...opsi2D(), ...o}); return {jumlah: r.jumlah, raster: r.raster, pdf: await keDataURL(r.blob)}; },
   rab: ids => { const r = dataRAB(ids && ids.length ? ids : semuaId()); return r.divisi; },
   ringkasan: ids => total(ids && ids.length ? ids : semuaId()),
