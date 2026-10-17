@@ -7700,7 +7700,8 @@ function buatSVG(o) {
         // kuda-kuda terdekat di belakang bidang potong, dan penampang reng/gording yang terpotong
         for (const rk of rangkaL) {
           // atap yang tidak terpotong hanya tampak penutupnya; rangkanya tersembunyi
-          if (!rk.muka.some(t => silangMuka(t).length >= 2)) continue;
+          // rangka tanpa bidang atap (batang yang digambar manual) tetap ditampilkan: kuda-kuda terdekat di belakang bidang potong
+          if (rk.muka.length && !rk.muka.some(t => silangMuka(t).length >= 2)) continue;
           const kuda = rk.batang.filter(b => b.jenis === 'kuda').map(b => ({...b, dd: (Dp(b.p[0], b.p[1]) + Dp(b.q[0], b.q[1])) / 2})).filter(b => b.dd >= -0.01);
           if (kuda.length) {
             const dMin = Math.min(...kuda.map(b => b.dd));
