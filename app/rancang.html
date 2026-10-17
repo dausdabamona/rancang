@@ -1312,9 +1312,14 @@ function ujungDinding(w, n) {
 function ubahDorong(asli, face, edge, jarak) {
   const d = salin(asli);
   if (face === 'bidang') {
-    // geser seluruh bidang sejajar arah normalnya
-    const [nx, ny, nz] = edge;
-    d.titik = asli.titik.map(q => ({x: r2(q.x + nx * jarak), y: r2(q.y + ny * jarak), z: r2(q.z + nz * jarak)}));
+    // seperti Push/Pull SketchUp: muka yang diklik maju/mundur, muka di seberangnya diam, jadi tebal bidang yang berubah.
+    // edge.n = normal Newell bidang, edge.s = +1 bila muka yang diklik searah normal, -1 bila muka sebaliknya
+    const {n: [nx, ny, nz], s} = edge, tb = (asli.tebal || 0) + jarak;
+    if (tb < 0.005) return null;
+    // geser titik acuan: tebal tengah → setengah langkah ke arah muka yang diklik; tebal satu sisi → hanya bila muka acuan yang ditarik
+    const g = asli.tebalTengah ? s * jarak / 2 : s > 0 ? jarak : 0;
+    d.titik = asli.titik.map(q => ({x: r2(q.x + nx * g), y: r2(q.y + ny * g), z: r2(q.z + nz * g)}));
+    d.tebal = r2(tb);
     return d;
   }
   if (face === 'ujung-batang') {
@@ -3468,7 +3473,7 @@ function buatDinding(a, b) {
 const MUKA_DORONG = new Set(['atas', 'sisi', 'atap', 'bidang', 'batang']);
 const alatDorong = {
   ganti() { setAlat('offset'); toast('Offset'); },
-  petunjuk: '<b>Push/Pull:</b> klik bidang, gerakkan mouse, lalu klik lagi. Ketik jarak lalu Enter. Nilai minus menurunkan. Pada dinding: tarik bidang ujungnya untuk mengubah panjang. Bidang lepas digeser tegak lurus permukaannya; batang ditarik dari ujung terdekat. Klik 2× grup untuk membukanya, atau nyalakan Tembus. Pada atap: klik dekat tepi atap untuk menarik tepinya ke ujung dinding.',
+  petunjuk: '<b>Push/Pull:</b> klik bidang, gerakkan mouse, lalu klik lagi. Ketik jarak lalu Enter. Nilai minus menurunkan. Pada dinding: tarik bidang ujungnya untuk mengubah panjang. Bidang lepas ditebalkan/ditipiskan dari muka yang diklik (muka seberangnya diam); batang ditarik dari ujung terdekat. Klik 2× grup untuk membukanya, atau nyalakan Tembus. Pada atap: klik dekat tepi atap untuk menarik tepinya ke ujung dinding.',
   vcb: 'Jarak',
   aktif: null,
   sibuk() { return !!this.aktif; },
@@ -3561,15 +3566,14 @@ const alatDorong = {
     if (u.face === 'bawah') return toast('Bidang bawah tidak bisa ditarik. Pilih bidang atas atau samping.');
     if (!MUKA_DORONG.has(u.face)) return toast('Bagian ini mengikuti atapnya. Ubah lewat panel Properti atap, atau Pecah atap dulu agar jadi bidang dan batang lepas.');
     if (d.jenis === 'bidang') {
-      // normal bidang (Newell), diarahkan ke sisi yang menghadap kamera
-      const t = d.titik, N = V();
-      for (let i = 0; i < t.length; i++) { const p = t[i], q = t[(i + 1) % t.length]; N.x += (p.y - q.y) * (p.z + q.z); N.y += (p.z - q.z) * (p.x + q.x); N.z += (p.x - q.x) * (p.y + q.y); }
-      if (N.lengthSq() < 1e-10) return;
-      N.normalize();
-      if (N.dot(V().subVectors(camera.position, h.point)) < 0) N.negate();
+      // normal bidang (Newell, sama dengan geoBidang); muka yang diklik = muka yang menghadap kamera
+      const n = V(...normalNewell(d.titik.map(ke3)));
+      if (n.lengthSq() < 1e-10) return;
+      n.normalize();
+      const sk = n.dot(V().subVectors(camera.position, h.point)) < 0 ? -1 : 1, N = n.clone().multiplyScalar(sk);
       soroti(null);
-      this.aktif = {id: u.elemId, face: 'bidang', edge: [N.x, N.y, N.z], garis: N, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
-      return toast('Menggeser bidang tegak lurus permukaannya. Gerakkan mouse atau ketik jarak.');
+      this.aktif = {id: u.elemId, face: 'bidang', edge: {n: [n.x, n.y, n.z], s: sk}, garis: N, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
+      return toast(`Menarik muka bidang (tebal sekarang ${fmtV(d.tebal || 0)}). Gerakkan mouse atau ketik jarak; minus menipiskan.`);
     }
     if (d.jenis === 'batang') {
       // ujung terdekat dari titik klik yang ditarik sepanjang sumbu batang
