@@ -2443,8 +2443,37 @@ function arahkan(e) {
 // Semua objek di bawah kursor, terdekat dulu (satu hit per elemen). Pintu, jendela, dan benda (komponen)
 // didahulukan dari lantai atau plafon yang menutupinya, agar tidak yang terpilih justru lantainya.
 const BIDANG_LEBAR = new Set(['volume', 'plafon']), BENDA_KECIL = new Set(['bukaan', 'instance']);
-function hitObjek(e, kecuali) {
+// id elemen pemilik sebuah objek 3D (garis tepi tidak membawa id; diambil dari grup induknya)
+function idPemilik(o) { while (o) { if (o.userData && o.userData.elemId) return o.userData.elemId; o = o.parent; } return null; }
+// ukuran satu piksel layar dalam meter di sekitar titik pandang (untuk toleransi pilih)
+function meterPerPiksel() {
+  const r = canvas.getBoundingClientRect(), c = camera;
+  if (c.isOrthographicCamera) return (c.top - c.bottom) / (c.zoom || 1) / Math.max(1, r.height);
+  return 2 * Math.max(0.5, nav.r) * Math.tan((c.fov || FOV) * Math.PI / 360) / Math.max(1, r.height);
+}
+// Pilih ala SketchUp: tepat di kursor dulu; bila tidak mengenai muka apa pun, garis tepi dalam ±5 px,
+// lalu muka terdekat dalam ±3–6 px (benda tipis: batang, lisplang, bidang yang terlihat dari samping)
+function hitObjek(e, kecuali, toleran = false) {
+  let hasil = hitObjekDi(e, kecuali);
+  if (hasil.length || !toleran) return hasil;
   arahkan(e);
+  ray.params.Line.threshold = 5 * meterPerPiksel();
+  const garis = ray.intersectObjects(root.children, true).find(h => h.object.isLineSegments && idPemilik(h.object) && !(kecuali && kecuali.has(idPemilik(h.object))) && !(IRIS.arr.length && terbuangIris(h.point.x, h.point.y, h.point.z)));
+  ray.params.Line.threshold = 0.001;
+  if (garis) { const id = idPemilik(garis.object); garis.object = {userData: {elemId: id, face: 'garis'}}; return [garis]; }
+  for (const rad of [3, 6]) {
+    let terbaik = null;
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4, h = hitObjekDi({clientX: e.clientX + rad * Math.cos(a), clientY: e.clientY + rad * Math.sin(a), shiftKey: e.shiftKey}, kecuali)[0];
+      if (h && (!terbaik || h.distance < terbaik.distance)) terbaik = h;
+    }
+    if (terbaik) return [terbaik];
+  }
+  return hasil;
+}
+function hitObjekDi(e, kecuali) {
+  arahkan(e);
+  ray.params.Line.threshold = 0.001;
   const padat = [], tembus = [], lihat = new Set();
   for (const h of ray.intersectObjects(root.children, true)) {
     const id = h.object.userData.elemId;
@@ -2455,13 +2484,14 @@ function hitObjek(e, kecuali) {
     if (S.tembus && h.object.material && h.object.material.transparent && h.object.material.opacity < 0.4) tembus.push(h); else padat.push(h);
   }
   const jenis = h => (S.elems.get(h.object.userData.elemId) || {}).jenis;
+  // pintu, jendela, atau komponen yang menempel (≤ 10 cm) di balik lantai/plafon didahulukan
   if (padat.length > 1 && BIDANG_LEBAR.has(jenis(padat[0]))) {
-    const i = padat.findIndex(h => BENDA_KECIL.has(jenis(h)));
+    const i = padat.findIndex(h => BENDA_KECIL.has(jenis(h)) && h.distance - padat[0].distance <= 0.10);
     if (i > 0) padat.unshift(...padat.splice(i, 1));
   }
   return [...padat, ...tembus];
 }
-function pilihObjek(e, kecuali) { return hitObjek(e, kecuali)[0] || null; }
+function pilihObjek(e, kecuali, toleran = false) { return hitObjek(e, kecuali, toleran)[0] || null; }
 function titikTanah(e) { arahkan(e); const v = V(); return ray.ray.intersectPlane(bidangTanah, v) ? v : null; }
 // opsi.atas: ujung elemen juga dicari di puncaknya; opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap
 function titikSnap(e, kecuali, opsi = {}) {
@@ -2960,7 +2990,7 @@ menuKonteksEl.className = 'menu-konteks'; menuKonteksEl.hidden = true; menuKonte
 document.body.appendChild(menuKonteksEl);
 function tutupMenuKonteks() { menuKonteksEl.hidden = true; }
 function bukaMenuKonteks(e) {
-  const hits = hitObjek(e);
+  const hits = hitObjek(e, null, true);
   if (hits.length) {
     const t = targetDariKlik(hits[0]);
     if (t && !S.sel.has(t)) { S.sel = new Set([t]); segarPilihan(); }
@@ -3097,7 +3127,7 @@ function operasiSolid(jenis) {
   toast(`${nama} selesai: ${hasil.length} objek hasil.${lewat ? ` ${lewat} objek dilewati karena beda ketinggian.` : ''}`);
 }
 const alatPilih = {
-  petunjuk: '<b>Pilih:</b> klik objek; Ctrl+klik menambah, Shift+klik menambah/mengurangi, Ctrl+Shift+klik mengurangi. Seret kiri→kanan: objek di dalam kotak; kanan→kiri: objek tersentuh. Klik 2× grup/komponen untuk membukanya, objek lain: pilih yang menempel; klik 3×: semua terhubung. Klik kanan: menu.',
+  petunjuk: '<b>Pilih:</b> klik objek; Ctrl+klik menambah, Shift+klik menambah/mengurangi, Ctrl+Shift+klik mengurangi. Seret kiri→kanan: objek di dalam kotak; kanan→kiri: objek tersentuh. Klik 2× grup/komponen untuk membukanya, objek lain: pilih yang menempel; klik 3×: semua terhubung. Alt+klik: objek di belakangnya. Klik kanan: menu.',
   vcb: 'Ukuran',
   tekan: null,
   down(e) {
@@ -3105,11 +3135,12 @@ const alatPilih = {
     if (peg) { alatIris.mulai(peg, e); return; }
     this.tekan = {x: e.clientX, y: e.clientY, awal: new Set(S.sel), kotak: false};
     try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* abaikan */ }
-    const hits = hitObjek(e);
+    const hits = hitObjek(e, null, true);
     if (!hits.length) { this.siklus = null; if (!e.shiftKey && !e.ctrlKey && !e.metaKey) S.sel.clear(); segarPilihan(); return; }
     // klik lagi di titik yang sama memilih objek berikutnya di belakangnya (seperti siklus pilih di CAD)
     const kunci = hits.map(x => x.object.userData.elemId).join(',');
-    const sama = this.siklus && this.siklus.kunci === kunci && Math.hypot(e.clientX - this.siklus.x, e.clientY - this.siklus.y) < 6 && !e.shiftKey;
+    // Alt+klik di titik yang sama memilih objek berikutnya di belakangnya; klik biasa selalu yang paling depan
+    const sama = e.altKey && this.siklus && this.siklus.kunci === kunci && Math.hypot(e.clientX - this.siklus.x, e.clientY - this.siklus.y) < 6;
     const i = sama ? (this.siklus.i + 1) % hits.length : 0;
     this.siklus = {x: e.clientX, y: e.clientY, kunci, i};
     const h = hits[i];
@@ -3134,7 +3165,7 @@ const alatPilih = {
   },
   batal() { this.tekan = null; kotakPilihEl.hidden = true; reset(); },
   dbl(e) {
-    const h = pilihObjek(e);
+    const h = pilihObjek(e, null, true);
     if (!h) return;
     const t = targetKlik(h.object.userData.elemId);
     if (!t) return;
@@ -3143,7 +3174,7 @@ const alatPilih = {
     else pilihTerhubung([t], false);
   },
   tiga(e) {
-    const h = pilihObjek(e);
+    const h = pilihObjek(e, null, true);
     if (!h) return;
     const t = targetKlik(h.object.userData.elemId);
     if (t) pilihTerhubung([t], true);
