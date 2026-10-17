@@ -9336,6 +9336,8 @@ function terapkanLuar(perubahan, oleh = 'claude') {
 function jenisGambar2D() {
   const daftar = [...$('#m-jenis').options].filter(op => !op.value.startsWith('potongan:')).map(op => ({jenis: op.value, nama: op.textContent}));
   for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d)) daftar.push({jenis: 'potongan:' + id, nama: `Potongan ${d.nama}–${d.nama}`});
+  // lembar detail (det:N) dibaca langsung dari model, bukan dari pilihan layar yang bisa usang
+  for (const j of lembarDetailAda()) if (!daftar.some(x => x.jenis === j)) daftar.push({jenis: j, nama: judulLembar(j)});
   return daftar;
 }
 function gambar2D(o = {}) {
