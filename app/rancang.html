@@ -4173,6 +4173,15 @@ function atapGeom(d) {
           const ring = bukaCincin(poly[0]);
           if (ring.length < 3) continue;
           if (Math.max(...ring.map(([x, y]) => Math.abs(fz(x, y)))) < 0.02) { if (lebihKecil) buang.push([ring]); continue; }
+          // Seluruhnya di bawah atap lain dengan jarak bebas (tidak berpotongan), mis. kanopi yang menyelip di bawah teritis:
+          // bagian di bawah teritis tetap utuh; hanya bagian di dalam batas dinding atap lain (tersembunyi di loteng) yang dibuang.
+          if (Math.max(...ring.map(([x, y]) => fz(x, y))) < -0.02) {
+            const e = o.e, bx0 = Math.min(e.x0, e.x1), bx1 = Math.max(e.x0, e.x1), by0 = Math.min(e.y0, e.y1), by1 = Math.max(e.y0, e.y1);
+            let D;
+            try { D = PC.intersection([ring], [[[bx0, by0], [bx1, by0], [bx1, by1], [bx0, by1]]]); } catch { D = [[ring]]; }
+            for (const p of D) { const r2 = bukaCincin(p[0]); if (r2.length >= 3 && Math.abs(luas2D(r2)) > 1e-4) buang.push([r2]); }
+            continue;
+          }
           const sisa = potongSetengah(ring, fz, lebihKecil ? 0.01 : -0.01);
           if (sisa.length >= 3 && Math.abs(luas2D(sisa)) > 1e-4) buang.push([sisa]);
         }
