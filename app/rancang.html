@@ -5402,6 +5402,9 @@ const jari = new Map();
 let navAktif = null;
 canvas.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+// Menu klik kanan RANCANG dibuka saat tombol dilepas, tepat di bawah kursor; event contextmenu sesudahnya jatuh ke menu itu
+// (bukan kanvas) sehingga menu bawaan peramban/aplikasi (Salin, Pilih Semua) ikut muncul bertumpuk. Cegah di luar isian teks.
+document.addEventListener('contextmenu', e => { if (!(e.target instanceof Element) || !e.target.closest('input, textarea, select, [contenteditable="true"]')) e.preventDefault(); });
 canvas.addEventListener('pointerdown', e => {
   canvas.focus({preventScroll: true});
   jari.set(e.pointerId, {x: e.clientX, y: e.clientY});
