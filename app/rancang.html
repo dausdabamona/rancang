@@ -305,6 +305,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
     <button class="alat" data-alat="sapuan" aria-pressed="false" title="Sapuan / Follow Me (J): profil disapukan sepanjang lintasan; Tab mengganti profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 18c3-8 7-10 16-10"/><path d="M3 15h4v5H3z"/></svg><span class="teks">Sapuan</span><kbd>J</kbd></button>
     <button class="alat" data-alat="pindah" aria-pressed="false" title="Pindah (M), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span class="teks">Pindah</span><kbd>M</kbd></button>
     <button class="alat" data-alat="putar" aria-pressed="false" title="Putar (U), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/><circle cx="12" cy="12" r="1.2"/></svg><span class="teks">Putar</span><kbd>U</kbd></button>
+    <button class="alat" data-alat="cermin" aria-pressed="false" title="Cermin (I): klik dua titik garis cermin; tekan Ctrl untuk Cermin + Salin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2.4 2.4"/><path d="M9.5 7 3.5 17h6z"/><path d="M14.5 7l6 10h-6z"/></svg><span class="teks">Cermin</span><kbd>I</kbd></button>
     <button class="alat" data-alat="hapus" aria-pressed="false" title="Hapus (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 20h12M5 15l9-10 6 6-9 9H8z"/></svg><span class="teks">Hapus</span><kbd>E</kbd></button>
     <button class="alat" data-alat="orbit" aria-pressed="false" title="Orbit (O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M17 6.5l2 1.8-2.6.8"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg><span class="teks">Orbit</span><kbd>O</kbd></button>
   </div>
@@ -1631,6 +1632,98 @@ function putarElemen(d, cx, cy, deg) {
     b.lisplangSisi = baru;
   }
   return b;
+}
+/* ===== CERMIN ===== */
+// Pencerminan terhadap garis lurus (sumbu simetri) melalui titik P dengan sudut `deg` derajat dari sumbu X.
+const WARNA_CERMIN = '#9A5BD0';
+const kelipatan45 = deg => Math.abs(deg / 45 - Math.round(deg / 45)) < 1e-6;
+const normSudut180 = deg => r2(((deg % 180) + 180) % 180);
+/**
+ * Pemetaan titik denah untuk pencerminan terhadap garis melalui P dengan sudut deg.
+ * @param {Titik2} P
+ * @param {number} deg
+ * @returns {(p: Titik2) => Titik2}
+ */
+function petaCermin(P, deg) {
+  const t = 2 * deg * Math.PI / 180, bulat = v => (Math.abs(v) < 1e-9 ? 0 : Math.abs(v - 1) < 1e-9 ? 1 : Math.abs(v + 1) < 1e-9 ? -1 : v);
+  const c = bulat(Math.cos(t)), s = bulat(Math.sin(t));
+  return p => { const dx = p.x - P.x, dy = p.y - P.y; return {x: r2(P.x + c * dx + s * dy), y: r2(P.y + s * dx - c * dy)}; };
+}
+/**
+ * Alasan sebuah garis cermin tidak boleh dipakai untuk kumpulan elemen (atau null bila boleh).
+ * Atap hanya bisa dicerminkan pada garis sejajar sumbu; kolom dan pondasi titik pada kelipatan 45°.
+ * @param {ElemenRancang[]} daftar
+ * @param {number} deg
+ * @returns {string | null}
+ */
+function cerminTerlarang(daftar, deg) {
+  if (daftar.some(d => d.jenis === 'atap') && !kelipatan90(deg)) return 'Pilihan memuat atap, jadi garis cermin harus sejajar sumbu merah atau hijau (0° atau 90°).';
+  if (daftar.some(d => (d.jenis === 'kolom' || d.jenis === 'pondasi') && Number.isFinite(/** @type {any} */ (d).x) && Number.isFinite(/** @type {any} */ (d).y)) && !kelipatan45(deg)) return 'Pilihan memuat kolom atau pondasi titik, jadi sudut garis cermin harus kelipatan 45°.';
+  return null;
+}
+/**
+ * Bayangan cermin satu elemen terhadap garis melalui P dengan sudut deg. Urutan awal→akhir dipertahankan;
+ * yang berubah: pintu (`bukaKe`), garis potong (`pandang`), urutan titik alas, tonjolan busur, sapuan, dan mata angin atap.
+ * @template {ElemenRancang} T
+ * @param {T} d
+ * @param {Titik2} P
+ * @param {number} deg
+ * @param {Map<string, string> | null} [peta] definisi komponen asal → definisi cermin
+ * @returns {T}
+ */
+function cerminElemen(d, P, deg, peta) {
+  if (d.jenis === 'gambar2d' || d.jenis === 'detail') return salin(d);
+  if (d.jenis === 'bukaan') { const b = salin(d); if (b.bukaKe === 1 || b.bukaKe === -1) b.bukaKe = /** @type {1 | -1} */ (-b.bukaKe); return b; }
+  const f = petaCermin(P, deg);
+  if (d.jenis === 'instance') {
+    // M·R(rot) = R(2θ − rot)·F: definisi dicerminkan di koordinat lokalnya (F), lalu diputar 2θ − rotasi
+    const b = salin(d);
+    b.posisi = {...d.posisi, ...f(d.posisi)};
+    b.rotasi = r2((((2 * deg - (d.rotasi || 0)) % 360) + 360) % 360);
+    if (peta && peta.has(d.definisi)) b.definisi = /** @type {string} */ (peta.get(d.definisi));
+    return b;
+  }
+  // jenis-jenis berbeda disempitkan lewat `any` di sini: tiap cabang di bawah memeriksa `jenis` dulu
+  const b = /** @type {any} */ (transformasi(d, f, 0)), a = /** @type {any} */ (d);
+  if ((b.jenis === 'volume' || b.jenis === 'plafon') && Array.isArray(b.alas)) {
+    const n = b.alas.length;
+    b.alas.reverse();
+    if (b.jenis === 'volume' && Array.isArray(a.mukaHapus)) b.mukaHapus = a.mukaHapus.map(k => (/^sisi:\d+$/.test(k) ? 'sisi:' + ((((n - 2 - Number(k.slice(5))) % n) + n) % n) : k));
+  }
+  if ((b.jenis === 'volume' || b.jenis === 'plafon') && Array.isArray(b.lubang)) b.lubang = b.lubang.map(r => r.reverse());
+  if (b.jenis === 'volume' && b.bentuk === 'busur') b.tonjolan = r2(-a.tonjolan);
+  if (b.jenis === 'bidang') b.titik.reverse();
+  if (b.jenis === 'potong') b.pandang = -a.pandang;
+  if (b.jenis === 'sapuan') {
+    b.balik = !a.balik;
+    if (a.geser) b.geser = {...a.geser, u: a.geser.u ? r2(-a.geser.u) : 0};
+  }
+  if (b.jenis === 'atap' && a.lisplangSisi) {
+    const vs = {timur: [1, 0], utara: [0, 1], barat: [-1, 0], selatan: [0, -1]}, o = f({x: 0, y: 0});
+    /** @type {Record<string, any>} */
+    const baru = {};
+    for (const [k, v] of Object.entries(a.lisplangSisi)) baru[k.replace(/timur|utara|barat|selatan/, w => { const q = f({x: vs[w][0], y: vs[w][1]}); return arahVektor(q.x - o.x, q.y - o.y); })] = v;
+    b.lisplangSisi = baru;
+  }
+  return b;
+}
+/**
+ * Definisi komponen baru "<nama> (cermin)" untuk tiap komponen yang ikut dicerminkan; isinya dicerminkan di koordinat lokal.
+ * @param {Iterable<string>} idEl id elemen yang ikut dicerminkan
+ * @returns {{peta: Map<string, string>, tulis: Perubahan[]}}
+ */
+function siapkanDefinisiCermin(idEl) {
+  const peta = new Map(), tulis = [], nid = pemberiId();
+  for (const id of idEl) {
+    const d = S.elems.get(id);
+    if (!d || d.jenis !== 'instance' || peta.has(d.definisi)) continue;
+    const def = S.komp.get(d.definisi);
+    if (!def) continue;
+    const kid = nid('K');
+    peta.set(d.definisi, kid);
+    tulis.push({id: kid, sesudah: {...salin(def), nama: (def.nama || d.definisi) + ' (cermin)', elemen: def.elemen.map(e => cerminElemen(e, {x: 0, y: 0}, 0))}});
+  }
+  return {peta, tulis};
 }
 function keDunia(e, inst) {
   const t = (inst.rotasi || 0) * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
@@ -3691,9 +3784,10 @@ function keluarKomponen() {
  * @param {number} dy
  * @param {number} [dz]
  * @param {((d: ElemenRancang) => ElemenRancang) | null} [ubah] pengubah tambahan tiap salinan (mis. putar)
+ * @param {((d: ElemenRancang) => ElemenRancang) | null} [ubahBuk] pengubah tambahan tiap pintu/jendela yang ikut tersalin (mis. cermin)
  * @returns {{tulis: Perubahan[], baruAtas: string[]}}
  */
-function buatSalinan(items, dx, dy, dz = 0, ubah = null) {
+function buatSalinan(items, dx, dy, dz = 0, ubah = null, ubahBuk = null) {
   const nid = pemberiId(), tulis = [], baruAtas = [];
   const salinEl = (eid, grupBaru) => {
     const d = S.elems.get(eid);
@@ -3702,7 +3796,7 @@ function buatSalinan(items, dx, dy, dz = 0, ubah = null) {
     if (grupBaru !== undefined) { if (grupBaru) b.grup = grupBaru; else delete b.grup; }
     tulis.push({id, sesudah: b});
     // pintu dan jendela ikut tersalin bersama dindingnya
-    if (d.jenis === 'dinding') for (const [, x] of S.elems) if (x.jenis === 'bukaan' && x.dinding === eid) tulis.push({id: nid('B'), sesudah: {...salin(x), dinding: id}});
+    if (d.jenis === 'dinding') for (const [, x] of S.elems) if (x.jenis === 'bukaan' && x.dinding === eid) tulis.push({id: nid('B'), sesudah: {...(ubahBuk ? ubahBuk(x) : salin(x)), dinding: id}});
     return id;
   };
   const salinGr = (gid, indukBaru) => {
@@ -4838,8 +4932,153 @@ const alatPutar = {
   }
 };
 
+// Cermin seperti AutoCAD: pilih benda → klik dua titik garis cermin. Bawaan: benda asal diganti bayangannya;
+// Ctrl = Cermin + Salin (asal tetap). Beda dengan Pindah + Salin: salinan Pindah hanya digeser, salinan Cermin terbalik kiri-kanan.
+const alatCermin = {
+  vcb: 'Sudut',
+  get petunjuk() {
+    const j = this.salin ? '<b>Cermin + Salin:</b> ' : '<b>Cermin:</b> ';
+    const ket = this.salin
+      ? 'Benda asal tetap; bayangannya menjadi salinan baru yang terbalik kiri-kanan. Tekan Ctrl lagi untuk kembali ke Cermin biasa.'
+      : 'Benda asal diganti bayangannya. Ctrl = Cermin + Salin (asal tetap). Beda dengan Pindah + Salin: salinan Cermin terbalik kiri-kanan, bukan hanya digeser.';
+    if (!this.A) return j + 'klik benda (bila belum dipilih) sekaligus titik pertama garis cermin (kotak hijau = ujung, bulat biru muda = titik tengah). ' + ket;
+    return j + 'klik titik kedua garis cermin. Garis ungu putus-putus = sumbu simetri; sudut menempel tiap 15°, Shift = sudut bebas, panah → / ← = sejajar sumbu X / Y. Atau ketik sudut garis lalu Enter (0° = sejajar sumbu merah). ' + ket;
+  },
+  A: null, deg: null, items: null, asli: null, defCermin: null, salin: false, dipasang: false,
+  sibuk() { return !!this.A; },
+  // kembalikan tampilan asli, buang definisi komponen sementara, kosongkan keadaan
+  bersih() {
+    if (this.dipasang && this.asli) for (const id of this.asli.keys()) pasang(id);
+    if (this.defCermin) for (const t of this.defCermin.tulis) S.komp.delete(t.id);
+    this.A = this.deg = this.items = this.asli = this.defCermin = null; this.dipasang = false;
+    reset(); setVcb(''); lepasKunci(); S.label = [];
+  },
+  batal() { this.bersih(); tulisPetunjuk(); },
+  ubahSalin() { this.salin = !this.salin; if (this.A && this.deg != null) this.gambar(); tulisPetunjuk(); },
+  // titik yang ditunjuk: ujung/tengah benda lain didahulukan, selain itu bidang datar setinggi titik pertama
+  tunjuk(e) {
+    const s = titikSnap(e, new Set(this.asli.keys()), {atas: true, tengah: true});
+    if (s && (s.jenis === 'ujung' || s.jenis === 'tengah')) return {x: s.x, y: s.y, snap: s};
+    arahkan(e);
+    const g = V();
+    if (!ray.ray.intersectPlane(new THREE.Plane(V(0, 0, 1), -this.A.z), g)) return null;
+    return {x: g.x, y: g.y, snap: null};
+  },
+  move(e) {
+    if (!this.A) { S.snap = titikSnap(e, null, {atas: true, tengah: true}); minta(); return; }
+    const q = this.tunjuk(e);
+    if (!q) return;
+    S.snap = q.snap;
+    const A = this.A, r = Math.hypot(q.x - A.x, q.y - A.y);
+    if (r < 0.02) { this.deg = null; bersihPratinjau(); S.label = []; minta(); return; }
+    let deg = Math.atan2(q.y - A.y, q.x - A.x) * 180 / Math.PI;
+    if (S.kunciPaksa === 'x') deg = 0;
+    else if (S.kunciPaksa === 'y') deg = 90;
+    else if (q.snap) deg = Math.round(deg * 100) / 100;
+    else deg = e.shiftKey ? Math.round(deg * 10) / 10 : Math.round(deg / 15) * 15;
+    this.deg = normSudut180(deg);
+    this.gambar();
+  },
+  // bayangan semua benda terpilih untuk garis cermin sekarang
+  bayangan(deg) {
+    const hasil = new Map();
+    for (const [id, d] of this.asli) {
+      const m = cerminElemen(d, this.A, deg, this.defCermin.peta);
+      // pratinjau saja: arah buka otomatis dijadikan eksplisit dari dinding asal supaya tampilannya benar sebelum diterapkan
+      if (d.jenis === 'bukaan' && m.jenis === 'bukaan' && d.tipe === 'pintu' && !(d.bukaKe === 1 || d.bukaKe === -1)) m.bukaKe = /** @type {1 | -1} */ (-arahBukaPintu(d, S.elems.get(d.dinding)));
+      hasil.set(id, m);
+    }
+    return hasil;
+  },
+  gambar() {
+    const A = this.A, deg = this.deg, rad = deg * Math.PI / 180, ux = Math.cos(rad), uy = Math.sin(rad), z = A.z || 0;
+    bersihPratinjau();
+    garisPutus([[A.x - ux * 60, A.y - uy * 60, z], [A.x + ux * 60, A.y + uy * 60, z]], WARNA_CERMIN);
+    const nama = this.salin ? 'Cermin + Salin' : 'Cermin';
+    const larang = cerminTerlarang([...this.asli.values()], deg);
+    // asal dikembalikan bila bayangan tidak dipasang menggantikannya (Cermin + Salin atau garis tidak sah)
+    if ((this.salin || larang) && this.dipasang) { for (const id of this.asli.keys()) pasang(id); this.dipasang = false; }
+    if (larang) { S.label = [{x: A.x, y: A.y, z: z + 0.1, t: 'Tidak bisa: ' + larang}]; minta(); return; }
+    const hasil = this.bayangan(deg);
+    if (this.salin) {
+      // asal tetap; bayangan digambar sebagai garis ungu
+      let n = 0;
+      for (const [id, m] of hasil) {
+        if (m.jenis === 'bukaan' || n > 300) continue;
+        for (const g of geometriElemen(id, m)) {
+          const t = titikKunci(g);
+          if (t.length < 2) continue;
+          const zt = (g.z0 || 0) + (g.tinggi || 0);
+          garisPratinjau(t.map(([x, y]) => [x, y, zt]), WARNA_CERMIN, t.length >= 3);
+          n++;
+        }
+      }
+    } else {
+      for (const [id, m] of hasil) pasang(id, m);
+      this.dipasang = true;
+    }
+    S.label = [{x: A.x + ux * 0.8, y: A.y + uy * 0.8, z: z + 0.1, t: `${nama} · garis ${fmtSudut(deg)}`}];
+    setVcb(fmt(deg, Number.isInteger(deg) ? 0 : 1)); minta();
+  },
+  down(e) {
+    if (this.A) {
+      this.move(e);
+      if (this.deg == null) return toast('Titik kedua terlalu dekat dengan titik pertama. Klik titik yang lebih jauh.');
+      this.selesai(this.deg);
+      return;
+    }
+    // titik pertama: ujung/tengah benda bila ada; benda yang diklik ikut terpilih bila belum ada pilihan (seperti Pindah)
+    const s0 = titikSnap(e, null, {atas: true, tengah: true});
+    let h = pilihObjek(e);
+    if (!h && s0 && s0.id && s0.jenis !== 'grid') h = /** @type {any} */ ({object: {userData: {elemId: s0.id}}, point: V(s0.x, s0.y, s0.z || 0)});
+    if (h && !S.sel.size) {
+      const t = targetDariKlik(h);
+      if (t === null) return toast('Saat mengedit komponen, hanya isi komponen yang bisa dicerminkan.');
+      if (t) { S.sel.add(t); segarPilihan(); }
+    }
+    if (!S.sel.size) return toast('Klik benda yang mau dicerminkan.');
+    const items = [...S.sel].filter(id => kodeOf(id) === 'G' || !['bukaan', 'gambar2d', 'detail'].includes(S.elems.get(id)?.jenis));
+    const {el} = ekspansi(items);
+    // pintu/jendela ikut dindingnya; gambar 2D dan detail tidak dicerminkan
+    for (const id of [...el]) { const d = S.elems.get(id); if (!d || d.jenis === 'gambar2d' || d.jenis === 'detail' || (d.jenis === 'bukaan' && !el.has(d.dinding))) el.delete(id); }
+    if (![...el].some(id => S.elems.get(id).jenis !== 'bukaan')) return toast('Pintu dan jendela menempel pada dinding. Cerminkan dindingnya.');
+    const s = s0 && s0.jenis !== 'grid' ? s0 : h ? {x: r2(h.point.x), y: r2(h.point.y), z: r2(h.point.z)} : s0;
+    if (!s) return;
+    this.A = {x: s.x, y: s.y, z: s.z || 0};
+    this.items = items;
+    this.asli = new Map([...el].map(id => [id, salin(S.elems.get(id))]));
+    // definisi komponen cermin dipasang sementara agar salinan komponen bisa digambar; dibuang di bersih()
+    this.defCermin = siapkanDefinisiCermin(el);
+    for (const t of this.defCermin.tulis) S.komp.set(t.id, salin(t.sesudah));
+    this.deg = null;
+    tulisPetunjuk(); minta();
+  },
+  selesai(deg) {
+    const A = this.A, asli = this.asli, items = this.items, salinan = this.salin, dc = this.defCermin;
+    this.bersih(); tulisPetunjuk();
+    if (!Number.isFinite(deg)) return;
+    const larang = cerminTerlarang([...asli.values()], deg);
+    if (larang) return toast(larang + ' Tidak ada yang diubah.');
+    if (salinan) {
+      const {tulis, baruAtas} = buatSalinan(items, 0, 0, 0, d => cerminElemen(d, A, deg, dc.peta), x => cerminElemen(x, A, deg, dc.peta));
+      terapkan([...dc.tulis, ...tulis]);
+      S.sel = new Set(baruAtas); segarPilihan();
+      toast(`${baruAtas.length} objek disalin dan dicerminkan (garis ${fmtSudut(deg)}). Ctrl+Z untuk mengembalikan.`);
+    } else {
+      terapkan([...dc.tulis, ...[...asli].map(([id, d]) => ({id, sesudah: cerminElemen(d, A, deg, dc.peta)}))]);
+      toast(`${items.length} objek dicerminkan (garis ${fmtSudut(deg)}). Ctrl+Z untuk mengembalikan.`);
+    }
+  },
+  ketik(v) {
+    if (!this.A) return toast('Klik benda dan titik pertama garis cermin dulu, lalu ketik sudut garisnya.');
+    const deg = angka(v);
+    if (!Number.isFinite(deg)) return toast('Tulis sudut garis cermin dalam derajat, misalnya 0, 90, atau 45.');
+    this.selesai(normSudut180(deg));
+  }
+};
+
 const alatHapus = {
-  petunjuk: '<b>Hapus:</b> klik objek untuk menghapusnya. Grup terhapus beserta isinya. Ctrl+Z mengembalikan.',
+  petunjuk:'<b>Hapus:</b> klik objek untuk menghapusnya. Grup terhapus beserta isinya. Ctrl+Z mengembalikan.',
   vcb: 'Ukuran',
   move(e) { const h = pilihObjek(e); soroti(h && targetKlik(h.object.userData.elemId) ? h.object : null); },
   batal() { soroti(null); },
@@ -6686,19 +6925,21 @@ function htmlPlafon(id, d) {
   <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
 
-const ALAT = {pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, hapus: alatHapus, orbit: alatOrbit, iris: alatIris};
-const UBAH = new Set(['bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'hapus']);
+const ALAT = {pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, cermin: alatCermin, hapus: alatHapus, orbit: alatOrbit, iris: alatIris};
+const UBAH = new Set(['bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'cermin', 'hapus']);
 const alat = () => ALAT[S.tool];
 function batalAlat() { const a = alat(); if (a.batal) a.batal(); else reset(); lepasKunci(); }
 const NAMA_SUMBU = {x: 'sumbu X (merah)', y: 'sumbu Y (hijau)', z: 'sumbu Z (biru)'};
 function tulisPetunjuk() {
   const panah = S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' ? ` Panah → kunci X, ← kunci Y${S.tool === 'pindah' ? ', ↑ kunci Z' : ''}, ↓ lepas.` : '';
+  const panahCermin = S.tool === 'cermin' ? ' Panah → garis sejajar sumbu X, ← sejajar sumbu Y, ↓ lepas.' : '';
   const kb = S.tool === 'pindah' && alatPindah.kunciBebas;
   const kunci = S.kunciPaksa ? ` <b>Terkunci ke ${NAMA_SUMBU[S.kunciPaksa]}.</b>` : kb ? ` <b>Terkunci ${kb.jenis === 'bidang' ? 'pada bidang muka' : 'sejajar tepi'} (lepas Shift untuk bebas).</b>` : '';
-  $('#petunjuk').innerHTML = alat().petunjuk + panah + kunci + ' <span>Tombol tengah: putar · Shift+tengah: geser · Scroll: zoom.</span>';
+  $('#petunjuk').innerHTML = alat().petunjuk + panah + panahCermin + kunci + ' <span>Tombol tengah: putar · Shift+tengah: geser · Scroll: zoom.</span>';
 }
 function lepasKunci() { if (S.kunciPaksa) { S.kunciPaksa = null; tulisPetunjuk(); } }
 function aturKunci(k) {
+  if (k === 'z' && S.tool === 'cermin') return toast('Garis cermin selalu di bidang lantai. Kunci sumbu Z tidak dipakai di sini.');
   if (k === 'z' && S.tool !== 'pindah') return toast('Dinding selalu digambar di bidang lantai. Sumbu Z dipakai saat Pindah.');
   S.kunciPaksa = k && S.kunciPaksa !== k ? k : null;
   tulisPetunjuk();
@@ -6709,6 +6950,7 @@ function setAlat(nama) {
   if (UBAH.has(nama) && !S.bisaUbah) { toast('Akun ini hanya bisa melihat.'); return; }
   batalAlat();
   if (nama === 'pindah') alatPindah.salin = false;
+  if (nama === 'cermin') alatCermin.salin = false;
   S.tool = nama;
   document.querySelectorAll('[data-alat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alat === ({ringbalk: 'slof', lingkaran: 'persegi', busur: 'persegi', offset: 'dorong', plafon: 'atap'}[nama] || nama))));
   tulisPetunjuk();
@@ -6825,7 +7067,7 @@ vcb.addEventListener('keydown', e => {
     const v = vcb.value;
     S.ketik = false; vcb.value = '';
     canvas.focus({preventScroll: true});
-    if (alat().ketik) alat().ketik(alat().vcb === 'Sudut' ? v : keMeter(v)); else toast('Pilih alat Persegi, Dinding, Push/Pull, Pindah, atau Putar untuk memakai ukuran ketik.');
+    if (alat().ketik) alat().ketik(alat().vcb === 'Sudut' ? v : keMeter(v)); else toast('Pilih alat Persegi, Dinding, Push/Pull, Pindah, Putar, atau Cermin untuk memakai ukuran ketik.');
   } else if (e.key === 'Escape') {
     S.ketik = false; vcb.value = ''; canvas.focus({preventScroll: true});
   }
@@ -6886,6 +7128,7 @@ window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
   if (e.key === 'Control' && S.tool === 'pindah' && !e.repeat) { alatPindah.ubahSalin(); return; }
   if (e.key === 'Control' && S.tool === 'putar' && !e.repeat) { alatPutar.ubahSalin(); return; }
+  if (e.key === 'Control' && S.tool === 'cermin' && !e.repeat) { alatCermin.ubahSalin(); return; }
   // salinan putar berderet: 4x atau x4
   if (S.tool === 'putar' && alatPutar.terakhir && !alatPutar.pusat && (k === 'x' || e.key === '*') && !ctrl) { e.preventDefault(); S.ketik = true; vcb.value = e.key; vcb.focus(); return; }
   // Shift saat Pindah: kunci ke yang sedang disentuh/terdeteksi, seperti SketchUp — muka → "pada bidang",
@@ -6904,7 +7147,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Enter' && alat().dariPilihan && !(alat().sibuk && alat().sibuk())) { e.preventDefault(); alat().dariPilihan(); return; }
   if (e.key.startsWith('Arrow') && S.tool === 'pilih' && S.sel.size && !ctrl) { e.preventDefault(); geserPilihan(e.key, e.shiftKey); return; }
   const PANAH = {ArrowRight: 'x', ArrowLeft: 'y', ArrowUp: 'z', ArrowDown: null};
-  if (e.key in PANAH && (S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' || S.tool === 'busur')) { e.preventDefault(); if (!e.repeat) aturKunci(PANAH[e.key]); return; }
+  if (e.key in PANAH && (S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' || S.tool === 'busur' || S.tool === 'cermin')) { e.preventDefault(); if (!e.repeat) aturKunci(PANAH[e.key]); return; }
   if (ctrl && k === 's') { e.preventDefault(); simpanProyek(); return; }
   if (ctrl && k === 'o') { e.preventDefault(); if (S.bisaUbah) bukaProyek(); return; }
   if (ctrl && k === 'z' && !e.shiftKey) { e.preventDefault(); urungkan(); return; }
@@ -6929,7 +7172,7 @@ window.addEventListener('keydown', e => {
   if (e.shiftKey && k === 'z') { zoomSemua(); return; }
   if (k === 'g' && !e.shiftKey) { if (S.bisaUbah) jadikanKomponen(); return; }
   if (k === 'h' && !e.shiftKey) { aturTembus(); return; }
-  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', k: 'kolom', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', e: 'hapus', o: 'orbit'};
+  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', k: 'kolom', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', e: 'hapus', o: 'orbit'};
   if (peta[k] && !e.shiftKey) { e.preventDefault(); setAlat(peta[k]); }
 });
 document.querySelectorAll('[data-alat]').forEach(b => b.addEventListener('click', () => setAlat(b.dataset.alat)));
