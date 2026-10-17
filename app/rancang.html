@@ -564,6 +564,29 @@ const angka = s => {
   if (s === '' || s === '-' || s === '.') return NaN;
   return Number(s);
 };
+// Satuan jarak untuk kotak ukur dan label saat menggambar; data model tetap dalam meter
+const satuanCm = () => S.setel.satuan === 'cm';
+const fmtCm = cm => fmt(cm, Math.abs(cm - Math.round(cm)) > 1e-6 ? 1 : 0);
+const fmtV = n => (satuanCm() ? fmtCm(n * 100) : fmt(n));
+// Teks kotak ukur → meter. Akhiran mm/cm/m selalu dihormati; angka tanpa akhiran mengikuti satuan proyek.
+// Bagian lain (sudut, "4x", "/4") dibiarkan apa adanya.
+const labelVcb = () => { const n = alat().vcb || 'Ukuran'; return n === 'Sudut' ? n + ' (°)' : n + (satuanCm() ? ' (cm)' : ' (m)'); };
+function keMeter(teks) {
+  return String(teks ?? '').split(';').map(b => {
+    const m = b.trim().match(/^([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))\s*(mm|cm|m)?$/i);
+    if (!m) return b;
+    const v = Number(m[1].replace(',', '.')), sat = (m[2] || (satuanCm() ? 'cm' : 'm')).toLowerCase();
+    return String(r2(v * {mm: 0.001, cm: 0.01, m: 1}[sat]));
+  }).join(';');
+}
+// Label ukuran di layar: "2,50 m" → "250 cm" bila satuan proyek cm (termasuk "2,00 × 3,00 m")
+function labelSatuan(t) {
+  if (!satuanCm() || !t) return t;
+  const cm = x => (x[0] === '+' ? '+' : '') + fmtCm(Number(x.replace(/\./g, '').replace(',', '.')) * 100);
+  const ANGKA = '[+-]?\\d{1,3}(?:\\.\\d{3})*(?:,\\d+)?';
+  return t.replace(new RegExp(`(${ANGKA}) × (${ANGKA}) m(?![²³\\w])`, 'g'), (_, a, b) => `${cm(a)} × ${cm(b)} cm`)
+    .replace(new RegExp(`(${ANGKA}) m(?![²³\\w])`, 'g'), (_, a) => `${cm(a)} cm`);
+}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const salin = o => (o == null ? o : JSON.parse(JSON.stringify(o)));
 const batas = (v, a, b) => Math.min(Math.max(v, a), b);
@@ -2316,7 +2339,7 @@ const alatIris = {
     if (a.jenis === 'datar') IRIS.datar = r2(a.awal + t); else IRIS.geser = r2(a.awal + t);
     const p = a.asal.clone().addScaledVector(a.n, t);
     S.label = [{x: p.x, y: p.y, z: p.z, t: a.jenis === 'datar' ? `irisan ${IRIS.datar >= 0 ? '+' : ''}${fmt(IRIS.datar)} m` : `geser ${t >= 0 ? '+' : ''}${fmt(t)} m`}];
-    setVcb(fmt(t)); minta();
+    setVcb(fmtV(t)); minta();
   },
   move(e) { if (this.aktif) this.terap(this.hitung(e)); },
   down() { this.selesai(); },
@@ -2684,7 +2707,7 @@ function posisiOverlay() {
     v.set(L.x, L.y, L.z || 0).project(camera);
     if (v.z > 1) { el.hidden = true; return; }
     el.hidden = false;
-    el.textContent = L.t;
+    el.textContent = labelSatuan(L.t);
     el.className = 'lbl' + (L.k ? ' ' + L.k : '');
     el.style.transform = `translate(${(v.x + 1) / 2 * w}px,${(1 - v.y) / 2 * h}px) translate(${L.k && !L.k.startsWith('anot peil') ? '-50%,-50%' : L.k ? '0,-50%' : '-50%,-150%'})`;
   });
@@ -3240,7 +3263,7 @@ const alatPersegi = {
     garisPratinjau(p, T.accent, true);
     if (Math.abs(x2 - x1) > 0.001 && Math.abs(y2 - y1) > 0.001) wajahPratinjau(p, 0);
     S.label = [{x: (x1 + x2) / 2, y: y1, t: fmt(Math.abs(x2 - x1)) + ' m'}, {x: x2, y: (y1 + y2) / 2, t: fmt(Math.abs(y2 - y1)) + ' m'}];
-    setVcb(fmt(Math.abs(x2 - x1)) + '; ' + fmt(Math.abs(y2 - y1)));
+    setVcb(fmtV(Math.abs(x2 - x1)) + '; ' + fmtV(Math.abs(y2 - y1)));
   },
   down(e) {
     const s = titikSnap(e);
@@ -3285,7 +3308,7 @@ const alatDinding = {
         garisPratinjau([[this.a.x, this.a.y], [s.x, s.y]], kunci === 'x' ? T.axX : kunci === 'y' ? T.axY : T.accent);
         S.label = [{x: (this.a.x + s.x) / 2, y: (this.a.y + s.y) / 2, t: fmt(L) + ' m'}];
       }
-      setVcb(fmt(L));
+      setVcb(fmtV(L));
     }
     minta();
   },
@@ -3359,7 +3382,7 @@ const alatDorong = {
     const z = (d.z0 || 0) + 0.02;
     garisPratinjau(sumbu === 'x' ? [[r2(v), y0, z], [r2(v), y1, z]] : [[x0, r2(v), z], [x1, r2(v), z]], T.accent);
     S.label = [{x: sumbu === 'x' ? v : (x0 + x1) / 2, y: sumbu === 'y' ? v : (y0 + y1) / 2, z, t: `as ${fmt(x1 - x0)} × ${fmt(y1 - y0)} m`}];
-    setVcb(fmt(sumbu === 'x' ? x1 - x0 : y1 - y0));
+    setVcb(fmtV(sumbu === 'x' ? x1 - x0 : y1 - y0));
     minta();
   },
   hitung(e) {
@@ -3382,7 +3405,7 @@ const alatDorong = {
     a.d = jarak; a.baru = baru;
     pasang(a.id, baru);
     S.label = [{x: a.p.x, y: a.p.y, z: a.p.z, t: (jarak >= 0 ? '+' : '') + fmt(jarak) + ' m'}];
-    setVcb(fmt(jarak));
+    setVcb(fmtV(jarak));
     minta();
   },
   down(e) {
@@ -3499,7 +3522,7 @@ const alatPindah = {
     const w = S.elems.get(b.dinding), {ux, uy} = infoDinding(w), uc = b.jarak + b.lebar / 2;
     S.label = [{x: w.awal.x + ux * uc, y: w.awal.y + uy * uc, z: (w.z0 || 0) + (b.ambang || 0) + b.tinggi + 0.25,
       t: salah ? salah : `${w.nama || b.dinding} · jarak ${fmt(b.jarak)} m`}];
-    setVcb(fmt(b.jarak)); minta();
+    setVcb(fmtV(b.jarak)); minta();
   },
   // Inferensi seperti SketchUp: kunci sumbu (panah atau Shift) diproyeksikan ke titik yang disentuh; tanpa kunci, titik benda
   // didahulukan, lalu sumbu merah/hijau/biru bila kursor sejajar sumbu di layar, terakhir bidang atau lantai.
@@ -3598,7 +3621,7 @@ const alatPindah = {
     const jenisSnap = inf && inf.snap && inf.snap.jenis;
     const ket = {ujung: 'ke ujung', tengah: 'ke titik tengah', tepi: 'pada tepi', bidang: 'pada bidang', lacak: 'sejajar titik lacak'}[jenisSnap] || '';
     S.label = [{x: (A[0] + B[0]) / 2, y: (A[1] + B[1]) / 2, z: (A[2] + B[2]) / 2, t: (this.salin ? 'Salin ' : '') + fmt(L, L < 1 && Math.abs(L * 100 - Math.round(L * 100)) > 1e-6 ? 3 : 2) + ' m' + [namaSumbu, ket].filter(Boolean).map(x => ' · ' + x).join('')}];
-    setVcb(fmt(L)); minta();
+    setVcb(fmtV(L)); minta();
   },
   down(e) {
     if (this.dasar) { this.selesai(); return; }
@@ -3843,7 +3866,7 @@ function buatAlatBukaan(tipe) {
       const [x1, y1] = P(jarak), [x2, y2] = P(jarak + uk.lebar);
       garisPratinjau([[x1, y1, z0], [x2, y2, z0], [x2, y2, z1], [x1, y1, z1]], salah ? tok('--danger') : T.accent, true);
       S.label = [{x: (x1 + x2) / 2, y: (y1 + y2) / 2, z: z1 + 0.2, t: `${fmt(jarak)} m dari ujung`}];
-      setVcb(fmt(uk.lebar) + '; ' + fmt(uk.tinggi) + (pintu ? '' : '; ' + fmt(uk.ambang)));
+      setVcb(fmtV(uk.lebar) + '; ' + fmtV(uk.tinggi) + (pintu ? '' : '; ' + fmtV(uk.ambang)));
       minta();
     },
     down(e) {
@@ -3931,7 +3954,7 @@ const alatAtap = {
     else for (const s of geo.permukaan) garisPratinjau(s.titik, T.accent, true);
     garisPratinjau([[d.x0, d.y0, d.z0], [d.x1, d.y0, d.z0], [d.x1, d.y1, d.z0], [d.x0, d.y1, d.z0]], T.accent, true);
     S.label = [{x: (d.x0 + d.x1) / 2, y: d.y0, z: d.z0, t: fmt(d.x1 - d.x0) + ' m'}, {x: d.x1, y: (d.y0 + d.y1) / 2, z: d.z0, t: fmt(d.y1 - d.y0) + ' m'}];
-    setVcb(fmt(d.x1 - d.x0) + '; ' + fmt(d.y1 - d.y0));
+    setVcb(fmtV(d.x1 - d.x0) + '; ' + fmtV(d.y1 - d.y0));
   },
   move(e) {
     const s = titikSnap(e, null, {atas: true, bidangZ: this.p1 ? this.p1.z : 0});
@@ -4070,7 +4093,7 @@ function buatAlatGaris(cfg) {
           garisPratinjau([[this.a.x, this.a.y, cfg.z()], [s.x, s.y, cfg.z()]], kunci === 'x' ? T.axX : kunci === 'y' ? T.axY : T.accent);
           S.label = [{x: (this.a.x + s.x) / 2, y: (this.a.y + s.y) / 2, z: cfg.z(), t: fmt(L) + ' m'}];
         }
-        setVcb(fmt(L));
+        setVcb(fmtV(L));
       }
       minta();
     },
@@ -4327,7 +4350,7 @@ const alatPotong = {
         garisPratinjau([[this.a.x, this.a.y, 0.03], [s.x, s.y, 0.03]], kunci === 'x' ? T.axX : kunci === 'y' ? T.axY : T.accent);
         S.label = [{x: (this.a.x + s.x) / 2, y: (this.a.y + s.y) / 2, z: 0, t: fmt(L) + ' m'}];
       }
-      setVcb(fmt(L));
+      setVcb(fmtV(L));
     }
     minta();
   },
@@ -4529,7 +4552,7 @@ const alatLingkaran = {
         garisPratinjau(p.map(([x, y]) => [x, y, z]), T.accent, true); wajahPratinjau(p, z);
         garisPratinjau([[this.p1.x, this.p1.y, z], [s.x, s.y, z]], T.accent);
         S.label = [{x: (this.p1.x + s.x) / 2, y: (this.p1.y + s.y) / 2, z, t: 'r ' + fmt(this.r) + ' m'}];
-        setVcb(fmt(this.r));
+        setVcb(fmtV(this.r));
       }
     }
     minta();
@@ -4574,7 +4597,7 @@ const alatBusur = {
         garisPratinjau(g.pts.map(([x, y]) => [x, y, z]), T.accent, true); wajahPratinjau(g.pts, z);
         S.label = [{x: g.puncak[0], y: g.puncak[1], z, t: `tonjolan ${fmt(Math.abs(this.h))} m · r ${fmt(g.R)} m`}];
       }
-      setVcb(fmt(Math.abs(this.h))); S.snap = null; minta();
+      setVcb(fmtV(Math.abs(this.h))); S.snap = null; minta();
       return;
     }
     let s = titikSnap(e, null, {atas: true}), kunci = null;
@@ -4584,7 +4607,7 @@ const alatBusur = {
       garisPratinjau([[this.a.x, this.a.y, this.a.z || 0], [s.x, s.y, this.a.z || 0]], kunci === 'x' ? T.axX : kunci === 'y' ? T.axY : T.accent);
       const L = Math.hypot(s.x - this.a.x, s.y - this.a.y);
       S.label = [{x: (this.a.x + s.x) / 2, y: (this.a.y + s.y) / 2, z: this.a.z || 0, t: fmt(L) + ' m'}];
-      setVcb(fmt(L));
+      setVcb(fmtV(L));
     }
     minta();
   },
@@ -4646,7 +4669,7 @@ const alatOffset = {
     a.jarak = jarak; bersihPratinjau(); S.label = [];
     const hasil = this.hasil(jarak);
     if (hasil && hasil.p) { garisPratinjau(hasil.p.map(([x, y]) => [x, y, a.z]), T.accent, true); S.label = [{x: hasil.p[0][0], y: hasil.p[0][1], z: a.z, t: (jarak > 0 ? '+' : '') + fmt(jarak) + ' m'}]; }
-    setVcb(fmt(jarak)); minta();
+    setVcb(fmtV(jarak)); minta();
   },
   hasil(jarak) {
     const a = this.aktif, d = a.d;
@@ -5401,7 +5424,7 @@ function setAlat(nama) {
   S.tool = nama;
   document.querySelectorAll('[data-alat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alat === ({ringbalk: 'slof', lingkaran: 'persegi', busur: 'persegi', offset: 'dorong', plafon: 'atap'}[nama] || nama))));
   tulisPetunjuk();
-  $('#vcb-label').textContent = alat().vcb;
+  $('#vcb-label').textContent = labelVcb();
   // tombol bersama menampilkan nama alat yang sedang aktif
   for (const [tb, anggota] of [['atap', ['atap', 'plafon']], ['persegi', ['persegi', 'lingkaran', 'busur']], ['dorong', ['dorong', 'offset']], ['slof', ['slof', 'ringbalk']]]) {
     const el = document.querySelector(`[data-alat="${tb}"] .teks`);
@@ -5511,7 +5534,7 @@ vcb.addEventListener('keydown', e => {
     const v = vcb.value;
     S.ketik = false; vcb.value = '';
     canvas.focus({preventScroll: true});
-    if (alat().ketik) alat().ketik(v); else toast('Pilih alat Persegi, Dinding, Push/Pull, Pindah, atau Putar untuk memakai ukuran ketik.');
+    if (alat().ketik) alat().ketik(alat().vcb === 'Sudut' ? v : keMeter(v)); else toast('Pilih alat Persegi, Dinding, Push/Pull, Pindah, atau Putar untuk memakai ukuran ketik.');
   } else if (e.key === 'Escape') {
     S.ketik = false; vcb.value = ''; canvas.focus({preventScroll: true});
   }
@@ -5538,7 +5561,7 @@ function geserPilihan(kunci, besar) {
     if (d.jenis === 'bukaan' && b.jarak === d.jarak) { toast('Bukaan sudah di ujung dinding.'); continue; }
     tulis.push({id, sesudah: b});
   }
-  if (tulis.length) { terapkan(tulis); setVcb(fmt(langkah)); }
+  if (tulis.length) { terapkan(tulis); setVcb(fmtV(langkah)); }
 }
 function tekanEsc() {
   if (!menuKonteksEl.hidden) { tutupMenuKonteks(); return; }
@@ -6074,6 +6097,7 @@ function htmlRingkasan() {
   }).join('');
   return `<section><h2>Proyek</h2><div class="medan">
     ${medanTeks('s-nama', 'Nama proyek', S.setel.nama)}
+    <label for="s-satuan">Satuan ketik dan label ukur</label><select id="s-satuan" ${dis()}><option value="m"${satuanCm() ? '' : ' selected'}>meter (m)</option><option value="cm"${satuanCm() ? ' selected' : ''}>sentimeter (cm)</option></select>
     ${medanAngka('s-tebal', 'Tebal dinding baru (m)', S.setel.tebalDinding)}
     ${medanAngka('s-tinggi', 'Tinggi dinding baru (m)', S.setel.tinggiDinding)}
     ${medanAngka('s-kemiringan', 'Kemiringan atap baru (°)', S.setel.kemiringanAtap)}
@@ -6264,6 +6288,7 @@ panel.addEventListener('change', e => {
   const [awal, f] = t.id.split('-');
   if (awal === 's') {
     if (f === 'nama') S.setel.nama = t.value.trim() || 'Proyek baru';
+    else if (f === 'satuan') { S.setel.satuan = t.value === 'cm' ? 'cm' : 'm'; const k = $('#vcb-label'); if (k) k.textContent = labelVcb(); minta(); }
     else {
       const v = angka(t.value);
       const ok = f === 'overstek' || f === 'faktorbesi' ? v >= 0 : f === 'kemiringan' ? v >= 1 && v <= 75 : v > 0;
@@ -10216,6 +10241,7 @@ function langganan() {
     if (d.kemiringanAtap > 0) S.setel.kemiringanAtap = d.kemiringanAtap;
     if (d.overstekAtap >= 0) S.setel.overstekAtap = d.overstekAtap;
     if (d.faktorBesi >= 0) S.setel.faktorBesi = d.faktorBesi;
+    if (d.satuan === 'cm' || d.satuan === 'm') S.setel.satuan = d.satuan;
     if (d.sampul && typeof d.sampul === 'object') S.setel.sampul = d.sampul;
     if (d.lembar && typeof d.lembar === 'object') S.setel.lembar = d.lembar;
     if (d.kop && typeof d.kop === 'object') S.setel.kop = d.kop;
