@@ -77,7 +77,6 @@ Perintah:
 ### Merilis versi baru
 
 1. Naikkan `version` di `package.json` (misalnya `0.25.0`) lewat pull request.
-2. Setelah digabung ke `main`, buat tag yang sama: `git tag v0.25.0 && git push origin v0.25.0`.
-3. GitHub Actions menguji, membangun, dan menerbitkan Release berisi Setup.exe, Portable.exe, dan RANCANG.mcpb.
+2. Setelah pull request digabung ke `main`, GitHub Actions menguji dan membangun, lalu **otomatis** membuat tag `v0.25.0` dan Release berisi Setup.exe, Portable.exe, dan RANCANG.mcpb. Bila versi itu sudah punya Release, tidak ada yang diterbitkan.
 
 Setiap push ke `main` dan setiap pull request juga dibangun; hasilnya bisa diunduh dari tab **Actions** → run terakhir → **Artifacts**.
