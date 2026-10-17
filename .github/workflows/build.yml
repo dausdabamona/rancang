@@ -34,7 +34,7 @@ jobs:
         run: npm run build
 
       - name: Uji unit, MCP mode berkas, dan MCP mengendalikan aplikasi
-        run: npm test
+        run: npm run test:ci
         env:
           RANCANG_UJI_ELECTRON: '1'
 

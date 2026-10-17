@@ -16,7 +16,8 @@
     "test": "node --test test/*.test.js test/*.test.mjs",
     "uji-asap": "electron . --uji-asap",
     "dist:win": "electron-builder --win --x64 --publish never",
-    "pack:mcpb": "mcpb pack build/mcp build/RANCANG.mcpb"
+    "pack:mcpb": "mcpb pack build/mcp build/RANCANG.mcpb",
+    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/reporter-anotasi.mjs --test-reporter-destination=stdout test/*.test.js test/*.test.mjs"
   },
   "devDependencies": {
     "@anthropic-ai/mcpb": "2.1.2",

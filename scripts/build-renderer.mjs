@@ -35,7 +35,8 @@ const FONT = [
 ];
 
 function susun() {
-  let html = fs.readFileSync(path.join(akar, 'app', 'rancang.html'), 'utf8');
+  // akhir baris disamakan (checkout Windows bisa memakai CRLF)
+  let html = fs.readFileSync(path.join(akar, 'app', 'rancang.html'), 'utf8').replace(/\r\n/g, '\n');
   html = ganti(html, '<link rel="preconnect" href="https://fonts.googleapis.com">\n', '', 'preconnect googleapis');
   html = ganti(html, '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n', '', 'preconnect gstatic');
   html = html.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2[^"]*">/, m => {
@@ -76,4 +77,11 @@ function susun() {
   console.log('[build-renderer] selesai →', path.relative(akar, keluar));
 }
 
-susun();
+try {
+  susun();
+} catch (err) {
+  // anotasi GitHub Actions agar pesan terlihat di ringkasan run
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=build-renderer::${err.message}`);
+  console.error(err);
+  process.exit(1);
+}
