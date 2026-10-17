@@ -488,13 +488,24 @@ const fmtV = n => (satuanCm() ? fmtCm(n * 100) : fmt(n));
 // Bagian lain (sudut, "4x", "/4") dibiarkan apa adanya.
 const labelVcb = () => { const n = alat().vcb || 'Ukuran'; return n === 'Sudut' ? n + ' (°)' : n + (satuanCm() ? ' (cm)' : ' (m)'); };
 function keMeter(teks) {
-  return String(teks ?? '').split(';').map(b => {
+  // pemisah ";" atau "x" (pintu/jendela: 90x210); bagian ganjil hasil split adalah pemisahnya
+  return String(teks ?? '').split(/([;x*×])/i).map((b, i) => {
+    if (i % 2) return b;
     const m = b.trim().match(/^([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))\s*(mm|cm|m)?$/i);
     if (!m) return b;
     const v = Number(m[1].replace(',', '.')), sat = (m[2] || (satuanCm() ? 'cm' : 'm')).toLowerCase();
     return String(r2(v * {mm: 0.001, cm: 0.01, m: 1}[sat]));
-  }).join(';');
+  }).join('');
 }
+// Isian panel berlabel "(m)": boleh diketik dengan akhiran cm/mm, diubah ke meter (angka polos tetap meter)
+function akhiranKeMeter(teks) {
+  const m = String(teks ?? '').trim().match(/^([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))\s*(mm|cm)$/i);
+  return m ? String(r2(Number(m[1].replace(',', '.')) * (m[2].toLowerCase() === 'mm' ? 0.001 : 0.01))).replace('.', ',') : teks;
+}
+// Contoh angka di pesan mengikuti satuan ketik
+const namaSatuan = () => (satuanCm() ? 'cm' : 'meter');
+const cth = (...ns) => ns.map(fmtVc).join(';');
+function fmtVc(n) { return satuanCm() ? fmtCm(n * 100) : String(n).replace('.', ','); }
 // Label ukuran di layar: "2,50 m" → "250 cm" bila satuan proyek cm (termasuk "2,00 × 3,00 m")
 function labelSatuan(t) {
   if (!satuanCm() || !t) return t;
@@ -2261,7 +2272,7 @@ const alatIris = {
   down() { this.selesai(); },
   ketik(v) {
     const x = angka(v);
-    if (!this.aktif || !Number.isFinite(x)) return toast('Ketik jarak geser dalam meter, misalnya 0,5 atau -1.');
+    if (!this.aktif || !Number.isFinite(x)) return toast(`Ketik jarak geser dalam ${namaSatuan()}, misalnya ${cth(0.5)} atau ${cth(-1)}.`);
     this.terap(x); this.selesai();
   },
   selesai() {
@@ -2623,7 +2634,7 @@ function posisiOverlay() {
     v.set(L.x, L.y, L.z || 0).project(camera);
     if (v.z > 1) { el.hidden = true; return; }
     el.hidden = false;
-    el.textContent = labelSatuan(L.t);
+    el.textContent = L.k ? L.t : labelSatuan(L.t);
     el.className = 'lbl' + (L.k ? ' ' + L.k : '');
     el.style.transform = `translate(${(v.x + 1) / 2 * w}px,${(1 - v.y) / 2 * h}px) translate(${L.k && !L.k.startsWith('anot peil') ? '-50%,-50%' : L.k ? '0,-50%' : '-50%,-150%'})`;
   });
@@ -3190,7 +3201,7 @@ const alatPersegi = {
   ketik(v) {
     if (!this.p1) return toast('Klik sudut pertama dulu, lalu ketik ukurannya.');
     const [a, b] = v.split(/[;x*]/i).map(angka);
-    if (!(a > 0) || !(b > 0)) return toast('Tulis dua ukuran dipisah titik koma, misalnya 8;9.');
+    if (!(a > 0) || !(b > 0)) return toast(`Tulis dua ukuran dipisah titik koma, misalnya ${cth(8, 9)}.`);
     const sx = this.p2 && this.p2.x < this.p1.x ? -1 : 1, sy = this.p2 && this.p2.y < this.p1.y ? -1 : 1;
     this.p2 = {x: r2(this.p1.x + sx * a), y: r2(this.p1.y + sy * b)};
     this.buat();
@@ -3244,7 +3255,7 @@ const alatDinding = {
   ketik(v) {
     if (!this.a) return toast('Klik titik awal dinding dulu, lalu ketik panjangnya.');
     const L = angka(v);
-    if (!(L > 0)) return toast('Tulis panjang dalam meter, misalnya 8 atau 3,5.');
+    if (!(L > 0)) return toast(`Tulis panjang dalam ${namaSatuan()}, misalnya ${cth(8)} atau ${cth(3.5)}.`);
     let dx = 1, dy = 0;
     if (this.b) { const l = Math.hypot(this.b.x - this.a.x, this.b.y - this.a.y); if (l > 0.001) { dx = (this.b.x - this.a.x) / l; dy = (this.b.y - this.a.y) / l; } }
     const b = {x: r2(this.a.x + dx * L), y: r2(this.a.y + dy * L)};
@@ -3358,14 +3369,14 @@ const alatDorong = {
     if (!this.aktif) return toast('Klik bidang yang mau ditarik dulu, lalu ketik jaraknya.');
     if (this.aktif.mode === 'atap') {
       const L = angka(v), a = this.aktif, sb = a.sisi;
-      if (!(L >= 0.5)) return toast('Tulis panjang as atap dalam meter, minimal 0,5.');
+      if (!(L >= 0.5)) return toast(`Tulis panjang as atap dalam ${namaSatuan()}, minimal ${cth(0.5)}.`);
       const lawan = {x0: 'x1', x1: 'x0', y0: 'y1', y1: 'y0'}[sb], arah = sb.endsWith('1') ? 1 : -1;
       this.tarikAtap(null, a.asli[lawan] + arah * L);
       this.selesai();
       return;
     }
     const j = angka(v);
-    if (!Number.isFinite(j)) return toast('Tulis jarak dalam meter, misalnya 3,5 atau -0,5.');
+    if (!Number.isFinite(j)) return toast(`Tulis jarak dalam ${namaSatuan()}, misalnya ${cth(3.5)} atau ${cth(-0.5)}.`);
     const baru = ubahDorong(this.aktif.asli, this.aktif.face, this.aktif.edge, j);
     if (!baru) return toast('Jarak itu membuat bidang hilang. Pakai nilai yang lebih kecil.');
     this.aktif.d = j; this.aktif.baru = baru;
@@ -3586,7 +3597,7 @@ const alatPindah = {
   ketik(v) {
     if (!this.dasar) return toast('Klik objek dan titik acuannya dulu, lalu ketik jaraknya.');
     const L = angka(v);
-    if (!Number.isFinite(L)) return toast('Tulis jarak dalam meter, misalnya 2,5.');
+    if (!Number.isFinite(L)) return toast(`Tulis jarak dalam ${namaSatuan()}, misalnya ${cth(2.5)}.`);
     // pintu/jendela: angka = jarak dari ujung awal dinding yang sedang ditunjuk
     if (this.bukaan) { this.terapBukaan({...this.bukaan.b, jarak: r2(L)}); this.selesai(); return; }
     // jarak diketik mengikuti arah panah yang sedang tampil (termasuk naik-turun)
@@ -3798,9 +3809,9 @@ function buatAlatBukaan(tipe) {
     },
     ketik(v) {
       const [a, b, c] = v.split(/[;x*]/i).map(angka);
-      if (!(a > 0) || !(b > 0)) return toast(pintu ? 'Tulis lebar;tinggi, misalnya 0,9;2,1.' : 'Tulis lebar;tinggi;ambang, misalnya 1,2;1,2;0,9.');
+      if (!(a > 0) || !(b > 0)) return toast(pintu ? `Tulis lebar;tinggi, misalnya ${cth(0.9, 2.1)}.` : `Tulis lebar;tinggi;ambang, misalnya ${cth(1.2, 1.2, 0.9)}.`);
       this.ukuran = {lebar: r2(a), tinggi: r2(b), ambang: Number.isFinite(c) && c >= 0 ? r2(c) : this.ukuranAktif().ambang};
-      toast(`Ukuran ${tipe} ${fmt(a)} × ${fmt(b)} m. Klik dinding untuk memasang.`);
+      toast(labelSatuan(`Ukuran ${tipe} ${fmt(a)} × ${fmt(b)} m. Klik dinding untuk memasang.`));
       if (S.eTerakhir) this.move(S.eTerakhir);
     }
   };
@@ -3905,7 +3916,7 @@ const alatAtap = {
   ketik(v) {
     if (!this.p1) return toast('Klik sudut as pertama dulu, lalu ketik ukurannya.');
     const [a, b] = v.split(/[;x*]/i).map(angka);
-    if (!(a > 0) || !(b > 0)) return toast('Tulis panjang;lebar dalam meter, misalnya 10;9.');
+    if (!(a > 0) || !(b > 0)) return toast(`Tulis panjang;lebar dalam ${namaSatuan()}, misalnya ${cth(10, 9)}.`);
     const sx = this.p2 && this.p2.x < this.p1.x ? -1 : 1, sy = this.p2 && this.p2.y < this.p1.y ? -1 : 1;
     this.p2 = {x: r2(this.p1.x + sx * a), y: r2(this.p1.y + sy * b)};
     this.buat();
@@ -4026,7 +4037,7 @@ function buatAlatGaris(cfg) {
     ketik(v) {
       if (!this.a) return toast('Klik titik awal dulu, lalu ketik panjangnya.');
       const L = angka(v);
-      if (!(L > 0)) return toast('Tulis panjang dalam meter.');
+      if (!(L > 0)) return toast(`Tulis panjang dalam ${namaSatuan()}.`);
       let dx = 1, dy = 0;
       if (this.b) { const l = Math.hypot(this.b.x - this.a.x, this.b.y - this.a.y); if (l > 0.001) { dx = (this.b.x - this.a.x) / l; dy = (this.b.y - this.a.y) / l; } }
       const b = {x: r2(this.a.x + dx * L), y: r2(this.a.y + dy * L)};
@@ -4482,7 +4493,7 @@ const alatLingkaran = {
   ketik(v) {
     if (!this.p1) return toast('Klik titik pusat dulu, lalu ketik jari-jarinya.');
     const r = angka(v);
-    if (!(r > 0)) return toast('Tulis jari-jari dalam meter, misalnya 0,5.');
+    if (!(r > 0)) return toast(`Tulis jari-jari dalam ${namaSatuan()}, misalnya ${cth(0.5)}.`);
     this.buat(r);
   },
   buat(r) {
@@ -4539,7 +4550,7 @@ const alatBusur = {
   ketik(v) {
     if (!this.a || !this.b) return toast('Klik kedua ujung busur dulu, lalu ketik tonjolannya.');
     const h = angka(v);
-    if (!Number.isFinite(h) || Math.abs(h) < 0.01) return toast('Tulis tinggi tonjolan dalam meter, misalnya 1,5.');
+    if (!Number.isFinite(h) || Math.abs(h) < 0.01) return toast(`Tulis tinggi tonjolan dalam ${namaSatuan()}, misalnya ${cth(1.5)}.`);
     this.buat((Math.sign(this.h) || 1) * Math.abs(h));
   },
   buat(h) {
@@ -4626,7 +4637,7 @@ const alatOffset = {
   ketik(v) {
     if (!this.aktif) return toast('Klik bidang atau dinding dulu, lalu ketik jaraknya.');
     const j = angka(v);
-    if (!Number.isFinite(j) || j === 0) return toast('Tulis jarak dalam meter; minus berarti ke dalam.');
+    if (!Number.isFinite(j) || j === 0) return toast(`Tulis jarak dalam ${namaSatuan()}; minus berarti ke dalam.`);
     this.aktif.jarak = this.aktif.d.jenis === 'dinding' ? (Math.sign(this.aktif.jarak) || 1) * Math.abs(j) : j;
     this.selesai();
   }
@@ -6198,6 +6209,10 @@ panel.addEventListener('click', e => {
 });
 panel.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) e.target.blur(); });
 function tolakAngka(pesan) { toast(pesan); S.panelKunci = ''; renderPanel(true); }
+panel.addEventListener('change', e => {
+  const t = e.target, lb = t.id && t.matches('input') && panel.querySelector(`label[for="${t.id}"]`);
+  if (lb && /\(m\)/.test(lb.textContent)) t.value = akhiranKeMeter(t.value);
+}, true);
 panel.addEventListener('change', e => {
   const t = e.target;
   if (!t.id) return;
