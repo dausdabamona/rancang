@@ -193,6 +193,11 @@ const metode = {
   rab: ({ids}) => halaman(`window.rancangAPI.rab(${arg(ids)})`),
   ringkasan: ({ids}) => halaman(`window.rancangAPI.ringkasan(${arg(ids)})`),
   ukur: ({id}) => halaman(`window.rancangAPI.ukurElemen(${arg(id)})`),
+  pecahAtap: async ({id}) => {
+    const r = await halaman(`window.rancangAPI.pecahAtap(${arg(id)})`);
+    if (r && r.ok) proyek.simpanSekarang();
+    return r;
+  },
   tangkap3D: async ({tampilan}) => {
     if (jendela && !jendela.isVisible() && !UJI_ASAP) jendela.show();
     return halaman(`window.rancangAPI.tangkap3D(${arg({tampilan, semua: !!tampilan})})`);
