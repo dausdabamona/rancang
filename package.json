@@ -17,7 +17,8 @@
     "uji-asap": "electron . --uji-asap",
     "dist:win": "electron-builder --win --x64 --publish never",
     "pack:mcpb": "mcpb pack build/mcp build/RANCANG.mcpb",
-    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/reporter-anotasi.mjs --test-reporter-destination=stdout test/*.test.js test/*.test.mjs"
+    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/reporter-anotasi.mjs --test-reporter-destination=stdout test/*.test.js test/*.test.mjs",
+    "periksa-tipe": "node scripts/periksa-tipe.mjs"
   },
   "devDependencies": {
     "@anthropic-ai/mcpb": "2.1.2",
@@ -25,6 +26,7 @@
     "@fontsource/ibm-plex-mono": "5.3.0",
     "@fontsource/ibm-plex-sans": "5.3.0",
     "@modelcontextprotocol/sdk": "1.31.0",
+    "@types/three": "0.149.0",
     "electron": "44.5.1",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
@@ -32,6 +34,7 @@
     "polygon-clipping": "0.15.7",
     "svg2pdf.js": "2.7.0",
     "three": "0.149.0",
+    "typescript": "5.9.3",
     "xlsx": "0.18.5"
   },
   "build": {

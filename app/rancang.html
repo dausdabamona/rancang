@@ -550,8 +550,231 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
 <script>
+// @ts-check
 (() => {
 'use strict';
+
+/* ===== TIPE ===== */
+// Tipe data RANCANG sebagai JSDoc, diperiksa editor/tsc lewat `// @ts-check` (tanpa langkah build, tanpa mengubah perilaku).
+// Properti di sini diambil dari pemakaian nyata di kode (`sah`, `sahData`, panel properti, geometri, RAB), bukan dari panduan.
+// Satuan meter; X ke timur, Y ke utara, Z ke atas. Satu elemen = satu dokumen dengan id tetap (awalan huruf + nomor).
+// Catatan arti `z0`: dasar untuk dinding/volume/kolom/slof/ring balk/foot plat; puncak untuk batu kali dan umpak;
+// muka bawah untuk plafon; dudukan (puncak dinding) untuk atap.
+
+/** @typedef {{x: number, y: number}} Titik2 Titik denah (meter) */
+/** @typedef {{x: number, y: number, z: number}} Titik3 Titik ruang (meter) */
+/** @typedef {{x: number, y: number, z?: number}} Titik3Opsional Titik dengan z yang boleh kosong (anotasi, gambar 2D) */
+/** @typedef {{n: number, d: number, ulir: boolean}} Tulangan Tulangan utama: jumlah, diameter (mm), ulir */
+/** @typedef {{d: number, s: number}} Sengkang Sengkang: diameter (mm), jarak (m) */
+/** @typedef {{d: number, s: number, ulir: boolean}} TulanganPlat Tulangan plat dua arah: diameter (mm), jarak (m) */
+
+/**
+ * Properti yang dimiliki semua dokumen elemen (koleksi `elemen`).
+ * @typedef {Object} DasarElemen
+ * @property {string} [nama]
+ * @property {string} [catatan]
+ * @property {string} [grup] id grup induk (G…)
+ * @property {string} [diubahOleh] 'pengguna' | 'claude' | nama lain
+ * @property {string} [diubahPada] waktu ISO
+ */
+
+/**
+ * D — dinding. `awal`/`akhir` adalah as dinding.
+ * @typedef {DasarElemen & {jenis: 'dinding', awal: Titik2, akhir: Titik2, tebal: number, tinggi: number, z0?: number}} Dinding
+ */
+
+/**
+ * B — bukaan (pintu/jendela) yang menempel pada dinding. `jarak` dari ujung awal as dinding ke tepi bukaan.
+ * @typedef {DasarElemen & {jenis: 'bukaan', tipe?: 'pintu' | 'jendela', dinding: string, jarak: number, lebar: number, tinggi: number,
+ *   ambang?: number, kode?: string, bukaKe?: 1 | -1, balikEngsel?: boolean}} Bukaan
+ */
+
+/**
+ * V — volume, lantai, atau bidang datar (tinggi 0). Bentuk lengkung memakai `bentuk` + `pusat`/`jari` atau `awal`/`akhir`/`tonjolan`.
+ * @typedef {DasarElemen & {jenis: 'volume', alas?: Titik2[], tinggi: number, z0?: number,
+ *   bentuk?: 'lingkaran' | 'busur', pusat?: Titik2, jari?: number, awal?: Titik2, akhir?: Titik2, tonjolan?: number,
+ *   lubang?: Titik2[][], lantai?: 'ruang' | 'km' | 'teras' | 'lain', penutupLantai?: 'k40' | 'k30' | 'k20' | 'g60' | 'plester',
+ *   mukaHapus?: string[]}} Volume
+ */
+
+/**
+ * P — plafon. `z0` = muka bawah plafon.
+ * @typedef {DasarElemen & {jenis: 'plafon', alas: Titik2[], z0: number, lubang?: Titik2[][], bahan?: 'grc' | 'gypsum', rangka?: 'hollow' | 'kayu'}} Plafon
+ */
+
+/**
+ * C — kolom. `b` lebar arah X, `h` arah Y, `tinggi` panjang kolom.
+ * @typedef {DasarElemen & {jenis: 'kolom', tipe?: 'praktis' | 'struktur', x: number, y: number, b: number, h: number, tinggi: number,
+ *   tul: Tulangan, sengkang: Sengkang, fc: number, selimut?: number, z0?: number}} Kolom
+ */
+
+/**
+ * S — slof dan R — ring balk (data sama). `z0` = dasar balok (bawaan −h untuk slof, tinggiDinding − h untuk ring balk).
+ * @typedef {DasarElemen & {jenis: 'slof' | 'ringbalk', awal: Titik2, akhir: Titik2, b: number, h: number,
+ *   tul: Tulangan, sengkang: Sengkang, fc: number, selimut?: number, z0?: number}} Balok
+ */
+/** @typedef {Balok & {jenis: 'slof'}} Slof */
+/** @typedef {Balok & {jenis: 'ringbalk'}} Ringbalk */
+
+/**
+ * F — pondasi batu kali menerus. `z0` = puncak pondasi.
+ * @typedef {DasarElemen & {jenis: 'pondasi', tipe: 'batukali', awal: Titik2, akhir: Titik2, lebarAtas: number, lebarBawah: number,
+ *   tinggi: number, aanstamping?: number, pasir?: number, z0?: number}} PondasiBatuKali
+ */
+/**
+ * F — foot plat. `z0` = dasar plat; `puncakPedestal` puncak pedestal.
+ * @typedef {DasarElemen & {jenis: 'pondasi', tipe: 'footplat', x: number, y: number, p: number, l: number, tebal: number,
+ *   tulPlat: TulanganPlat, pedestal: {b: number, h: number}, tul: Tulangan, sengkang: Sengkang, fc: number,
+ *   puncakPedestal?: number, selimut?: number, z0?: number}} PondasiFootPlat
+ */
+/**
+ * F — umpak beton. `z0` = puncak umpak.
+ * @typedef {DasarElemen & {jenis: 'pondasi', tipe: 'umpak', x: number, y: number, bawah: number, atas: number, tinggi: number,
+ *   fc: number, z0?: number}} PondasiUmpak
+ */
+/** @typedef {PondasiBatuKali | PondasiFootPlat | PondasiUmpak} Pondasi */
+
+/** @typedef {'tritisan-utara' | 'tritisan-selatan' | 'tritisan-timur' | 'tritisan-barat' | string} KunciSisiAtap Kunci sisi atap (mis. 'gunung-selatan-2') */
+/**
+ * Pengaturan lisplang satu sisi atap.
+ * @typedef {{pasang?: boolean, bahan?: 'papan' | 'grc', tebal?: number, tinggi?: number, mundur?: number}} LisplangSisi
+ */
+/**
+ * Ukuran dan susunan kuda-kuda kayu per atap (cm untuk penampang, % untuk posisi).
+ * @typedef {{kaki?: [number, number], tarik?: [number, number], makelar?: [number, number], tiang?: [number, number],
+ *   sokong?: [number, number], gording?: [number, number], posTiang?: number, posSokong?: number,
+ *   pakaiTiang?: boolean, pakaiSokong?: boolean, tarikSambung?: boolean, jarakGording?: number}} KudaKuda
+ */
+/**
+ * A — atap parametrik berdenah persegi (batas as dinding x0..x1, y0..y1). `z0` = elevasi dudukan.
+ * @typedef {DasarElemen & {jenis: 'atap', bentuk: 'pelana' | 'limas' | 'sandar' | 'datar', x0: number, y0: number, x1: number, y1: number,
+ *   z0?: number, kemiringan?: number, overstek?: number, arah?: 'x' | 'y' | 'utara' | 'selatan' | 'timur' | 'barat',
+ *   overstekSisi?: {utara?: number, selatan?: number, timur?: number, barat?: number},
+ *   penutup?: 'spandek' | 'gelombang' | 'genteng' | 'datar', rangka?: 'bajaringan' | 'kayu' | 'tanpa', jarakKuda?: number,
+ *   lisplang?: 'papan' | 'grc' | 'tanpa', lisplangSisi?: Record<KunciSisiAtap, LisplangSisi>,
+ *   plafonMiring?: 'tanpa' | 'penuh' | 'tritisan', kuda?: KudaKuda, tebal?: number, tebalGunung?: number}} Atap
+ */
+
+/**
+ * H — bidang 3D bebas (hasil pecah atap atau alat Bidang 3D). `dinding` di sini adalah persegi batas, bukan id dinding.
+ * @typedef {DasarElemen & {jenis: 'bidang', titik: Titik3[], peran: 'atap' | 'gunung' | 'lisplang' | 'plafon',
+ *   tebal?: number, tebalTengah?: boolean, penutup?: string, rangka?: string, bahan?: string, tinggi?: number,
+ *   dinding?: {x0: number, y0: number, x1: number, y1: number}}} Bidang
+ */
+
+/** @typedef {'kaki' | 'tarik' | 'makelar' | 'tiang' | 'sokong' | 'klos' | 'gording' | 'nok' | 'usuk' | 'reng' | 'rangka' | 'lisplang' | 'lain'} PeranBatang */
+/**
+ * J — batang lurus 3D (kayu atau baja ringan). `b` × `h` penampang; `jangkar` letak garis awal→akhir pada penampang;
+ * `atas` arah "atas" penampang sebagai larik [x, y, z] (satu-satunya titik berbentuk larik di model).
+ * @typedef {DasarElemen & {jenis: 'batang', awal: Titik3, akhir: Titik3, b: number, h: number, peran: PeranBatang,
+ *   bahan?: 'kayu' | 'bajaringan' | string, atas?: [number, number, number], jangkar?: 'tengah' | 'atas'}} Batang
+ */
+
+/** @typedef {'talangKotak' | 'talangU' | 'lisplangPapan' | 'lisplangGrc' | 'listPlafon' | 'plint' | 'pipa' | 'paritU'} ProfilSapuan */
+/**
+ * U — sapuan (Follow Me yang tetap bisa diedit): profil penampang disapukan sepanjang lintasan.
+ * @typedef {DasarElemen & {jenis: 'sapuan', profil: ProfilSapuan, lintasan: Titik3[],
+ *   ukuran?: {lebar?: number, tinggi?: number, tebal?: number, diameter?: number, dalam?: number},
+ *   tertutup?: boolean, balik?: boolean, geser?: {u: number, v: number}, peran?: string}} Sapuan
+ */
+
+/**
+ * X — garis potong. `pandang` 1 = melihat ke kiri arah awal→akhir, −1 = ke kanan.
+ * @typedef {DasarElemen & {jenis: 'potong', nama: string, awal: Titik2, akhir: Titik2, pandang: 1 | -1}} Potong
+ */
+
+/**
+ * N — anotasi (teks, label berpanah, ukuran dua titik, peil).
+ * @typedef {DasarElemen & {jenis: 'anotasi', tipe: 'teks' | 'label' | 'ukuran' | 'peil', titik: Titik3Opsional, ujung?: Titik3Opsional,
+ *   teks?: string, pada?: 'semua' | 'denah' | 'tampak' | 'potongan', sembunyiDi?: string[]}} Anotasi
+ */
+
+/**
+ * I — salinan komponen; `definisi` menunjuk dokumen K.
+ * @typedef {DasarElemen & {jenis: 'instance', definisi: string, posisi: Titik2, rotasi?: number, z0?: number}} Instance
+ */
+
+/**
+ * L — gambar 2D di Ruang Lembar (koordinat gambar/kertas/petak sesuai `tempel`).
+ * @typedef {DasarElemen & {jenis: 'gambar2d', lembar: string, titik: Titik3Opsional[], tempel: 'gambar' | 'kertas' | 'petak', petak?: string,
+ *   bentuk: 'garis' | 'polyline' | 'persegi' | 'lingkaran' | 'busur' | 'teks' | 'arsir' | 'rujukan' | 'simbol' | 'legenda',
+ *   teks?: string, detail?: string, simbol?: string, ukuran?: number, gaya?: {tebal?: number, garis?: string, warna?: string},
+ *   pola?: string, tutup?: boolean, rotasi?: number}} Gambar2D
+ */
+
+/**
+ * E — lembar detail dari pustaka.
+ * @typedef {DasarElemen & {jenis: 'detail', template: 'pondasiBatuKali' | 'footplat' | 'umpak' | 'kudaKuda' | 'sambunganKayu' | 'bebas',
+ *   lembar: string, sumber?: string | null, sambungan?: string, skala?: number, judul?: string}} Detail
+ */
+
+/** Semua jenis dokumen di koleksi `elemen`.
+ * @typedef {Dinding | Bukaan | Volume | Plafon | Kolom | Slof | Ringbalk | Pondasi | Atap | Bidang | Batang | Sapuan | Potong | Anotasi | Instance | Gambar2D | Detail} ElemenRancang
+ */
+
+/**
+ * G — grup (koleksi `grup`). `induk` null = grup teratas. `pecahan: 'atap'` menandai hasil Pecah atap.
+ * @typedef {{nama: string, induk?: string | null, catatan?: string, pecahan?: 'atap', diubahOleh?: string, diubahPada?: string}} Grup
+ */
+/**
+ * K — definisi komponen (koleksi `komponen`). Isi `elemen` dalam koordinat lokal, tanpa id dan tanpa `grup`;
+ * bukaan di dalamnya merujuk dinding lewat '#<urutan>'.
+ * @typedef {{nama?: string, elemen: ElemenRancang[], catatan?: string, diubahOleh?: string, diubahPada?: string}} Komponen
+ */
+/**
+ * T — tipe kusen (koleksi `kusen`) untuk pasangan (kode, untuk).
+ * @typedef {{kode: string, untuk: 'pintu' | 'jendela', daun: number, isi: string, boven?: {tinggi: number, kolom?: number, baris?: number} | null,
+ *   buka?: string, kolom?: number, baris?: number, profil?: number, nama?: string, catatan?: string, diubahOleh?: string, diubahPada?: string}} TipeKusen
+ */
+/** Dokumen apa pun yang bisa dirujuk lewat id. @typedef {ElemenRancang | Grup | Komponen | TipeKusen} DokumenRancang */
+
+/**
+ * Pengaturan proyek (dokumen `pengaturan/proyek`).
+ * @typedef {{nama: string, tebalDinding: number, tinggiDinding: number, kemiringanAtap: number, overstekAtap: number, faktorBesi: number,
+ *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[]}} Setelan
+ */
+
+/** Satu perubahan dari luar (MCP, panel Claude): `data` null = hapus. @typedef {{id: string, data?: DokumenRancang | null, sesudah?: DokumenRancang | null}} PerubahanLuar */
+/** Satu entri langkah `terapkan`: `sesudah` null = hapus. @typedef {{id: string, sesudah: DokumenRancang | null}} Perubahan */
+/** Entri riwayat Undo. @typedef {{id: string, sebelum: DokumenRancang | null, sesudah: DokumenRancang | null}} EntriUndo */
+/** Hasil `terapkanLuar`. @typedef {{ok: boolean, galat?: string[], diubah?: string[], dihapus?: string[]}} HasilTerapkanLuar */
+
+/**
+ * Status aplikasi (objek `S`). Medan di luar literal awal ditambahkan saat berjalan.
+ * @typedef {Object} Status
+ * @property {Map<string, ElemenRancang>} elems
+ * @property {Map<string, Grup>} grup
+ * @property {Map<string, Komponen>} komp
+ * @property {Map<string, TipeKusen>} kusen
+ * @property {Set<string>} sel
+ * @property {Set<string>} kilat
+ * @property {Set<string>} sembunyi
+ * @property {string | null} konteks id grup yang sedang dibuka
+ * @property {{iid: string, kid: string} | null} edit komponen yang sedang diedit
+ * @property {string} tool
+ * @property {boolean} paralel
+ * @property {Setelan} setel
+ * @property {any} db
+ * @property {any} unduh
+ * @property {string} mode
+ * @property {boolean} bisaUbah
+ * @property {EntriUndo[][]} undo
+ * @property {EntriUndo[][]} redo
+ * @property {Array<{x: number, y: number, z?: number, t: string}>} label
+ * @property {any} snap titik snap yang sedang ditampilkan
+ * @property {boolean} ketik
+ * @property {any} sorot mesh yang disorot
+ * @property {string} panelKunci
+ * @property {Map<string, any>} antrean
+ * @property {number} sibuk
+ * @property {Map<string, Bukaan | null>} pratBuk
+ * @property {boolean} [tembus]
+ * @property {'x' | 'y' | 'z' | null} [kunciPaksa]
+ * @property {{id: string, k: string} | null} [muka]
+ * @property {{atap: string, sisi: string} | null} [lisSisi]
+ * @property {{clientX: number, clientY: number, shiftKey?: boolean} | null} [eTerakhir]
+ */
+/* ===== akhir TIPE ===== */
 
 /* ============ Utilitas ============ */
 const $ = s => document.querySelector(s);
@@ -605,6 +828,7 @@ const salin = o => (o == null ? o : JSON.parse(JSON.stringify(o)));
 const batas = (v, a, b) => Math.min(Math.max(v, a), b);
 
 /* ============ Status aplikasi ============ */
+/** @type {Status} */
 const S = {
   elems: new Map(),        // elemen: D (dinding), V (bidang/volume), I (salinan komponen); _D/_V = isi komponen yang sedang diedit
   grup: new Map(),         // G: {nama, induk, catatan}
@@ -628,6 +852,11 @@ const petaDari = id => { const c = kodeOf(id); return c === 'G' ? S.grup : c ===
 const koleksi = id => (id[0] === '_' ? null : id[0] === 'G' ? 'grup' : id[0] === 'K' ? 'komponen' : id[0] === 'T' ? 'kusen' : 'elemen');
 const ambil = id => petaDari(id).get(id);
 const titikSah = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+/**
+ * Periksa kesahihan data satu elemen menurut jenisnya (dipakai saat memuat, menerima perubahan luar, dan sebelum menggambar).
+ * @param {any} d data elemen
+ * @returns {boolean}
+ */
 function sah(d) {
   if (!d || typeof d !== 'object') return false;
   if (d.jenis === 'dinding') return titikSah(d.awal) && titikSah(d.akhir) && d.tebal > 0 && d.tinggi >= 0;
@@ -1183,6 +1412,12 @@ function strukturGeom(d) {
   }
   return {benda, rekap: r, ukur: u};
 }
+/**
+ * Periksa kesahihan dokumen apa pun menurut awalan id (G grup, K komponen, T tipe kusen, lainnya elemen).
+ * @param {string} id
+ * @param {any} d
+ * @returns {boolean}
+ */
 function sahData(id, d) {
   const c = kodeOf(id);
   if (c === 'G') return !!d && typeof d === 'object' && typeof d.nama === 'string';
@@ -1207,18 +1442,33 @@ function pemberiId() {
   };
 }
 const idBaru = awalan => pemberiId()(awalan);
+/**
+ * Id grup induk langsung sebuah dokumen (elemen → `grup`, grup → `induk`, bukaan → grup dindingnya).
+ * @param {string} id
+ * @returns {string | null}
+ */
 function indukDari(id) {
   const d = ambil(id);
   if (!d) return null;
   if (d.jenis === 'bukaan') return S.elems.has(d.dinding) ? indukDari(d.dinding) : null;
   return (kodeOf(id) === 'G' ? d.induk : d.grup) || null;
 }
+/**
+ * Rantai grup induk dari yang terdekat sampai teratas (paling banyak 50 tingkat).
+ * @param {string} id
+ * @returns {string[]}
+ */
 function leluhur(id) {
   const r = [];
   let p = indukDari(id), jaga = 0;
   while (p && S.grup.has(p) && jaga++ < 50) { r.push(p); p = indukDari(p); }
   return r;
 }
+/**
+ * Uraikan daftar id (elemen dan grup) menjadi semua elemen dan semua grup di dalamnya.
+ * @param {Iterable<string>} ids
+ * @returns {{el: Set<string>, gr: Set<string>}}
+ */
 function ekspansi(ids) {
   const el = new Set(), gr = new Set();
   for (const id of ids) {
@@ -1273,6 +1523,11 @@ function lubangDari(d) {
 }
 const luasLubang = d => (lubangDari(d) || []).reduce((s, r) => s + Math.abs(luasBertanda(r)), 0);
 const kelilingCincin = r => r.reduce((s, q, i) => s + Math.hypot(r[(i + 1) % r.length][0] - q[0], r[(i + 1) % r.length][1] - q[1]), 0);
+/**
+ * Ukuran satu elemen untuk panel dan RAB (panjang, luas, volume, dan rincian per jenis), dihitung dari data, bukan dari mesh.
+ * @param {ElemenRancang} d
+ * @returns {Record<string, any>}
+ */
 function ukur(d) {
   const h = d.tinggi || 0;
   if (d.jenis === 'bukaan') return {luasB: d.lebar * d.tinggi};
@@ -1298,6 +1553,14 @@ function ukur(d) {
   const K = kelilingCincin(p) + (lubangDari(d) || []).reduce((s, r) => s + kelilingCincin(r), 0);
   return {luasAlas: A, keliling: K, luasSisi: K * h, volume: A * h, luasLubang: luasLubang(d)};
 }
+/**
+ * Terapkan pemetaan titik denah `f` pada seluruh titik elemen (dipakai Pindah, Putar, salin), dengan geser tinggi `dz`.
+ * @template {ElemenRancang} T
+ * @param {T} d
+ * @param {(p: Titik2) => Titik2} f
+ * @param {number} [dz]
+ * @returns {T}
+ */
 function transformasi(d, f, dz) {
   const b = salin(d);
   if (b.jenis === 'bukaan') return b; // posisinya relatif terhadap dinding
@@ -1344,6 +1607,15 @@ function transformasi(d, f, dz) {
 // Atap, kolom, dan pondasi titik disimpan sejajar sumbu, jadi hanya boleh kelipatan 90°.
 const kunci90 = d => d.jenis === 'atap' || ((d.jenis === 'kolom' || d.jenis === 'pondasi') && Number.isFinite(d.x) && Number.isFinite(d.y));
 const kelipatan90 = deg => Math.abs(deg / 90 - Math.round(deg / 90)) < 1e-6;
+/**
+ * Putar elemen `deg` derajat (berlawanan jarum jam dilihat dari atas) mengelilingi (cx, cy).
+ * @template {ElemenRancang} T
+ * @param {T} d
+ * @param {number} cx
+ * @param {number} cy
+ * @param {number} deg
+ * @returns {T}
+ */
 function putarElemen(d, cx, cy, deg) {
   if (d.jenis === 'bukaan') return salin(d);
   const k90 = kelipatan90(deg), t = deg * Math.PI / 180;
@@ -1369,6 +1641,12 @@ function keLokal(d, inst) {
 }
 function bersihkan(d) { const b = salin(d); delete b.diubahOleh; delete b.diubahPada; delete b.grup; return b; }
 // Elemen dunia yang membentuk satu entri (salinan komponen diurai menjadi isinya)
+/**
+ * Geometri yang digambar untuk satu elemen: elemen itu sendiri (dinding membawa `_buk` bukaannya) atau isi komponen dalam koordinat dunia.
+ * @param {string} id
+ * @param {ElemenRancang | undefined} d
+ * @returns {any[]}
+ */
 function geometriElemen(id, d) {
   if (!d || d.jenis === 'bukaan' || d.jenis === 'potong' || d.jenis === 'anotasi' || d.jenis === 'gambar2d' || d.jenis === 'detail') return [];
   if (d.jenis === 'instance') {
@@ -1397,6 +1675,12 @@ function bukaanDari(wid) {
   return r;
 }
 // Isi definisi komponen dari daftar [id, data]; bukaan merujuk dinding lewat #urutan
+/**
+ * Susun isi definisi komponen dari pasangan [id, data]; bukaan merujuk dindingnya lewat '#<urutan>'.
+ * @param {Array<[string, ElemenRancang]>} daftar
+ * @param {Instance} ref salinan acuan (posisi dan rotasi menjadi titik nol lokal)
+ * @returns {ElemenRancang[]}
+ */
 function keDefinisi(daftar, ref) {
   const utama = daftar.filter(([, d]) => d.jenis !== 'bukaan'), urut = new Map();
   const elemen = utama.map(([id, d], i) => { urut.set(id, i); return bersihkan(keLokal(d, ref)); });
@@ -1404,6 +1688,13 @@ function keDefinisi(daftar, ref) {
   return elemen;
 }
 // Uraikan definisi komponen menjadi pasangan [id baru, data dunia]
+/**
+ * Uraikan definisi komponen menjadi pasangan [id baru, data dunia] pada posisi salinan `inst`.
+ * @param {Komponen} def
+ * @param {Instance} inst
+ * @param {(awalan: string) => string} nid pemberi id baru per awalan
+ * @returns {Array<[string, ElemenRancang]>}
+ */
 function dariDefinisi(def, inst, nid) {
   const hasil = [], peta = new Map();
   def.elemen.forEach((e, i) => {
@@ -1436,6 +1727,11 @@ function kodeBukaan(tipe, lebar, tinggi, ambang) {
   }
   return (tipe === 'pintu' ? 'P' : 'J') + (maks + 1);
 }
+/**
+ * Titik-titik denah penting sebuah elemen (ujung as, sudut alas, pusat) sebagai [x, y].
+ * @param {ElemenRancang} d
+ * @returns {number[][]}
+ */
 function titikKunci(d) {
   if (d.jenis === 'bukaan' || d.jenis === 'instance') return [];
   if (d.jenis === 'anotasi') return [[d.titik.x, d.titik.y]];
@@ -1451,6 +1747,15 @@ function titikKunci(d) {
   return d.jenis === 'dinding' ? [[d.awal.x, d.awal.y], [d.akhir.x, d.akhir.y]] : d.alas.map(q => [q.x, q.y]);
 }
 const namaJenis = d => (d.jenis === 'sapuan' ? (profilSapuan(d) || {}).nama || 'Sapuan' : d.jenis === 'bidang' ? PERAN_BIDANG[d.peran] || 'Bidang' : d.jenis === 'batang' ? PERAN_BATANG[d.peran] || 'Batang' : d.jenis === 'gambar2d' ? 'Gambar 2D' : d.jenis === 'detail' ? 'Detail' : d.jenis === 'plafon' ? 'Plafon' : d.jenis === 'potong' ? 'Garis potong' : d.jenis === 'anotasi' ? 'Anotasi' : d.jenis === 'kolom' || d.jenis === 'pondasi' ? NAMA_STRUKTUR[d.tipe] || 'Pondasi' : d.jenis === 'slof' ? 'Slof' : d.jenis === 'ringbalk' ? 'Ring balk' : d.jenis === 'atap' ? 'Atap ' + (BENTUK_ATAP[d.bentuk] || '').toLowerCase() : d.jenis === 'dinding' ? 'Dinding' : d.jenis === 'instance' ? 'Komponen' : d.jenis === 'bukaan' ? (d.tipe === 'pintu' ? 'Pintu' : 'Jendela') : ((d.tinggi || 0) > 0 ? 'Volume' : 'Bidang'));
+/**
+ * Salinan elemen yang digeser (dx, dy, dz). Bukaan bergeser sepanjang dindingnya.
+ * @template {ElemenRancang} T
+ * @param {T} d
+ * @param {number} dx
+ * @param {number} dy
+ * @param {number} [dz]
+ * @returns {T}
+ */
 function geser(d, dx, dy, dz = 0) {
   const b = salin(d);
   if (b.jenis === 'bukaan') {
@@ -1483,6 +1788,14 @@ function ujungDinding(w, n) {
   const {ux, uy} = infoDinding(w), k = n[0] * ux + n[1] * uy;
   return k > 0.7 ? 'akhir' : k < -0.7 ? 'awal' : null;
 }
+/**
+ * Hasil Push/Pull satu elemen sejauh `jarak` pada muka `face` (atas, bawah, sisi, ujung, bidang, ujung-batang, …); null bila tidak sah.
+ * @param {ElemenRancang} asli
+ * @param {string} face
+ * @param {any} edge data tambahan muka (normal sisi, ujung dinding, dsb.)
+ * @param {number} jarak
+ * @returns {ElemenRancang | null}
+ */
 function ubahDorong(asli, face, edge, jarak) {
   const d = salin(asli);
   if (face === 'bidang') {
@@ -3188,12 +3501,23 @@ function antre(kunci, kerja) {
   }).finally(() => { S.sibuk--; statusSimpan(); });
   S.antrean.set(kunci, p);
 }
+/**
+ * Tulis satu dokumen ke penyimpanan (database artifact atau berkas .rancang lewat shim); null = hapus.
+ * @param {string} id
+ * @param {DokumenRancang | null} data
+ */
 function simpan(id, data) {
   const kol = koleksi(id);
   if (!S.db || !kol) return;
   const ref = S.db.collection(kol).doc(id);
   antre(kol + '/' + id, () => (data ? ref.set(data) : ref.delete()));
 }
+/**
+ * Beri jejak `diubahOleh`/`diubahPada` pada dokumen yang ditulis pengguna.
+ * @template {DokumenRancang | null} T
+ * @param {T} d
+ * @returns {T}
+ */
 function cap(d) {
   if (!d) return null;
   const b = salin(d);
@@ -3201,6 +3525,11 @@ function cap(d) {
   b.diubahPada = new Date().toISOString();
   return b;
 }
+/**
+ * Terapkan sekumpulan perubahan sekaligus (satu langkah Undo): perbarui peta, simpan, bangun ulang 3D, catat riwayat.
+ * @param {Perubahan[]} daftar
+ * @param {boolean} [catat] false saat dipanggil Undo/Redo
+ */
 function terapkan(daftar, catat = true) {
   if (!S.bisaUbah) { toast('Akun ini hanya bisa melihat.'); return; }
   const entri = daftar.map(({id, sesudah}) => ({id, sebelum: ambil(id) ? salin(ambil(id)) : null, sesudah: sesudah ? salin(sesudah) : null}));
@@ -3238,6 +3567,7 @@ function simpanSetelan() {
 const denganKonteks = d => (S.konteks && !S.edit ? {...d, grup: S.konteks} : d);
 
 /* ============ Grup dan komponen ============ */
+/** Jadikan pilihan sekarang satu grup baru di konteks yang sedang dibuka (Ctrl+G). */
 function buatGrup() {
   if (S.edit) return toast('Grup di dalam komponen belum didukung.');
   if (!S.sel.size) return toast('Pilih objek dulu, lalu tekan Ctrl+G.');
@@ -3252,6 +3582,10 @@ function buatGrup() {
   S.sel = new Set([gid]); segarPilihan();
   toast(`${gid} dibuat dari ${tulis.length - 1} objek.`);
 }
+/**
+ * Pecah grup: anggotanya naik ke induk grup itu, dokumen G dihapus (Explode).
+ * @param {string} gid
+ */
 function pecahGrup(gid) {
   const g = S.grup.get(gid);
   if (!g) return;
@@ -3264,6 +3598,7 @@ function pecahGrup(gid) {
   toast(`${gid} dipecah menjadi ${anak.length} objek.`);
 }
 function masukGrup(gid) { S.konteks = gid; S.sel.clear(); segarKonteks(); segarPilihan(); }
+/** Jadikan pilihan sekarang definisi komponen baru + satu salinan; elemen dan grup asal dihapus (tombol G). */
 function jadikanKomponen() {
   if (S.edit) return toast('Selesaikan edit komponen dulu.');
   if (!S.sel.size) return toast('Pilih objek dulu, lalu tekan G.');
@@ -3286,6 +3621,10 @@ function jadikanKomponen() {
   S.sel = new Set([iid]); segarPilihan();
   toast(`${kid} dibuat dari ${daftar.length} elemen. Salin dengan Pindah + Ctrl.`);
 }
+/**
+ * Uraikan satu salinan komponen menjadi elemen biasa di grup konteks sekarang.
+ * @param {string} iid id salinan (I…)
+ */
 function pecahKomponen(iid) {
   const inst = S.elems.get(iid), def = inst && S.komp.get(inst.definisi);
   if (!def) return toast('Definisi komponen tidak ditemukan.');
@@ -3332,6 +3671,15 @@ function keluarKomponen() {
   S.sel = new Set(inst ? [iid] : []);
   segarKonteks(); bangunSemua(); renderPanel(true);
 }
+/**
+ * Susun daftar tulis untuk menyalin elemen/grup yang dipilih dengan pergeseran, memakai id baru.
+ * @param {Iterable<string>} items id elemen dan grup
+ * @param {number} dx
+ * @param {number} dy
+ * @param {number} [dz]
+ * @param {((d: ElemenRancang) => ElemenRancang) | null} [ubah] pengubah tambahan tiap salinan (mis. putar)
+ * @returns {{tulis: Perubahan[], baruAtas: string[]}}
+ */
 function buatSalinan(items, dx, dy, dz = 0, ubah = null) {
   const nid = pemberiId(), tulis = [], baruAtas = [];
   const salinEl = (eid, grupBaru) => {
@@ -3355,6 +3703,7 @@ function buatSalinan(items, dx, dy, dz = 0, ubah = null) {
   for (const it of items) baruAtas.push(kodeOf(it) === 'G' ? salinGr(it, S.grup.get(it).induk || null) : salinEl(it));
   return {tulis, baruAtas: baruAtas.filter(Boolean)};
 }
+/** Hapus semua elemen dan grup di dalam pilihan sekarang (Delete). Grup terluar yang terpilih ikut terhapus beserta isinya. */
 function hapusPilihan() {
   if (!S.sel.size || !S.bisaUbah) return;
   const {el, gr} = ekspansi([...S.sel]), n = S.sel.size;
@@ -3795,6 +4144,11 @@ const alatDinding = {
     this.a = b; this.b = null; reset();
   }
 };
+/**
+ * Buat satu dinding dari titik as `a` ke `b` dengan tebal dan tinggi bawaan proyek.
+ * @param {Titik2} a
+ * @param {Titik2} b
+ */
 function buatDinding(a, b) {
   const id = idBaru('D');
   terapkan([{id, sesudah: denganKonteks({jenis: 'dinding', nama: 'Dinding ' + id.replace('_', ''), awal: {x: r2(a.x), y: r2(a.y)}, akhir: {x: r2(b.x), y: r2(b.y)}, tebal: S.setel.tebalDinding, tinggi: S.setel.tinggiDinding, z0: 0, catatan: ''})}]);
@@ -3825,6 +4179,14 @@ function sisiAtapDari(N) {
   return Math.abs(N[0]) >= Math.abs(N[1]) ? (N[0] > 0 ? 'timur' : 'barat') : (N[1] > 0 ? 'utara' : 'selatan');
 }
 // Tarik satu elemen ke arah N sejauh jarak, untuk bagian yang sebidang dengan bidang (N, p0). null = tidak berlaku / tidak sah.
+/**
+ * Push/Pull komposit: hasil elemen `d` yang mukanya sebidang dengan bidang (N, p0) ditarik sejauh `jarak`; null bila tidak bisa.
+ * @param {ElemenRancang} d
+ * @param {[number, number, number]} N normal bidang
+ * @param {[number, number, number]} p0 titik pada bidang
+ * @param {number} jarak
+ * @returns {ElemenRancang | null}
+ */
 function dorongIkut(d, N, p0, jarak) {
   const b = salin(d), di = q => jarakBidang(N, p0, q), padaBidang = q => Math.abs(di(q)) < TOL_SEBIDANG;
   const geser3 = q => ({x: r2(q.x + N[0] * jarak), y: r2(q.y + N[1] * jarak), z: r2(q.z + N[2] * jarak)});
@@ -4454,6 +4816,10 @@ const alatHapus = {
 };
 
 // Alat pasang pintu atau jendela: arahkan ke dinding, klik untuk memasang
+/**
+ * Alat pintu atau jendela: klik dinding untuk memasang bukaan dengan ukuran bawaan atau yang diketik.
+ * @param {'pintu' | 'jendela'} tipe
+ */
 function buatAlatBukaan(tipe) {
   const pintu = tipe === 'pintu';
   return {
@@ -7015,6 +7381,11 @@ function htmlRingkasan() {
     <dt><kbd>Shift+Z</kbd></dt><dd>Tampilkan semua</dd><dt><kbd>Ctrl+Z</kbd></dt><dd>Urungkan</dd><dt><kbd>Esc</kbd></dt><dd>Batalkan atau keluar grup</dd>
   </dl></section>`;
 }
+/**
+ * Rekap ukuran sekumpulan elemen (jumlah per jenis, luas, volume, bukaan, struktur, atap, plafon, lantai).
+ * @param {Iterable<string>} ids
+ * @returns {Record<string, any>}
+ */
 function total(ids) {
   const t = {nD: 0, nV: 0, nP: 0, nJ: 0, nA: 0, nKP: 0, nKS: 0, nF: 0, panjangSlof: 0, panjangRingbalk: 0, luasPlafon: 0, lisPlafon: 0, luasRangka: 0, panjang: 0, luasDinding: 0, volDinding: 0, luasBukaan: 0, luasAlas: 0, volVolume: 0, luasAtap: 0, nok: 0, jurai: 0, lisplang: 0, rekap: rekapBaru()};
   const {el} = ekspansi(ids), bidAtapT = [];
@@ -7948,6 +8319,11 @@ function lembarKhusus(o) {
   return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`,
     info: '', skala: '-', W, H, peta: null, anotStat: null};
 }
+/**
+ * Gambar 2D sebagai SVG untuk satu jenis gambar (denah, atap, pondasi, tampak, potongan, kusen, detail, sampul, daftar).
+ * @param {{jenis: string, skala?: number, kertas?: string, dimensi?: boolean, terhalang?: boolean, [k: string]: any}} o
+ * @returns {{svg: string, info: string, skala: number | string, W: number, H: number, peta?: any, anotStat?: any, petak?: any[]}} `skala` angka penyebut, '-' (sampul/daftar) atau 'TERTERA' (lembar detail)
+ */
 function buatSVG(o) {
   if (o.jenis === 'sampul' || o.jenis === 'daftar') return lembarKhusus(o);
   if (o.jenis.startsWith('det:')) return lembarDetail(o);
@@ -9530,6 +9906,11 @@ function muatXLSX() {
 // Pola nama benda → kode HSP (selaras KODE_MAP skill RAB)
 const KODE_NAMA = [[/closet|kloset/i, 'SA-001', 'unit'], [/wastafel/i, 'SA-002', 'unit'], [/titik lampu|lampu/i, 'EL-001', 'titik'], [/stop kontak/i, 'EL-002', 'titik'], [/keran/i, 'SA-010', 'unit'], [/ember/i, 'SA-011', 'unit'],
   [/keramik.*dinding/i, 'KR-003', 'm²'], [/keramik|lantai/i, 'KR-001', 'm²']];
+/**
+ * Data volume RAB per divisi untuk sekumpulan elemen (dipakai ekspor Excel dan MCP `volume_rab`).
+ * @param {Iterable<string>} ids
+ * @returns {{divisi: any[], geos: any[], t: Record<string, any>}}
+ */
 function dataRAB(ids) {
   const t = total(ids), f = faktorBesi(), r = t.rekap, {el} = ekspansi(ids);
   const geos = [];
@@ -11177,6 +11558,12 @@ function langganan() {
 var olehLuar = null;
 function idTujuanSah(id) { return typeof id === 'string' && /^[A-Z]\d+$/.test(id); }
 // Terapkan paket perubahan dari luar: semua diperiksa dulu, ditolak utuh bila ada yang tidak sah
+/**
+ * Terapkan paket perubahan dari luar (MCP, panel Claude): semua diperiksa dulu dan ditolak utuh bila ada yang tidak sah.
+ * @param {PerubahanLuar[]} perubahan
+ * @param {string} [oleh] pengisi `diubahOleh`
+ * @returns {HasilTerapkanLuar}
+ */
 function terapkanLuar(perubahan, oleh = 'claude') {
   if (!S.bisaUbah) return {ok: false, galat: ['Aplikasi dalam mode hanya lihat.']};
   if (!Array.isArray(perubahan) || !perubahan.length) return {ok: false, galat: ['Daftar perubahan kosong.']};
@@ -11215,6 +11602,11 @@ function jenisGambar2D() {
   for (const j of lembarDetailAda()) if (!daftar.some(x => x.jenis === j)) daftar.push({jenis: j, nama: judulLembar(j)});
   return daftar;
 }
+/**
+ * Gambar 2D untuk jembatan desktop/MCP: SVG beserta ukuran kertas dan info.
+ * @param {{jenis?: string, skala?: number, kertas?: string, [k: string]: any}} [o]
+ * @returns {{svg: string, W: number, H: number, skala: number | string, info: string, kertas: string} | {galat: string}}
+ */
 function gambar2D(o = {}) {
   const opsi = {jenis: o.jenis || 'denah', skala: +o.skala || 0, kertas: o.kertas === 'A3' ? 'A3' : 'A4', dimensi: o.dimensi !== false, terhalang: o.terhalang !== false};
   if (!jenisGambar2D().some(x => x.jenis === opsi.jenis)) throw new Error(`Jenis gambar "${opsi.jenis}" tidak dikenal.`);
