@@ -363,7 +363,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | S | slof | awal, akhir, b, h, z0 (dasar), tul, sengkang, fc, selimut | `{"jenis":"slof","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"b":0.15,"h":0.2,"z0":-0.31,"tul":{"n":4,"d":10,"ulir":false},"sengkang":{"d":8,"s":0.15},"fc":18.7,"selimut":0.025}` |
 | R | ringbalk | sama dengan slof | z0 = dasar ring balk |
 | F | pondasi | tipe 'batukali' (awal, akhir, lebarAtas, lebarBawah, tinggi, aanstamping, pasir, z0); 'footplat' (x, y, p, l, tebal, tulPlat{d,s,ulir}, pedestal{b,h}, puncakPedestal, tul, sengkang, fc, selimut, z0); 'umpak' (x, y, bawah, atas, tinggi, fc, z0) | `{"jenis":"pondasi","tipe":"batukali","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"lebarAtas":0.3,"lebarBawah":0.7,"tinggi":0.7,"aanstamping":0.15,"pasir":0.05,"z0":-0.31}` |
-| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa','penuh','tritisan'), kuda{…}, lisplangSisi{…} | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
+| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa','penuh','tritisan'), kuda{…}, lisplangSisi{…}, overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
 | H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
 | J | batang | Batang lurus 3D (kuda-kuda, gording, usuk, reng, klos): awal{x,y,z}, akhir{x,y,z}, b (lebar), h (tinggi penampang), bahan ('kayu'/'bajaringan'), peran ('kaki','tarik','makelar','tiang','sokong','klos','gording','nok','usuk','reng','rangka','lain'). Opsional: atas [x,y,z] (arah tinggi penampang), jangkar ('tengah' = sumbu di tengah penampang; 'atas' = sumbu di sisi atas) | `{"jenis":"batang","peran":"kaki","bahan":"kayu","awal":{"x":0,"y":0,"z":3.6},"akhir":{"x":0,"y":3,"z":5.2},"b":0.06,"h":0.12,"jangkar":"tengah"}` |
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'), rangka ('hollow'/'kayu'). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
@@ -630,6 +630,15 @@ const AWALAN = {dinding: 'D', volume: 'V', atap: 'A', bidang: 'H', batang: 'J', 
 const STRUKTUR = new Set(['kolom', 'slof', 'ringbalk', 'pondasi']);
 const BENTUK_ATAP = {pelana: 'Pelana', limas: 'Limas', sandar: 'Sandar', datar: 'Datar / dak'};
 function batasAtap(d) { return {x0: Math.min(d.x0, d.x1), x1: Math.max(d.x0, d.x1), y0: Math.min(d.y0, d.y1), y1: Math.max(d.y0, d.y1)}; }
+// Overstek per sisi (v0.28.3): isian overstekSisi {utara, selatan, timur, barat}; sisi yang kosong ikut overstek umum.
+// Limas tetap memakai overstek umum agar jurainya tetap 45° di denah.
+function ovSisi(d) {
+  const ov = Math.max(0, d.overstek ?? 0.6), o = d.bentuk === 'limas' ? {} : (d.overstekSisi || {}), r = {};
+  for (const k of ['utara', 'selatan', 'timur', 'barat']) r[k] = Number.isFinite(o[k]) && o[k] >= 0 ? o[k] : ov;
+  return r;
+}
+// batas luar atap termasuk overstek tiap sisi: [x0, y0, x1, y1]
+function kotakOverstek(d) { const b = batasAtap(d), o = ovSisi(d); return [b.x0 - o.barat, b.y0 - o.selatan, b.x1 + o.timur, b.y1 + o.utara]; }
 /* ============ Bidang dan batang bebas (v0.28): hasil Pecah atap ============ */
 // Bidang: muka 3D bebas (titik berurutan mengelilingi bidang). Batang: balok lurus 3D dengan penampang b × h.
 const PERAN_BIDANG = {atap: 'Bidang atap', gunung: 'Gunungan (sopi-sopi)', lisplang: 'Lisplang', plafon: 'Plafon miring'};
@@ -730,8 +739,8 @@ function tepiBersamaBidang(daftar) {
 }
 // kunci cache: bidang atap bebas di sekitar atap parametrik d
 function kunciBidangDekat(d) {
-  const b = batasAtap(d), o = Math.max(0, d.overstek ?? 0.6);
-  return bidangAtapDekat(b.x0 - o, b.y0 - o, b.x1 + o, b.y1 + o).map(x => x.t.flat().map(v => v.toFixed(3)).join(',') + JSON.stringify(x.dinding || '')).join(';');
+  const [kx0, ky0, kx1, ky1] = kotakOverstek(d);
+  return bidangAtapDekat(kx0, ky0, kx1, ky1).map(x => x.t.flat().map(v => v.toFixed(3)).join(',') + JSON.stringify(x.dinding || '')).join(';');
 }
 // Bidang atap bebas yang memotong atap parametrik di sekitarnya (setelah sebuah atap dipecah)
 function bidangAtapDekat(bx0, by0, bx1, by1) {
@@ -781,13 +790,13 @@ function tepiLuarAtap(muka) {
 function atapGeomDasar(d) {
   const {x0, x1, y0, y1} = batasAtap(d);
   const th = batas(d.kemiringan ?? 30, 1, 75) * Math.PI / 180, tn = Math.tan(th), cs = Math.cos(th);
-  const ov = Math.max(0, d.overstek ?? 0.6), z0 = d.z0 || 0;
-  const u = {luasPenutup: 0, luasProyeksi: (x1 - x0 + 2 * ov) * (y1 - y0 + 2 * ov), nok: 0, jurai: 0, lisplang: 0, luasGunung: 0, volume: 0, puncak: z0};
+  const ov = Math.max(0, d.overstek ?? 0.6), z0 = d.z0 || 0, os = ovSisi(d), [kx0, ky0, kx1, ky1] = kotakOverstek(d);
+  const u = {luasPenutup: 0, luasProyeksi: (kx1 - kx0) * (ky1 - ky0), nok: 0, jurai: 0, lisplang: 0, luasGunung: 0, volume: 0, puncak: z0};
   const permukaan = [];
   if (d.bentuk === 'datar') {
     const tb = d.tebal > 0 ? d.tebal : 0.12;
-    const p = [[x0 - ov, y0 - ov], [x1 + ov, y0 - ov], [x1 + ov, y1 + ov], [x0 - ov, y1 + ov]];
-    Object.assign(u, {luasPenutup: u.luasProyeksi, volume: u.luasProyeksi * tb, lisplang: 2 * ((x1 - x0 + 2 * ov) + (y1 - y0 + 2 * ov)), puncak: z0 + tb});
+    const p = [[kx0, ky0], [kx1, ky0], [kx1, ky1], [kx0, ky1]];
+    Object.assign(u, {luasPenutup: u.luasProyeksi, volume: u.luasProyeksi * tb, lisplang: 2 * ((kx1 - kx0) + (ky1 - ky0)), puncak: z0 + tb});
     return {permukaan, prisma: {p, z0, h: tb}, ukur: u};
   }
   // sistem lokal: a = sepanjang nok (sandar: sejajar talang), b = melintang
@@ -796,16 +805,19 @@ function atapGeomDasar(d) {
   else sepanjangX = (d.arah === 'x' || d.arah === 'y' ? d.arah : ((x1 - x0) >= (y1 - y0) ? 'x' : 'y')) === 'x';
   const a0 = sepanjangX ? x0 : y0, a1 = sepanjangX ? x1 : y1, b0 = sepanjangX ? y0 : x0, b1 = sepanjangX ? y1 : x1;
   const ke = (a, b, z) => { if (balik) b = b0 + b1 - b; return sepanjangX ? [a, b, z] : [b, a, z]; };
-  const A0 = a0 - ov, A1 = a1 + ov, B0 = b0 - ov, B1 = b1 + ov, ze = z0 - ov * tn;
+  // overstek tiap sisi di sistem lokal (sandar ke utara/timur dicerminkan: B0 lokal = sisi b1 dunia)
+  const sA0 = sepanjangX ? 'barat' : 'selatan', sA1 = sepanjangX ? 'timur' : 'utara', sB0 = sepanjangX ? 'selatan' : 'barat', sB1 = sepanjangX ? 'utara' : 'timur';
+  const oB0 = os[balik ? sB1 : sB0], oB1 = os[balik ? sB0 : sB1];
+  const A0 = a0 - os[sA0], A1 = a1 + os[sA1], B0 = b0 - oB0, B1 = b1 + oB1, ze = z0 - oB0 * tn, ze1 = z0 - oB1 * tn;
   const atap = (...t) => permukaan.push({jenis: 'atap', titik: t.map(q => ke(...q))});
   const gunung = (...t) => permukaan.push({jenis: 'gunung', titik: t.map(q => ke(...q))});
   if (d.bentuk === 'pelana') {
     const bm = (b0 + b1) / 2, zr = z0 + (b1 - b0) / 2 * tn;
     atap([A0, B0, ze], [A1, B0, ze], [A1, bm, zr], [A0, bm, zr]);
-    atap([A1, B1, ze], [A0, B1, ze], [A0, bm, zr], [A1, bm, zr]);
+    atap([A1, B1, ze1], [A0, B1, ze1], [A0, bm, zr], [A1, bm, zr]);
     gunung([a0, b0, z0], [a0, b1, z0], [a0, bm, zr]);
     gunung([a1, b1, z0], [a1, b0, z0], [a1, bm, zr]);
-    Object.assign(u, {nok: A1 - A0, lisplang: 2 * (A1 - A0) + 4 * ((B1 - B0) / 2) / cs, luasGunung: (b1 - b0) * (zr - z0), puncak: zr});
+    Object.assign(u, {nok: A1 - A0, lisplang: 2 * (A1 - A0) + 2 * (B1 - B0) / cs, luasGunung: (b1 - b0) * (zr - z0), puncak: zr});
   } else if (d.bentuk === 'limas') {
     const bm = (b0 + b1) / 2, hb = (B1 - B0) / 2, zr = ze + hb * tn, ar0 = A0 + hb, ar1 = A1 - hb;
     if (ar1 > ar0 + 1e-6) {
@@ -823,7 +835,7 @@ function atapGeomDasar(d) {
     u.lisplang = 2 * (A1 - A0) + 2 * (B1 - B0);
   } else {
     // sandar: air turun ke sisi b0
-    const zh = z0 + (b1 - b0) * tn, zt = z0 + (b1 - b0 + ov) * tn;
+    const zh = z0 + (b1 - b0) * tn, zt = z0 + (b1 - b0 + oB1) * tn;
     atap([A0, B0, ze], [A1, B0, ze], [A1, B1, zt], [A0, B1, zt]);
     gunung([a0, b0, z0], [a0, b1, z0], [a0, b1, zh]);
     gunung([a1, b1, z0], [a1, b0, z0], [a1, b1, zh]);
@@ -1099,6 +1111,7 @@ function transformasi(d, f, dz) {
     const arahBaru = (vx, vy) => { const q = f({x: vx, y: vy}), qx = q.x - o.x, qy = q.y - o.y; return Math.abs(qx) > Math.abs(qy) ? (qx > 0 ? 'timur' : 'barat') : (qy > 0 ? 'utara' : 'selatan'); };
     if (b.arah === 'x' || b.arah === 'y') { const r = arahBaru(b.arah === 'x' ? 1 : 0, b.arah === 'y' ? 1 : 0); b.arah = r === 'timur' || r === 'barat' ? 'x' : 'y'; }
     else if (b.arah) { const v = {selatan: [0, -1], utara: [0, 1], timur: [1, 0], barat: [-1, 0]}[b.arah]; if (v) b.arah = arahBaru(...v); }
+    if (d.overstekSisi) { const vs = {selatan: [0, -1], utara: [0, 1], timur: [1, 0], barat: [-1, 0]}, baru = {}; for (const [k, v] of Object.entries(d.overstekSisi)) if (vs[k]) baru[arahBaru(...vs[k])] = v; b.overstekSisi = baru; }
     b.z0 = r2((d.z0 || 0) + dz);
     return b;
   }
@@ -4593,7 +4606,7 @@ function normalMuka(t) {
   return n.z < 0 ? n.negate() : n;
 }
 const zBidang = (t, n, x, y) => t[0][2] - (n.x * (x - t[0][0]) + n.y * (y - t[0][1])) / (Math.abs(n.z) < 1e-9 ? 1e-9 : n.z);
-const kunciAtapGeom = d => [d.bentuk, d.arah, d.x0, d.x1, d.y0, d.y1, d.z0, d.kemiringan, d.overstek, d.rangka, d.tebalGunung, JSON.stringify(d.kuda || {})].join('|');
+const kunciAtapGeom = d => [d.bentuk, d.arah, d.x0, d.x1, d.y0, d.y1, d.z0, d.kemiringan, d.overstek, JSON.stringify(d.overstekSisi || {}), d.rangka, d.tebalGunung, JSON.stringify(d.kuda || {})].join('|');
 const luasAlasAtap = d => Math.abs((d.x1 - d.x0) * (d.y1 - d.y0));
 function luas2D(r) { let a = 0; for (let i = 0; i < r.length; i++) { const p = r[i], q = r[(i + 1) % r.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; }
 const bukaCincin = r => (r.length > 1 && r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1] ? r.slice(0, -1) : r);
@@ -4618,8 +4631,8 @@ const cacheAtapGeom = new Map();
 function atapGeom(d) {
   const g = atapGeomDasar(d);
   if (g.prisma || typeof polygonClipping === 'undefined') return g;
-  const kd = kunciAtapGeom(d), ov = Math.max(0, d.overstek ?? 0.6);
-  const kotak = e => { const o = Math.max(0, e.overstek ?? 0.6); return [Math.min(e.x0, e.x1) - o, Math.min(e.y0, e.y1) - o, Math.max(e.x0, e.x1) + o, Math.max(e.y0, e.y1) + o]; };
+  const kd = kunciAtapGeom(d);
+  const kotak = kotakOverstek;
   const [ax0, ay0, ax1, ay1] = kotak(d);
   const lain = atapLain(d).filter(e => { const [bx0, by0, bx1, by1] = kotak(e); return bx0 < ax1 && bx1 > ax0 && by0 < ay1 && by1 > ay0; });
   // bidang atap hasil pecah juga memotong atap ini (seperti atap parametrik lain, tanpa batas dinding)
@@ -4724,7 +4737,7 @@ function susunTepiAtap(d) {
   const kunciRuas = (p, q) => [p, q].map(v => v.map(x => x.toFixed(3)).join(',')).sort().join('|');
   const pemilik0 = new Map();
   muka0.forEach((t, fi) => t.forEach((p, i) => { const k = kunciRuas(p, t[(i + 1) % t.length]); pemilik0.set(k, [...(pemilik0.get(k) || []), fi]); }));
-  const bt = batasAtap(d), ovT = Math.max(0, d.overstek ?? 0.6), bidDekat = bidangAtapDekat(bt.x0 - ovT - 0.2, bt.y0 - ovT - 0.2, bt.x1 + ovT + 0.2, bt.y1 + ovT + 0.2);
+  const kOv = kotakOverstek(d), bidDekat = bidangAtapDekat(kOv[0] - 0.2, kOv[1] - 0.2, kOv[2] + 0.2, kOv[3] + 0.2);
   const mukaLain = [...atapLain(d).flatMap(e => atapGeom(e).permukaan.filter(x => x.jenis === 'atap').map(x => x.titik)), ...bidDekat.map(x => x.t)];
   // tepi luar dipecah di titik peralihan tertutup/terbuka oleh atap lain, agar lisplang hanya di bagian yang terbuka
   const muka = muka0.map(t => {
@@ -4900,7 +4913,7 @@ function rangkaAtap(d) {
   const geo = atapGeom(d), hasil = {batang: [], pola: [], ukur: {}};
   if (geo.prisma) return hasil;
   const muka = geo.permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
-  const {x0, x1, y0, y1} = batasAtap(d), z0 = d.z0 || 0, ov = Math.max(0, d.overstek ?? 0.6), th = batas(d.kemiringan ?? 30, 1, 75) * Math.PI / 180;
+  const {x0, x1, y0, y1} = batasAtap(d), z0 = d.z0 || 0, th = batas(d.kemiringan ?? 30, 1, 75) * Math.PI / 180;
   const rangka = d.rangka || 'bajaringan', penutup = d.penutup || 'spandek';
   // arah nok: a sepanjang, b melintang
   let sepanjangX;
@@ -4909,6 +4922,7 @@ function rangkaAtap(d) {
   const a0 = sepanjangX ? x0 : y0, a1 = sepanjangX ? x1 : y1, b0 = sepanjangX ? y0 : x0, b1 = sepanjangX ? y1 : x1;
   const P = (a, b, z) => (sepanjangX ? [a, b, z] : [b, a, z]);
   hasil.arahA = sepanjangX ? [1, 0, 0] : [0, 1, 0];
+  const os = ovSisi(d), oA0 = os[sepanjangX ? 'barat' : 'selatan'], oA1 = os[sepanjangX ? 'timur' : 'utara'], oB0 = os[sepanjangX ? 'selatan' : 'barat'], oB1 = os[sepanjangX ? 'utara' : 'timur'];
   const tebalPenutup = 0.03, panjang = {kuda: 0, reng: 0, gording: 0, usuk: 0}, kayu = rangka === 'kayu';
   // kayu: gording 6/12 di atas kaki kuda-kuda 6/12; as kaki = bawah penutup - 12 cm gording - 6 cm; balok tarik di atas ring balk
   const volume = {kuda: 0, gording: 0, usuk: 0, reng: 0};
@@ -4938,8 +4952,8 @@ function rangkaAtap(d) {
       // ujung kaki kuda-kuda: berhenti di sisi dalam lisplang (batas bidang dalam), atau di pertemuan dengan atap lain
       const dalamAda = b => { const p = P(a, b, 0); return zAtapDi(mukaDalam, p[0], p[1]) !== null; };
       let bA = null, bB = null;
-      for (let b = b0 - ov; b <= b1 + ov + 1e-9; b += 0.005) if (dalamAda(b)) { bA = b; break; }
-      for (let b = b1 + ov; b >= b0 - ov - 1e-9; b -= 0.005) if (dalamAda(b)) { bB = b; break; }
+      for (let b = b0 - oB0; b <= b1 + oB1 + 1e-9; b += 0.005) if (dalamAda(b)) { bA = b; break; }
+      for (let b = b1 + oB1; b >= b0 - oB0 - 1e-9; b -= 0.005) if (dalamAda(b)) { bB = b; break; }
       if (bA === null || bB === null) return;
       // batas bidang dalam ada di permukaan atap; as kaki lebih rendah, dan papan lisplang tegak lurus atap,
       // maka ujung as kaki bergeser ke dalam agar ujung kaki rata dengan sisi dalam lisplang
@@ -4986,9 +5000,9 @@ function rangkaAtap(d) {
     for (let i = 0; i <= nK; i++) {
       if (adaGunung && (i === 0 || i === nK) && nK >= 2) continue;
       const a = Math.min(a1 - 0.05, Math.max(a0 + 0.05, a0 + (a1 - a0) * i / nK));
-      const titikB = [b0 - ov + 0.02];
+      const titikB = [b0 - oB0 + 0.02];
       for (let k = 0; k <= nPanel; k++) titikB.push(b0 + (b1 - b0) * k / nPanel);
-      titikB.push(b1 + ov - 0.02);
+      titikB.push(b1 + oB1 - 0.02);
       const atas = titikB.map(b => [b, zT(a, b)]).filter(([, z]) => z !== null);
       if (atas.length < 2) continue;
       const tinggiMaks = Math.max(...atas.map(([, z]) => z)) - z0;
@@ -5071,7 +5085,7 @@ function rangkaAtap(d) {
       }
       if (rangka === 'kayu' && penutup === 'genteng') {
         // usuk tegak lurus listplang tiap 0,5 m dan reng tiap 0,3 m
-        for (let a = a0 - ov + 0.25; a < a1 + ov; a += 0.5) { const n = sepanjangX ? [1, 0, 0] : [0, 1, 0], s = irisMuka(t, n, a); if (s) tambah('usuk', s[0].map((v, j) => j === 2 ? v - tebalPenutup - 0.01 : v), s[1].map((v, j) => j === 2 ? v - tebalPenutup - 0.01 : v)); }
+        for (let a = a0 - oA0 + 0.25; a < a1 + oA1; a += 0.5) { const n = sepanjangX ? [1, 0, 0] : [0, 1, 0], s = irisMuka(t, n, a); if (s) tambah('usuk', s[0].map((v, j) => j === 2 ? v - tebalPenutup - 0.01 : v), s[1].map((v, j) => j === 2 ? v - tebalPenutup - 0.01 : v)); }
         const dr = 0.3 * Math.sin(th);
         for (let z = zMin + dr / 2; z < zMax - 1e-3; z += dr) { const s = irisMuka(t, [0, 0, 1], z); if (s) tambah('reng', [s[0][0], s[0][1], z - tebalPenutup], [s[1][0], s[1][1], z - tebalPenutup]); }
       }
@@ -5549,6 +5563,7 @@ function htmlAtap(id, d) {
     ${datar ? medanAngka('a-tebal', 'Tebal dak (m)', d.tebal > 0 ? d.tebal : 0.12)
             : `<label for="a-arah">Arah</label><select id="a-arah" ${dis()}>${opsi(arah, arahOpsi)}</select>` + medanAngka('a-kemiringan', 'Kemiringan (°)', d.kemiringan ?? 30)}
     ${medanAngka('a-overstek', 'Overstek (m)', d.overstek ?? 0.6)}
+    ${d.bentuk === 'limas' ? '' : ['utara', 'selatan', 'timur', 'barat'].map(k => `<label for="a-sisi${k}">Overstek sisi ${k} (m)</label><input id="a-sisi${k}" type="text" inputmode="decimal" placeholder="${esc(fmtIsi(d.overstek ?? 0.6))}" value="${Number.isFinite((d.overstekSisi || {})[k]) ? esc(fmtIsi(d.overstekSisi[k])) : ''}" title="Kosongkan agar ikut overstek umum. 0 = atap berhenti di muka dinding (mis. kanopi yang bersandar ke dinding)." ${dis()}>`).join('')}
     ${datar ? '' : `<label for="a-penutup">Penutup</label><select id="a-penutup" ${dis()}>${opsi(d.penutup || 'spandek', Object.entries(PENUTUP_ATAP))}</select>
     <label for="a-rangka">Rangka</label><select id="a-rangka" ${dis()}>${opsi(d.rangka || 'bajaringan', Object.entries(RANGKA_ATAP))}</select>
     <label for="a-lisplang">Lisplang</label><select id="a-lisplang" ${dis()}>${opsi(d.lisplang || 'papan', Object.entries(LISPLANG_ATAP))}</select>
@@ -6252,7 +6267,12 @@ panel.addEventListener('change', e => {
       if (/^Atap /.test(d.nama || '')) b.nama = 'Atap ' + BENTUK_ATAP[b.bentuk].toLowerCase() + ' ' + id.replace('_', '');
     } else if (f === 'arah') b.arah = t.value;
     else if (f === 'rangka' || f === 'penutup' || f === 'lisplang' || f === 'plafonMiring') b[f] = t.value;
-    else {
+    else if (/^sisi(utara|selatan|timur|barat)$/.test(f)) {
+      const k = f.slice(4), os = {...(b.overstekSisi || {})};
+      if (t.value.trim() === '') delete os[k];
+      else { const v = angka(t.value); if (!(v >= 0 && v <= 5)) return tolakAngka('Overstek sisi antara 0 dan 5 m; kosongkan agar ikut overstek umum.'); os[k] = r2(v); }
+      if (Object.keys(os).length) b.overstekSisi = os; else delete b.overstekSisi;
+    } else {
       const v = angka(t.value);
       const ok = ['z0', 'x0', 'x1', 'y0', 'y1'].includes(f) ? Number.isFinite(v) : f === 'overstek' ? v >= 0 : f === 'kemiringan' ? v >= 1 && v <= 75 : v > 0;
       if (!ok) return tolakAngka(f === 'kemiringan' ? 'Kemiringan antara 1° dan 75°.' : 'Isi angka yang sesuai.');
@@ -7094,7 +7114,7 @@ function buatSVG(o) {
 
   if (o.jenis === 'denah') {
     const daftar = geos.filter(g => g.jenis !== 'atap' && g.jenis !== 'bidang' && g.jenis !== 'batang' && g.jenis !== 'slof' && g.jenis !== 'ringbalk' && g.jenis !== 'pondasi' && g.jenis !== 'plafon').map(g => ({g, p: poligon(g)}));
-    const atapNya = geos.filter(g => g.jenis === 'atap').map(g => { const {x0, x1, y0, y1} = batasAtap(g), ov = g.overstek ?? 0.6; return [[x0 - ov, y0 - ov], [x1 + ov, y0 - ov], [x1 + ov, y1 + ov], [x0 - ov, y1 + ov]]; });
+    const atapNya = geos.filter(g => g.jenis === 'atap').map(g => { const [x0, y0, x1, y1] = kotakOverstek(g); return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]; });
     if (!daftar.length) info = 'Belum ada gambar untuk dibuat denahnya.';
     else {
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -7222,7 +7242,7 @@ function buatSVG(o) {
       const dindingP = geos.filter(g => g.jenis === 'dinding').map(g => poligon(g));
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       const ambilBatas = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
-      for (const {g} of geoAtap) { if (g.bidangBebas) continue; const {x0: a, x1: b, y0: c, y1: e} = batasAtap(g), ov = g.overstek ?? 0.6; ambilBatas(a - ov, c - ov); ambilBatas(b + ov, e + ov); }
+      for (const {g} of geoAtap) { if (g.bidangBebas) continue; const [a, c, b, e] = kotakOverstek(g); ambilBatas(a, c); ambilBatas(b, e); }
       for (const g of bidList) for (const q of g.titik) ambilBatas(q.x, q.y);
       for (const p of dindingP) for (const [x, y] of p) ambilBatas(x, y);
       const tepi = o.dimensi ? 1.6 : 0.4, bx0 = x0 - tepi, by0 = y0 - tepi, bx1 = x1 + 0.6, by1 = y1 + 0.6;
@@ -9473,7 +9493,7 @@ function susunDetail(d) {
   if (d.template === 'kudaKuda') {
     const R = rangkaAtap(g), arahA = R.arahA || [1, 0, 0], kayu = g.rangka === 'kayu', sepX = arahA[0] === 1;
     const aK = q => (sepX ? q[0] : q[1]), bK = q => (sepX ? q[1] : q[0]);
-    const {x0, x1, y0, y1} = batasAtap(g), b0 = sepX ? y0 : x0, b1 = sepX ? y1 : x1, bc = (b0 + b1) / 2, ov = Math.max(0, g.overstek ?? 0.6);
+    const {x0, x1, y0, y1} = batasAtap(g), b0 = sepX ? y0 : x0, b1 = sepX ? y1 : x1, bc = (b0 + b1) / 2, osK = ovSisi(g), ovB0 = osK[sepX ? 'selatan' : 'barat'], ovB1 = osK[sepX ? 'utara' : 'timur'];
     // kuda-kuda yang digambar: yang di tengah deretan
     const deret = [...new Set(R.batang.filter(b => b.jenis === 'kuda' && Math.abs(aK(b.p) - aK(b.q)) < 2e-3).map(b => +aK(b.p).toFixed(3)))].sort((p, q) => p - q);
     if (!deret.length) return {galat: 'Atap ini belum punya kuda-kuda.'};
@@ -9526,7 +9546,7 @@ function susunDetail(d) {
     }
     // garis penutup atap pada stasiun ini
     const geo = atapGeom(g), muka = geo.permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
-    const bmin = b0 - ov - 0.1, bmax = b1 + ov + 0.1, prof = [];
+    const bmin = b0 - ovB0 - 0.1, bmax = b1 + ovB1 + 0.1, prof = [];
     let jalur = [];
     for (let k = 0; k <= 400; k++) {
       const bb = bmin + (bmax - bmin) * k / 400, z = zAtapDi(muka, sepX ? a : bb, sepX ? bb : a);
