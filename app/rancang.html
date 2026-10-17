@@ -2529,6 +2529,23 @@ function hitObjekDi(e, kecuali) {
 }
 function pilihObjek(e, kecuali, toleran = false) { return hitObjek(e, kecuali, toleran)[0] || null; }
 function titikTanah(e) { arahkan(e); const v = V(); return ray.ray.intersectPlane(bidangTanah, v) ? v : null; }
+// Titik dan rusuk 3D benda miring (atap, bidang, batang) dari bentuk sebenarnya: ujung seng, sopi-sopi, ujung kasau.
+// Sebelumnya atap hanya memberi pojok alas datar di z0 (tanpa overstek) dan bidang memberi titik di lantai.
+function rangka3D(g) {
+  let muka = null, ujung = [];
+  if (g.jenis === 'atap') muka = atapGeom(g).permukaan.map(f => f.titik);
+  else if (g.jenis === 'bidang') { const b = geoBidang(g); muka = b.muka || [b.t]; }
+  else if (g.jenis === 'batang') { const b = geoBatang(g); if (!b) return null; muka = b.muka; ujung = [b.p, b.q]; }
+  else return null;
+  const titik = new Map(), rusuk = new Map(), k = q => q.map(n => n.toFixed(3)).join(',');
+  for (const m of muka) for (let i = 0; i < m.length; i++) {
+    const a = m[i], b = m[(i + 1) % m.length], ka = k(a), kb = k(b);
+    titik.set(ka, a);
+    if (ka !== kb) rusuk.set(ka < kb ? ka + '|' + kb : kb + '|' + ka, [a, b]);
+  }
+  for (const q of ujung) titik.set(k(q), q);
+  return {titik: [...titik.values()], rusuk: [...rusuk.values()]};
+}
 // opsi.atas: ujung elemen juga dicari di puncaknya; opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap
 function titikSnap(e, kecuali, opsi = {}) {
   const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, v = V();
@@ -2536,11 +2553,15 @@ function titikSnap(e, kecuali, opsi = {}) {
   for (const [id, d] of S.elems) {
     if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
     for (const g of geometriElemen(id, d)) {
+      const r3 = rangka3D(g);
       const dasar = g.z0 || 0, tinggiG = g.jenis === 'pondasi' && g.tipe === 'batukali' ? 0 : (g.tinggi ?? g.h ?? 0);
       const zs = opsi.atas && g.jenis !== 'atap' ? [dasar + tinggiG, dasar] : [dasar];
-      const calon = titikKunci(g).map(q => [q, 'ujung']);
-      if (opsi.tengah) for (const q of titikTengah(g)) calon.push([q, 'tengah']);
-      for (const [[x, y], jenis] of calon) for (const z of zs) {
+      const calon = r3 ? r3.titik.map(q => [q, 'ujung']) : titikKunci(g).map(q => [q, 'ujung']);
+      if (opsi.tengah) {
+        if (r3) for (const [a, b] of r3.rusuk) calon.push([[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], 'tengah']);
+        else for (const q of titikTengah(g)) calon.push([q, 'tengah']);
+      }
+      for (const [[x, y, z3], jenis] of calon) for (const z of r3 ? [z3] : zs) {
         if (IRIS.arr.length && terbuangIris(x, y, z)) continue;
         v.set(x, y, z).project(camera);
         if (v.z > 1 || v.z < -1) continue;
@@ -2572,6 +2593,8 @@ function titikSnap(e, kecuali, opsi = {}) {
     for (const [id, d] of S.elems) {
       if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
       for (const g of geometriElemen(id, d)) {
+        const r3 = rangka3D(g);
+        if (r3) { for (const [a, b] of r3.rusuk) cek(a, b); continue; }
         const t = titikKunci(g);
         if (!t.length) continue;
         const dasar = g.z0 || 0, tinggiG = g.jenis === 'atap' || (g.jenis === 'pondasi' && g.tipe === 'batukali') ? 0 : (g.tinggi ?? g.h ?? 0);
