@@ -26,6 +26,8 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | E | detail | Detail di lembar detail ('det:1', 'det:2', …): template ('pondasiBatuKali','footplat','umpak','kudaKuda','sambunganKayu','bebas'), sumber (id elemen: pondasi untuk tiga template pertama, atap berangka kayu untuk kuda-kuda dan sambungan), lembar, skala (5, 10, 20, 25, 50, 75, 100), judul (opsional). sambunganKayu wajib `sambungan`: 'tumpuan','puncak','makelar','sokong','perpanjangan' | `{"jenis":"detail","template":"sambunganKayu","sumber":"A2","sambungan":"tumpuan","lembar":"det:2","skala":10}` |
 | I | instance | definisi (id komponen K…), posisi{x,y}, rotasi (°), z0 | |
 
+Muka terbuka (volume, opsional): `mukaHapus` = daftar muka yang dibuang, 'atas', 'bawah', atau 'sisi:<i>' (i = indeks tepi alas, mulai 0), mis. talang atau bak terbuka di atas: `"mukaHapus":["atas"]`. Gambar 2D dan RAB tetap menghitung volume utuh.
+
 Lubang (volume dan plafon, opsional): `lubang` = daftar cincin [[{x,y}…]…] di dalam alas, mis. bukaan tangga atau kolom yang berdiri bebas; luas dan RAB sudah dikurangi lubang.
 
 Lantai (volume): `lantai` = 'ruang' / 'km' / 'teras' / 'lain'; `penutupLantai` = 'k40', 'k30', 'k20' (kasar anti licin), 'g60', 'plester'.
