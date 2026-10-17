@@ -1,3 +1,12 @@
+## Yang baru di 0.26.0
+
+- **Simbol perabot dan sanitair** ukuran nyata di denah (alat Simbol, tekan R untuk memutar): kasur, lemari, meja, sofa, kloset, wastafel, shower, bak mandi, kitchen set, pohon.
+- **Legenda otomatis** dari isi lembar (alat Legenda).
+- **Unggah logo** untuk kop semua lembar.
+- **Pustaka detail sendiri**: gambar di petak Detail bebas, simpan ke pustaka, pakai lagi di lembar atau proyek lain.
+- **Perbaikan klos penahan gording**: kini di sisi bawah gording (3D, potongan, detail kuda-kuda).
+- Claude lewat MCP bisa membuat gambar lembar detail (det:1, det:2, …).
+
 ## Yang baru di 0.25.0
 
 - **Zoom gambar 2D** dan **Ruang Lembar**: daftar lembar, sampul, daftar gambar, kop di kanan (3 model), urutan lembar bisa diseret.
