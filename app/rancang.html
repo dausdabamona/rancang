@@ -162,6 +162,17 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 #m-svg [data-anot].pilih line,#m-svg [data-anot].pilih polygon{stroke:#1F6FD1}
 #m-svg.tambah{cursor:crosshair}
 #m-svg .peil-oto{cursor:move}
+.alat2d-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:0 18px 10px}
+.alat2d-bar .judul-kecil{font-size:12px;color:var(--muted);margin-right:2px}
+.alat2d-bar .grup-alat{display:inline-flex;gap:3px;flex-wrap:wrap}
+.alat2d-bar .tombol{padding:5px 9px;font-size:12.5px}
+.alat2d-bar .tombol[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.alat2d-bar select,.alat2d-bar input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:5px 7px;color:var(--fg);font-size:12.5px}
+.alat2d-bar .kecil{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+.alat2d-bar .edit-anot{display:inline-flex;gap:6px;align-items:center}
+#m-svg [data-g2]{cursor:move}
+#m-svg [data-g2].pilih line,#m-svg [data-g2].pilih polyline,#m-svg [data-g2].pilih polygon,#m-svg [data-g2].pilih rect,#m-svg [data-g2].pilih circle,#m-svg [data-g2].pilih path{stroke:#1F6FD1}
+#m-svg [data-g2].pilih text{fill:#1F6FD1}
 #m-svg .peil-oto:hover text{fill:#1F6FD1}
 #m-svg .peil-oto.pilih text{fill:#1F6FD1;font-weight:700}
 #m-svg .peil-oto.pilih line{stroke:#1F6FD1}
@@ -356,6 +367,30 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
         <button class="tombol" type="button" id="m-peil-pulih" title="Kembalikan posisi teks ke otomatis">Posisi otomatis</button></span>
       <button class="tombol" type="button" id="m-peil-tampil" hidden></button>
     </div>
+    <div class="alat2d-bar" id="m-alat2d">
+      <span class="judul-kecil">Gambar</span>
+      <span class="grup-alat">
+        <button class="tombol" type="button" data-alat2d="pilih" aria-pressed="true" title="Pilih benda 2D">Pilih</button>
+        <button class="tombol" type="button" data-alat2d="garis" aria-pressed="false" title="Garis berantai, Esc berhenti">Garis</button>
+        <button class="tombol" type="button" data-alat2d="polyline" aria-pressed="false" title="Polyline: klik dua kali atau Enter untuk selesai">Polyline</button>
+        <button class="tombol" type="button" data-alat2d="persegi" aria-pressed="false">Persegi</button>
+        <button class="tombol" type="button" data-alat2d="lingkaran" aria-pressed="false">Lingkaran</button>
+        <button class="tombol" type="button" data-alat2d="busur" aria-pressed="false" title="Busur: ujung awal, ujung akhir, titik pada lengkung">Busur</button>
+        <button class="tombol" type="button" data-alat2d="teks" aria-pressed="false">Teks</button>
+        <button class="tombol" type="button" data-alat2d="arsir" aria-pressed="false" title="Bidang arsir: klik sudut-sudutnya">Arsir</button>
+      </span>
+      <select id="g2-tebal" aria-label="Tebal garis" title="Tebal garis (mm)"><option value="0.13">0,13 mm</option><option value="0.18">0,18 mm</option><option value="0.25" selected>0,25 mm</option><option value="0.35">0,35 mm</option><option value="0.5">0,50 mm</option><option value="0.7">0,70 mm</option></select>
+      <select id="g2-garis" aria-label="Jenis garis"><option value="penuh">Penuh</option><option value="putus">Putus-putus</option><option value="as">As (titik-strip)</option><option value="titik">Titik-titik</option></select>
+      <select id="g2-warna" aria-label="Warna"><option value="hitam">Hitam</option><option value="abu">Abu-abu</option><option value="merah">Merah</option><option value="biru">Biru</option></select>
+      <select id="g2-pola" aria-label="Pola arsir" title="Pola arsir"><option value="beton">Beton / rabat</option><option value="bata">Pasangan bata</option><option value="tanah">Tanah</option><option value="pasir">Pasir</option><option value="kayu">Kayu</option><option value="keramik">Keramik</option></select>
+      <label class="kecil">Teks <input id="g2-ukuran" type="text" inputmode="decimal" value="2.5" size="3" aria-label="Ukuran teks (mm)"> mm</label>
+      <select id="g2-tempel" aria-label="Tempel" title="Tempel ke gambar: ikut skala dan posisi bangunan. Tempel ke kertas: tetap di kertas."><option value="gambar">Tempel ke gambar</option><option value="kertas">Tempel ke kertas</option></select>
+      <label class="cek kecil"><input type="checkbox" id="g2-snap" checked> Snap</label>
+      <input id="g2-panjang" type="text" inputmode="decimal" placeholder="Panjang" size="7" aria-label="Panjang diketik" title="Ketik panjang lalu Enter (meter bila tempel ke gambar, mm bila tempel ke kertas)">
+      <span class="edit-anot" id="g2-teks-wadah" hidden><input type="text" id="g2-teks" aria-label="Isi teks terpilih" placeholder="Teks"></span>
+      <span class="edit-anot" id="g2-aksi" hidden><button class="tombol" type="button" id="g2-salin" title="Ctrl+D">Salin</button><button class="tombol bahaya" type="button" id="g2-hapus" title="Delete">Hapus</button></span>
+      <span class="meta" id="g2-info"></span>
+    </div>
     <div class="wadah-2d">
       <div class="pratinjau-2d" id="m-svg"></div>
       <div class="zoom-2d" role="group" aria-label="Zoom gambar 2D">
@@ -449,6 +484,9 @@ function sah(d) {
   if (d.jenis === 'bukaan') return typeof d.dinding === 'string' && d.lebar > 0 && d.tinggi > 0 && Number.isFinite(d.jarak) && (d.ambang || 0) >= 0;
   if (d.jenis === 'atap') return ['x0', 'y0', 'x1', 'y1'].every(k => Number.isFinite(d[k])) && Math.abs(d.x1 - d.x0) > 0.05 && Math.abs(d.y1 - d.y0) > 0.05 && !!BENTUK_ATAP[d.bentuk];
   if (d.jenis === 'potong') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.1 && (d.pandang === 1 || d.pandang === -1) && typeof d.nama === 'string' && !!d.nama;
+  if (d.jenis === 'gambar2d') return typeof d.lembar === 'string' && !!d.lembar && Array.isArray(d.titik) && d.titik.length >= 1 && d.titik.every(titikSah)
+    && (d.tempel === 'gambar' || d.tempel === 'kertas') && ['garis', 'polyline', 'persegi', 'lingkaran', 'busur', 'teks', 'arsir'].includes(d.bentuk)
+    && (d.bentuk !== 'teks' || (typeof d.teks === 'string' && d.teks.length > 0));
   if (d.jenis === 'anotasi') {
     const pt = p => titikSah(p) && (p.z === undefined || Number.isFinite(p.z));
     if (!['teks', 'label', 'ukuran', 'peil'].includes(d.tipe) || !pt(d.titik)) return false;
@@ -854,7 +892,7 @@ function keLokal(d, inst) {
 function bersihkan(d) { const b = salin(d); delete b.diubahOleh; delete b.diubahPada; delete b.grup; return b; }
 // Elemen dunia yang membentuk satu entri (salinan komponen diurai menjadi isinya)
 function geometriElemen(id, d) {
-  if (!d || d.jenis === 'bukaan' || d.jenis === 'potong' || d.jenis === 'anotasi') return [];
+  if (!d || d.jenis === 'bukaan' || d.jenis === 'potong' || d.jenis === 'anotasi' || d.jenis === 'gambar2d') return [];
   if (d.jenis === 'instance') {
     const def = S.komp.get(d.definisi);
     if (!def) return [];
@@ -923,6 +961,7 @@ function kodeBukaan(tipe, lebar, tinggi, ambang) {
 function titikKunci(d) {
   if (d.jenis === 'bukaan' || d.jenis === 'instance') return [];
   if (d.jenis === 'anotasi') return [[d.titik.x, d.titik.y]];
+  if (d.jenis === 'gambar2d') return [];
   if (d.jenis === 'atap') { const {x0, x1, y0, y1} = batasAtap(d); return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]; }
   if (Number.isFinite(d.x) && Number.isFinite(d.y)) return [[d.x, d.y]];
   if (d.jenis === 'slof' || d.jenis === 'ringbalk' || d.jenis === 'pondasi') return [[d.awal.x, d.awal.y], [d.akhir.x, d.akhir.y]];
@@ -930,7 +969,7 @@ function titikKunci(d) {
   if (d.bentuk === 'busur') return [[d.awal.x, d.awal.y], [d.akhir.x, d.akhir.y], geoBusur(d).puncak];
   return d.jenis === 'dinding' ? [[d.awal.x, d.awal.y], [d.akhir.x, d.akhir.y]] : d.alas.map(q => [q.x, q.y]);
 }
-const namaJenis = d => (d.jenis === 'plafon' ? 'Plafon' : d.jenis === 'potong' ? 'Garis potong' : d.jenis === 'anotasi' ? 'Anotasi' : d.jenis === 'kolom' || d.jenis === 'pondasi' ? NAMA_STRUKTUR[d.tipe] || 'Pondasi' : d.jenis === 'slof' ? 'Slof' : d.jenis === 'ringbalk' ? 'Ring balk' : d.jenis === 'atap' ? 'Atap ' + (BENTUK_ATAP[d.bentuk] || '').toLowerCase() : d.jenis === 'dinding' ? 'Dinding' : d.jenis === 'instance' ? 'Komponen' : d.jenis === 'bukaan' ? (d.tipe === 'pintu' ? 'Pintu' : 'Jendela') : ((d.tinggi || 0) > 0 ? 'Volume' : 'Bidang'));
+const namaJenis = d => (d.jenis === 'gambar2d' ? 'Gambar 2D' : d.jenis === 'plafon' ? 'Plafon' : d.jenis === 'potong' ? 'Garis potong' : d.jenis === 'anotasi' ? 'Anotasi' : d.jenis === 'kolom' || d.jenis === 'pondasi' ? NAMA_STRUKTUR[d.tipe] || 'Pondasi' : d.jenis === 'slof' ? 'Slof' : d.jenis === 'ringbalk' ? 'Ring balk' : d.jenis === 'atap' ? 'Atap ' + (BENTUK_ATAP[d.bentuk] || '').toLowerCase() : d.jenis === 'dinding' ? 'Dinding' : d.jenis === 'instance' ? 'Komponen' : d.jenis === 'bukaan' ? (d.tipe === 'pintu' ? 'Pintu' : 'Jendela') : ((d.tinggi || 0) > 0 ? 'Volume' : 'Bidang'));
 function geser(d, dx, dy, dz = 0) {
   const b = salin(d);
   if (b.jenis === 'bukaan') {
@@ -1770,7 +1809,7 @@ function pasangInti(id) {
   lepas(id);
   const d = pratDunia.has(id) ? pratDunia.get(id) : S.elems.get(id);
   tandaSambung.delete(id);
-  if (d && sah(d) && !S.sembunyi.has(id)) {
+  if (d && sah(d) && !S.sembunyi.has(id) && !HANYA2D.has(d.jenis)) {
     const f = {dipilih: dipilihEl(id), kilat: S.kilat.has(id), redup: redupEl(id)};
     const g = new THREE.Group(); g.userData.elemId = id;
     if (NONFISIK.has(d.jenis)) bangunPenanda(g, id, d, f);
@@ -3465,6 +3504,8 @@ const alatOrbit = {
 /* ============ Garis potong dan anotasi ============ */
 // Keduanya bukan benda fisik: tidak masuk perhitungan volume, luas, maupun rekap RAB.
 const NONFISIK = new Set(['potong', 'anotasi']);
+// benda gambar 2D hanya ada di Ruang Lembar
+const HANYA2D = new Set(['gambar2d']);
 const TIPE_ANOT = {teks: 'Teks', label: 'Label', ukuran: 'Ukuran', peil: 'Peil'};
 const PADA_ANOT = {semua: 'Semua gambar', denah: 'Denah saja', tampak: 'Tampak saja', potongan: 'Potongan saja'};
 const zDari = p => (p && Number.isFinite(p.z) ? p.z : 0);
@@ -4718,6 +4759,7 @@ window.addEventListener('keydown', e => {
   if (!$('#modalProyek').hidden) { if (e.key === 'Escape') $('#mp-batal').click(); return; }
   if (!$('#modal2d').hidden) {
     if (e.target && e.target.matches && e.target.matches('input, textarea, select')) return;
+    if (kunci2D(e)) return;
     if (e.key === 'Escape') { if (ANOT2D.tambah || ANOT2D.pilih || ANOT2D.pilihPeil) { ANOT2D.pilihPeil = null; ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.pilih = null; segarAnot2D(); } else tutup2D(); }
     else if ((e.key === 'Delete' || e.key === 'Backspace') && ANOT2D.pilih) { e.preventDefault(); hapusAnot2D(); }
     else if ((e.key === 'Delete' || e.key === 'Backspace') && ANOT2D.pilihPeil) { e.preventDefault(); sembunyikanPeil2D(); }
@@ -5862,6 +5904,53 @@ function kopGambar(o, W, H, skalaTeks) {
   bawah.forEach(([b, t], i) => { const h = t * f; b(h)(y); y += h; if (i < bawah.length - 1) pisah(y, 0.3); });
   return out.join('');
 }
+/* ---- benda gambar 2D di lembar (v0.27) ---- */
+const POLA_2D_DEF = {
+  beton: '<path d="M2.5 3.2l1.8 0.5-1.2 1.3z M10.2 8.6l1.5-0.9 0.3 1.8z M5.4 12.4l1.7 0.7-1.5 1z M13.2 2.4l1.2 1.3-1.7 0.2z" fill="none" stroke="#555" stroke-width="0.13"/><circle cx="8.2" cy="4.6" r="0.22" fill="#666"/><circle cx="3.6" cy="8.8" r="0.2" fill="#666"/><circle cx="12.6" cy="13.4" r="0.24" fill="#666"/>',
+  bata: '<line x1="0" y1="16" x2="16" y2="0" stroke="#000" stroke-width="0.13"/><line x1="-4" y1="4" x2="4" y2="-4" stroke="#000" stroke-width="0.13"/><line x1="12" y1="20" x2="20" y2="12" stroke="#000" stroke-width="0.13"/><line x1="0" y1="8" x2="8" y2="0" stroke="#000" stroke-width="0.13"/><line x1="8" y1="16" x2="16" y2="8" stroke="#000" stroke-width="0.13"/>',
+  tanah: '<path d="M1 7l4-4M3 8l4-4M5 9l4-4 M9 15l4-4M11 16l4-4M13 17l3-3" stroke="#444" stroke-width="0.13" fill="none"/>',
+  pasir: '<g fill="#666"><circle cx="1.5" cy="2" r="0.18"/><circle cx="5.2" cy="1.1" r="0.15"/><circle cx="9.4" cy="3.2" r="0.2"/><circle cx="13.6" cy="1.8" r="0.16"/><circle cx="3.1" cy="6.4" r="0.17"/><circle cx="7.6" cy="7.5" r="0.2"/><circle cx="11.8" cy="6.1" r="0.15"/><circle cx="15" cy="8.6" r="0.18"/><circle cx="1.2" cy="11.3" r="0.2"/><circle cx="5.9" cy="12.6" r="0.16"/><circle cx="10.1" cy="11.2" r="0.18"/><circle cx="13.4" cy="14.2" r="0.2"/><circle cx="3.6" cy="15.1" r="0.15"/><circle cx="8.3" cy="15.4" r="0.17"/></g>',
+  kayu: '<path d="M0 2 Q4 1 8 2.4 T16 2 M0 7 Q5 5.6 9 7.2 T16 6.8 M0 12 Q3.5 13.2 8 11.6 T16 12.2" stroke="#7a5a3a" stroke-width="0.13" fill="none"/>',
+  keramik: '<path d="M0 0H16M0 8H16M0 0V16M8 0V16" stroke="#999" stroke-width="0.1" fill="none"/>'
+};
+function svgBenda2D(o, proyek) {
+  const out = [], pakai = new Set();
+  const nk = v => Math.round(v * 100) / 100;
+  for (const [id, d] of S.elems) {
+    if (d.jenis !== 'gambar2d' || d.lembar !== o.jenis || S.sembunyi.has(id) || !sah(d)) continue;
+    if (d.tempel === 'gambar' && !proyek) continue;
+    const q = d.titik.map(t => (d.tempel === 'gambar' ? proyek(t) : [t.x, t.y]));
+    const g = d.gaya || {}, warna = WARNA_2D[g.warna] || '#000', tebal = g.tebal ?? 0.25;
+    const da = {putus: '2 1', as: '5 1 0.6 1', titik: '0.3 0.8'}[g.garis];
+    const gs = `stroke="${warna}" stroke-width="${tebal}"${da ? ` stroke-dasharray="${da}"` : ''} stroke-linejoin="round" stroke-linecap="round"`;
+    const pt = a => a.map(([x, y]) => `${nk(x)},${nk(y)}`).join(' ');
+    let el = '', hit = '';
+    const tebalHit = 'stroke="#000" stroke-opacity="0" stroke-width="2.4" fill="none" class="sasaran"';
+    if (d.bentuk === 'garis') { el = `<line x1="${nk(q[0][0])}" y1="${nk(q[0][1])}" x2="${nk(q[1][0])}" y2="${nk(q[1][1])}" ${gs}/>`; hit = `<line x1="${nk(q[0][0])}" y1="${nk(q[0][1])}" x2="${nk(q[1][0])}" y2="${nk(q[1][1])}" ${tebalHit}/>`; }
+    else if (d.bentuk === 'polyline') { const t = d.tutup ? 'polygon' : 'polyline'; el = `<${t} points="${pt(q)}" fill="none" ${gs}/>`; hit = `<${t} points="${pt(q)}" ${tebalHit}/>`; }
+    else if (d.bentuk === 'persegi') {
+      const x = Math.min(q[0][0], q[1][0]), y = Math.min(q[0][1], q[1][1]), w = Math.abs(q[1][0] - q[0][0]), h = Math.abs(q[1][1] - q[0][1]);
+      el = `<rect x="${nk(x)}" y="${nk(y)}" width="${nk(w)}" height="${nk(h)}" fill="none" ${gs}/>`; hit = `<rect x="${nk(x)}" y="${nk(y)}" width="${nk(w)}" height="${nk(h)}" ${tebalHit}/>`;
+    } else if (d.bentuk === 'lingkaran') {
+      const r = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]);
+      el = `<circle cx="${nk(q[0][0])}" cy="${nk(q[0][1])}" r="${nk(r)}" fill="none" ${gs}/>`; hit = `<circle cx="${nk(q[0][0])}" cy="${nk(q[0][1])}" r="${nk(r)}" ${tebalHit}/>`;
+    } else if (d.bentuk === 'busur' && q.length >= 3) {
+      const dd = jalurBusur2D({x: q[0][0], y: q[0][1]}, {x: q[1][0], y: q[1][1]}, {x: q[2][0], y: q[2][1]});
+      el = `<path d="${dd}" fill="none" ${gs}/>`; hit = `<path d="${dd}" ${tebalHit}/>`;
+    } else if (d.bentuk === 'teks') {
+      const uk = d.ukuran || 2.5, tw = String(d.teks).length * uk * 0.56;
+      el = `<text x="${nk(q[0][0])}" y="${nk(q[0][1])}" font-size="${uk}" fill="${warna}">${esk(d.teks)}</text>`;
+      hit = `<rect x="${nk(q[0][0] - 0.6)}" y="${nk(q[0][1] - uk)}" width="${nk(tw + 1.2)}" height="${nk(uk * 1.3)}" fill="transparent" class="sasaran"/>`;
+    } else if (d.bentuk === 'arsir' && q.length >= 3) {
+      const pola = POLA_2D_DEF[d.pola] ? d.pola : 'beton';
+      pakai.add(pola);
+      el = `<polygon points="${pt(q)}" fill="url(#p2d-${pola})" ${gs}/>`; hit = `<polygon points="${pt(q)}" fill="transparent" class="sasaran"/>`;
+    }
+    if (el) out.push(`<g data-g2="${id}">${el}${o.layar ? hit : ''}</g>`);
+  }
+  if (pakai.size) out.unshift(`<defs>${[...pakai].map(k => `<pattern id="p2d-${k}" patternUnits="userSpaceOnUse" width="16" height="16"><rect width="16" height="16" fill="#fff"/>${POLA_2D_DEF[k]}</pattern>`).join('')}</defs>`);
+  return out;
+}
 function lembarKhusus(o) {
   const [W, H] = KERTAS[o.kertas], f = W / 297, sp = S.setel.sampul || {}, m = 10;
   const tk = (x, y, t, uk, extra = '') => `<text x="${n2k(x)}" y="${n2k(y)}" font-size="${n2k(uk)}" ${extra}>${esk(t)}</text>`;
@@ -5883,6 +5972,7 @@ function lembarKhusus(o) {
     }
     isi.push(tk(cx, H - 34 * f, `${lembar.length} lembar · kertas ${o.kertas}`, 3.4 * f, 'text-anchor="middle" fill="#555"'),
       tk(cx, H - 26 * f, sp.tanggal || new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), 3.6 * f, 'text-anchor="middle"'));
+    isi.push(...svgBenda2D(o, null));
     return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}</svg>`,
       info: '', skala: '-', W, H, peta: null, anotStat: null};
   }
@@ -5908,6 +5998,7 @@ function lembarKhusus(o) {
   let x = x0;
   for (const [, w] of kol) { isi.push(gr(x, m + 26, x, y, 0.15)); x += lebar * w; }
   isi.push(gr(x0 + lebar, m + 26, x0 + lebar, y, 0.15));
+  isi.push(...svgBenda2D(o, null));
   const kop = kopGambar(o, W, H, '-');
   return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`,
     info: '', skala: '-', W, H, peta: null, anotStat: null};
@@ -5937,7 +6028,9 @@ function buatSVG(o) {
   };  // Anotasi pada gambar 2D: proyek(titik 3D) → [x, y] di kertas
   // Anotasi pada gambar 2D: proyek(titik 3D) → [x, y] di kertas; terhalang(d) = true bila titiknya tertutup dinding/atap
   const anotStat = {disembunyikan: 0, terhalang: 0};
+  let proyekLembar = null;
   const anotasiSvg = (proyek, jenisGambar, saring, terhalang) => {
+    proyekLembar = proyek;
     const r = [];
     for (const [id, d] of S.elems) {
       if (d.jenis !== 'anotasi' || S.sembunyi.has(id) || !sah(d)) continue;
@@ -6702,6 +6795,7 @@ function buatSVG(o) {
   }
   if (info && !skala) skala = o.skala || 100;
   // bingkai dan kop gambar
+  isi.push(...svgBenda2D(o, proyekLembar));
   const kop = kopGambar(o, W, H, '1 : ' + skala);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`;
   return {svg, info, skala, W, H, peta, anotStat};
@@ -6716,11 +6810,14 @@ function skala2D() {
 }
 function opsi2D() { return {jenis: $('#m-jenis').value, skala: skala2D(), kertas: $('#m-kertas').value, dimensi: $('#m-dimensi').checked, dimDinding: $('#m-dimdinding').checked, terhalang: $('#m-terhalang').checked}; }
 function segar2D() {
-  hasil2D = buatSVG(opsi2D());
+  hasil2D = buatSVG({...opsi2D(), layar: true});
   $('#m-svg').innerHTML = hasil2D.svg;
   pasangZoom2D();
   renderLembar();
+  kumpulSnap2D();
   segarAnot2D();
+  segarPilih2D();
+  $('#m-alat2d').hidden = !S.bisaUbah;
   const o = opsi2D();
   $('#m-info').textContent = o.jenis === 'sampul' ? 'Sampul set gambar. Isi data proyek di panel kiri.' : o.jenis === 'daftar' ? 'Daftar gambar dibuat otomatis dari lembar yang dicentang.' : hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, skala 1 : ${hasil2D.skala}, kertas ${o.kertas} lanskap. Ukuran dalam meter.`;
   const bisa = !!S.unduh;
@@ -7428,6 +7525,7 @@ function tambahAnot2D(p) {
   if (tipe !== 'peil') { const i = $('#m-anot-teks'); i.focus(); i.select(); }
 }
 document.querySelectorAll('[data-tambah]').forEach(b => b.addEventListener('click', () => {
+  if (ALAT2D.alat) pakaiAlat2D('pilih');
   ANOT2D.tambah = ANOT2D.tambah === b.dataset.tambah ? null : b.dataset.tambah; ANOT2D.titikA = null; segarAnot2D();
 }));
 $('#m-svg').addEventListener('pointerdown', e => {
@@ -7562,6 +7660,310 @@ $('#m-png3d').addEventListener('click', () => {
   renderer.render(scene, camera);
   canvas.toBlob(blob => { if (blob) simpanBerkas(namaBerkas('png').replace(/_[^_]+_1-\d+\.png$/, '_3d.png'), blob); else toast('Gambar 3D gagal dibuat.'); }, 'image/png');
 });
+
+/* ============ Alat gambar 2D di Ruang Lembar (v0.27) ============ */
+// Benda 2D (jenis 'gambar2d', id L…) hanya tampil di lembarnya. Tempel 'gambar' menyimpan titik dunia (meter) lewat peta lembar;
+// tempel 'kertas' menyimpan titik mm kertas. Snap ke ujung, titik tengah, dan perpotongan garis yang tergambar di lembar.
+const TEBAL_2D = [0.13, 0.18, 0.25, 0.35, 0.5, 0.7];
+const GARIS_2D = {penuh: 'Penuh', putus: 'Putus-putus', as: 'As (titik-strip)', titik: 'Titik-titik'};
+const WARNA_2D = {hitam: '#000000', abu: '#777777', merah: '#C62828', biru: '#1565C0'};
+const POLA_2D = {beton: 'Beton / rabat', bata: 'Pasangan bata', tanah: 'Tanah', pasir: 'Pasir', kayu: 'Kayu', keramik: 'Keramik'};
+const NAMA_ALAT_2D = {pilih: 'Pilih', garis: 'Garis', polyline: 'Polyline', persegi: 'Persegi', lingkaran: 'Lingkaran', busur: 'Busur', teks: 'Teks', arsir: 'Arsir'};
+const ALAT2D = {alat: null, titik: [], kursor: null, pilih: new Set(), seret: null, snap: [], segmen: [], gaya: {tebal: 0.25, garis: 'penuh', warna: 'hitam'}, pola: 'beton', ukuran: 2.5, tempel: 'gambar'};
+const adaPeta2D = () => !!(hasil2D && hasil2D.peta);
+const tempelAktif = () => (adaPeta2D() ? ALAT2D.tempel : 'kertas');
+// titik kertas (mm) → data simpan
+function simpanTitik2D(p, tempel) {
+  if (tempel === 'gambar') { const w = hasil2D.peta.keDunia(p.x, p.y); return {x: r2(w.x), y: r2(w.y), z: r2(w.z || 0)}; }
+  return {x: r2(p.x), y: r2(p.y)};
+}
+function svgDrag2D() { return $('#m-svg svg'); }
+// kumpulan titik snap dan segmen dari SVG yang tampil (koordinat kertas)
+function kumpulSnap2D() {
+  const svg = svgDrag2D(), titik = [], seg = [];
+  ALAT2D.snap = titik; ALAT2D.segmen = seg;
+  if (!svg) return;
+  const tambahSeg = (a, b) => { if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 0.3) return; seg.push([a, b]); titik.push({x: a[0], y: a[1], j: 'ujung'}, {x: b[0], y: b[1], j: 'ujung'}, {x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2, j: 'tengah'}); };
+  for (const el of svg.querySelectorAll('line, polygon, polyline, rect')) {
+    if (el.closest('defs, pattern, .zoom-2d') || el.getAttribute('fill') === 'transparent' || el.getAttribute('stroke-opacity') === '0') continue;
+    if (seg.length > 12000) break;
+    if (el.tagName === 'line') tambahSeg([+el.getAttribute('x1'), +el.getAttribute('y1')], [+el.getAttribute('x2'), +el.getAttribute('y2')]);
+    else if (el.tagName === 'rect') {
+      const x = +el.getAttribute('x') || 0, y = +el.getAttribute('y') || 0, w = +el.getAttribute('width'), h = +el.getAttribute('height');
+      if (!(w > 0 && h > 0) || el.parentNode === svg && w >= 200) continue;
+      const q = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+      q.forEach((a, i) => tambahSeg(a, q[(i + 1) % 4]));
+    } else {
+      const q = (el.getAttribute('points') || '').trim().split(/\s+/).map(s => s.split(',').map(Number)).filter(a => a.length === 2 && a.every(Number.isFinite));
+      for (let i = 0; i + 1 < q.length; i++) tambahSeg(q[i], q[i + 1]);
+      if (el.tagName === 'polygon' && q.length > 2) tambahSeg(q[q.length - 1], q[0]);
+    }
+  }
+}
+// titik kertas di bawah kursor dengan snap dan kunci tegak/datar
+function titikKursor2D(e) {
+  let p = svgTitik(e);
+  if (!p) return null;
+  p = {x: p.x, y: p.y, j: null};
+  const svg = svgDrag2D(), m = svg && svg.getScreenCTM(), r = m && m.a ? 7 / m.a : 1.5;
+  const akhir = ALAT2D.titik[ALAT2D.titik.length - 1];
+  if (e.shiftKey && akhir) {
+    if (Math.abs(p.x - akhir.x) >= Math.abs(p.y - akhir.y)) p.y = akhir.y; else p.x = akhir.x;
+    p.j = 'kunci';
+  }
+  if (!$('#g2-snap').checked) return p;
+  let best = null, dmin = r;
+  for (const q of ALAT2D.snap) {
+    const d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d < dmin && !(e.shiftKey && akhir && Math.abs(q.x - akhir.x) > 1e-6 && Math.abs(q.y - akhir.y) > 1e-6)) { dmin = d; best = q; }
+  }
+  // perpotongan: hanya segmen di dekat kursor
+  if (!best) {
+    const dekat = [];
+    for (const [a, b] of ALAT2D.segmen) {
+      const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy, t = Math.max(0, Math.min(1, ((p.x - a[0]) * dx + (p.y - a[1]) * dy) / L));
+      if (Math.hypot(a[0] + t * dx - p.x, a[1] + t * dy - p.y) < r) dekat.push([a, b]);
+      if (dekat.length > 40) break;
+    }
+    for (let i = 0; i < dekat.length; i++) for (let k = i + 1; k < dekat.length; k++) {
+      const [a, b] = dekat[i], [c, d] = dekat[k], den = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+      if (Math.abs(den) < 1e-9) continue;
+      const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / den, u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / den;
+      if (t < -1e-6 || t > 1 + 1e-6 || u < -1e-6 || u > 1 + 1e-6) continue;
+      const q = {x: a[0] + t * (b[0] - a[0]), y: a[1] + t * (b[1] - a[1]), j: 'potong'}, dd = Math.hypot(q.x - p.x, q.y - p.y);
+      if (dd < dmin) { dmin = dd; best = q; }
+    }
+  }
+  return best ? {x: best.x, y: best.y, j: best.j} : p;
+}
+// pratinjau di atas SVG
+function pratinjau2D(p) {
+  const svg = svgDrag2D();
+  if (!svg) return;
+  let g = svg.querySelector('#g2-prat');
+  if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.id = 'g2-prat'; svg.appendChild(g); }
+  const t = ALAT2D.titik, a = ALAT2D.alat, w = '0.25', warna = '#1F6FD1';
+  let isi = '';
+  const garisP = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${warna}" stroke-width="${w}" stroke-dasharray="1 0.6"/>`;
+  if (p && t.length) {
+    const q = [...t, p];
+    if (a === 'persegi') isi += `<rect x="${Math.min(t[0].x, p.x)}" y="${Math.min(t[0].y, p.y)}" width="${Math.abs(p.x - t[0].x)}" height="${Math.abs(p.y - t[0].y)}" fill="none" stroke="${warna}" stroke-width="${w}" stroke-dasharray="1 0.6"/>`;
+    else if (a === 'lingkaran') isi += `<circle cx="${t[0].x}" cy="${t[0].y}" r="${Math.hypot(p.x - t[0].x, p.y - t[0].y)}" fill="none" stroke="${warna}" stroke-width="${w}" stroke-dasharray="1 0.6"/>`;
+    else if (a === 'busur' && t.length === 2) { const d = jalurBusur2D(t[0], t[1], p); if (d) isi += `<path d="${d}" fill="none" stroke="${warna}" stroke-width="${w}" stroke-dasharray="1 0.6"/>`; }
+    else for (let i = 0; i + 1 < q.length; i++) isi += garisP(q[i].x, q[i].y, q[i + 1].x, q[i + 1].y);
+    if (a === 'arsir' && t.length >= 2) isi += garisP(p.x, p.y, t[0].x, t[0].y);
+  }
+  for (const q of t) isi += `<circle cx="${q.x}" cy="${q.y}" r="0.5" fill="${warna}"/>`;
+  if (p && p.j && p.j !== 'kunci') isi += p.j === 'tengah' ? `<circle cx="${p.x}" cy="${p.y}" r="0.9" fill="none" stroke="#00A3B5" stroke-width="0.3"/>`
+    : p.j === 'potong' ? `<path d="M${p.x - 0.9} ${p.y - 0.9}L${p.x + 0.9} ${p.y + 0.9}M${p.x - 0.9} ${p.y + 0.9}L${p.x + 0.9} ${p.y - 0.9}" stroke="#E07B00" stroke-width="0.35"/>`
+    : `<rect x="${p.x - 0.8}" y="${p.y - 0.8}" width="1.6" height="1.6" fill="none" stroke="#1B9E3E" stroke-width="0.3"/>`;
+  g.innerHTML = isi;
+}
+// busur melalui tiga titik kertas: lengkung SVG dari a ke b lewat c
+function jalurBusur2D(a, b, c) {
+  const ax = a.x, ay = a.y, bx = b.x, by = b.y, cx = c.x, cy = c.y;
+  const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+  if (Math.abs(d) < 1e-9) return `M${ax} ${ay}L${bx} ${by}`;
+  const ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / d;
+  const uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / d;
+  const r = Math.hypot(ax - ux, ay - uy);
+  // sisi c terhadap tali a-b menentukan lengkung besar/kecil dan arah
+  const sisiC = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax), sisiU = (bx - ax) * (uy - ay) - (by - ay) * (ux - ax);
+  // koordinat layar (y ke bawah): c di kiri arah a→b berarti berputar searah jarum jam
+  const besar = sisiC * sisiU > 0 ? 1 : 0, sapu = sisiC < 0 ? 1 : 0;
+  return `M${n2(ax)} ${n2(ay)} A${n2(r)} ${n2(r)} 0 ${besar} ${sapu} ${n2(bx)} ${n2(by)}`;
+}
+function selesaiBentuk2D(bentuk, titik, ekstra = {}) {
+  const tempel = tempelAktif();
+  const d = {jenis: 'gambar2d', bentuk, lembar: opsi2D().jenis, tempel, titik: titik.map(p => simpanTitik2D(p, tempel)), gaya: {...ALAT2D.gaya}, ...ekstra};
+  const id = idBaru('L');
+  terapkan([{id, sesudah: d}]);
+  segar2D();
+  return id;
+}
+function batalBentuk2D() { ALAT2D.titik = []; pratinjau2D(null); }
+function pakaiAlat2D(nama) {
+  ALAT2D.alat = nama === 'pilih' ? null : nama;
+  if (ALAT2D.alat) { ANOT2D.tambah = null; ANOT2D.titikA = null; ALAT2D.pilih.clear(); segarAnot2D(); }
+  batalBentuk2D();
+  document.querySelectorAll('[data-alat2d]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.alat2d === 'pilih' && !ALAT2D.alat) || b.dataset.alat2d === ALAT2D.alat)));
+  $('#m-svg').classList.toggle('tambah', !!ALAT2D.alat);
+  segarPanel2D();
+}
+function tambahTitik2D(p) {
+  const a = ALAT2D.alat, t = ALAT2D.titik;
+  t.push(p);
+  if (a === 'garis' && t.length === 2) { selesaiBentuk2D('garis', t); ALAT2D.titik = [p]; return; }
+  if (a === 'persegi' && t.length === 2) { if (Math.abs(t[1].x - t[0].x) > 0.2 && Math.abs(t[1].y - t[0].y) > 0.2) selesaiBentuk2D('persegi', t); batalBentuk2D(); return; }
+  if (a === 'lingkaran' && t.length === 2) { if (Math.hypot(t[1].x - t[0].x, t[1].y - t[0].y) > 0.2) selesaiBentuk2D('lingkaran', t); batalBentuk2D(); return; }
+  if (a === 'busur' && t.length === 3) { selesaiBentuk2D('busur', [t[0], t[1], t[2]]); batalBentuk2D(); return; }
+  if (a === 'teks') {
+    const id = selesaiBentuk2D('teks', [p], {teks: 'Keterangan', ukuran: ALAT2D.ukuran});
+    batalBentuk2D(); pakaiAlat2D('pilih');
+    ALAT2D.pilih = new Set([id]); segar2D();
+    const i = $('#g2-teks'); if (i) { i.focus(); i.select(); }
+    return;
+  }
+  if ((a === 'polyline' || a === 'arsir') && t.length > 2 && Math.hypot(p.x - t[0].x, p.y - t[0].y) < 0.6) { t.pop(); akhiriPoly2D(true); }
+}
+function akhiriPoly2D(tutup) {
+  const a = ALAT2D.alat, t = ALAT2D.titik.filter((q, i, arr) => !i || Math.hypot(q.x - arr[i - 1].x, q.y - arr[i - 1].y) > 0.05);
+  if (a === 'polyline' && t.length >= 2) selesaiBentuk2D('polyline', t, {tutup: !!tutup});
+  else if (a === 'arsir' && t.length >= 3) selesaiBentuk2D('arsir', t, {pola: ALAT2D.pola});
+  else if (a === 'garis') { /* rantai garis berhenti */ }
+  batalBentuk2D();
+}
+// panjang diketik: titik berikut sejauh L ke arah kursor (meter untuk tempel gambar, mm untuk kertas)
+function panjangDiketik2D(teks) {
+  const L = angka(teks), t = ALAT2D.titik, akhir = t[t.length - 1], k = ALAT2D.kursor;
+  if (!Number.isFinite(L) || L <= 0) return toast('Isi panjang lebih dari 0.');
+  if (!akhir || !k) return toast('Klik titik awal dulu, arahkan kursor, lalu ketik panjangnya.');
+  const dx = k.x - akhir.x, dy = k.y - akhir.y, dl = Math.hypot(dx, dy);
+  if (dl < 1e-6) return toast('Arahkan kursor ke arah garis dulu.');
+  const mm = tempelAktif() === 'gambar' ? L * 1000 / hasil2D.skala : L;
+  tambahTitik2D({x: akhir.x + dx / dl * mm, y: akhir.y + dy / dl * mm});
+  pratinjau2D(ALAT2D.kursor);
+}
+/* ---- pilih, pindah, salin, hapus, gaya ---- */
+function segarPilih2D() {
+  $('#m-svg').querySelectorAll('[data-g2]').forEach(g => g.classList.toggle('pilih', ALAT2D.pilih.has(g.dataset.g2)));
+  if (ALAT2D.alat) { $('#m-svg').classList.add('tambah'); pratinjau2D(ALAT2D.kursor); }
+  segarPanel2D();
+}
+function segarPanel2D() {
+  const ids = [...ALAT2D.pilih].filter(id => S.elems.has(id)), d = ids.length === 1 ? S.elems.get(ids[0]) : null;
+  ALAT2D.pilih = new Set(ids);
+  const acuan = ids.length ? S.elems.get(ids[0]) : null, gaya = acuan ? (acuan.gaya || {}) : ALAT2D.gaya;
+  $('#g2-tebal').value = String(gaya.tebal ?? 0.25); $('#g2-garis').value = gaya.garis || 'penuh'; $('#g2-warna').value = gaya.warna || 'hitam';
+  $('#g2-pola').value = (acuan && acuan.pola) || ALAT2D.pola;
+  $('#g2-ukuran').value = String((acuan && acuan.ukuran) || ALAT2D.ukuran);
+  $('#g2-tempel').value = acuan ? acuan.tempel : ALAT2D.tempel;
+  $('#g2-tempel').disabled = !!acuan || !adaPeta2D();
+  $('#g2-teks-wadah').hidden = !(d && d.bentuk === 'teks');
+  if (d && d.bentuk === 'teks' && document.activeElement !== $('#g2-teks')) $('#g2-teks').value = d.teks || '';
+  $('#g2-aksi').hidden = !ids.length;
+  $('#g2-info').textContent = ALAT2D.alat ? petunjuk2D() : ids.length ? `${ids.length} benda 2D terpilih. Seret untuk memindah, Delete menghapus, Ctrl+D menyalin.` : '';
+}
+function petunjuk2D() {
+  const a = ALAT2D.alat, n = ALAT2D.titik.length, sat = tempelAktif() === 'gambar' ? 'meter' : 'mm';
+  const t = {garis: n ? `klik titik berikut (Esc berhenti). Ketik panjang (${sat}) lalu Enter.` : 'klik titik awal.',
+    polyline: n ? `klik titik berikut; klik dua kali atau Enter untuk selesai, klik titik awal untuk menutup.` : 'klik titik awal.',
+    persegi: n ? 'klik sudut seberang.' : 'klik sudut pertama.', lingkaran: n ? 'klik titik tepi.' : 'klik pusat lingkaran.',
+    busur: n === 0 ? 'klik ujung awal busur.' : n === 1 ? 'klik ujung akhir.' : 'klik titik pada lengkungnya.', teks: 'klik tempat teks.',
+    arsir: n ? 'klik sudut berikut; klik dua kali atau Enter untuk selesai.' : 'klik sudut pertama bidang arsir.'}[a];
+  return `${NAMA_ALAT_2D[a]}: ${t} Shift = tegak/datar.`;
+}
+function ubahPilih2D(ubah) {
+  const tulis = [...ALAT2D.pilih].filter(id => S.elems.has(id)).map(id => ({id, sesudah: ubah(salin(S.elems.get(id)))}));
+  if (tulis.length) { terapkan(tulis); segar2D(); }
+}
+function geserData2D(d, dx, dy) {
+  const b = salin(d);
+  if (b.tempel === 'gambar') { const v = hasil2D.peta.geser(dx, dy); b.titik = b.titik.map(q => ({x: r2(q.x + v.x), y: r2(q.y + v.y), z: r2((q.z || 0) + v.z)})); }
+  else b.titik = b.titik.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy)}));
+  return b;
+}
+function hapusPilih2D() {
+  const ids = [...ALAT2D.pilih].filter(id => S.elems.has(id));
+  if (!ids.length) return;
+  terapkan(ids.map(id => ({id, sesudah: null})));
+  ALAT2D.pilih.clear(); segar2D();
+  toast(`${ids.length} benda 2D dihapus. Ctrl+Z untuk mengembalikan.`);
+}
+function salinPilih2D() {
+  const ids = [...ALAT2D.pilih].filter(id => S.elems.has(id));
+  if (!ids.length) return;
+  const nid = pemberiId(), baru = [], tulis = [];
+  for (const id of ids) { const n = nid('L'); baru.push(n); tulis.push({id: n, sesudah: geserData2D(S.elems.get(id), 5, 5)}); }
+  terapkan(tulis); ALAT2D.pilih = new Set(baru); segar2D();
+}
+/* ---- kejadian penunjuk (fase tangkap agar mendahului anotasi dan geser layar) ---- */
+$('#m-svg').addEventListener('pointerdown', e => {
+  if (e.button !== 0 || ZOOM2D.spasi || ZOOM2D.jari.size > 1 || !hasil2D || !S.bisaUbah) return;
+  const p = svgTitik(e);
+  if (!p) return;
+  if (ALAT2D.alat) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    const q = titikKursor2D(e);
+    if (q) { tambahTitik2D(q); pratinjau2D(q); segarPanel2D(); }
+    return;
+  }
+  const g = e.target.closest && e.target.closest('[data-g2]');
+  if (!g) { if (ALAT2D.pilih.size && !e.shiftKey) { ALAT2D.pilih.clear(); segarPilih2D(); } return; }
+  e.preventDefault(); e.stopImmediatePropagation();
+  const id = g.dataset.g2;
+  if (e.shiftKey) { if (ALAT2D.pilih.has(id)) ALAT2D.pilih.delete(id); else ALAT2D.pilih.add(id); }
+  else if (!ALAT2D.pilih.has(id)) ALAT2D.pilih = new Set([id]);
+  ANOT2D.pilih = null; ANOT2D.pilihPeil = null; segarAnot2D();
+  segarPilih2D();
+  ALAT2D.seret = {x0: p.x, y0: p.y, dx: 0, dy: 0, g: [...ALAT2D.pilih].map(i => $('#m-svg').querySelector(`[data-g2="${i}"]`)).filter(Boolean)};
+  $('#m-svg').setPointerCapture(e.pointerId);
+}, true);
+$('#m-svg').addEventListener('pointermove', e => {
+  if (ALAT2D.seret) {
+    const p = svgTitik(e), sr = ALAT2D.seret;
+    if (!p) return;
+    sr.dx = p.x - sr.x0; sr.dy = p.y - sr.y0;
+    if (e.shiftKey) { if (Math.abs(sr.dx) >= Math.abs(sr.dy)) sr.dy = 0; else sr.dx = 0; }
+    for (const g of sr.g) g.setAttribute('transform', `translate(${n2(sr.dx)} ${n2(sr.dy)})`);
+    return;
+  }
+  if (!ALAT2D.alat) return;
+  const q = titikKursor2D(e);
+  ALAT2D.kursor = q;
+  pratinjau2D(q);
+}, true);
+function akhirSeret2DBenda() {
+  const sr = ALAT2D.seret;
+  ALAT2D.seret = null;
+  if (!sr) return;
+  if (Math.hypot(sr.dx, sr.dy) < 0.3) { for (const g of sr.g) g.removeAttribute('transform'); return; }
+  const tulis = [...ALAT2D.pilih].filter(id => S.elems.has(id)).map(id => ({id, sesudah: geserData2D(S.elems.get(id), sr.dx, sr.dy)}));
+  terapkan(tulis); segar2D();
+}
+$('#m-svg').addEventListener('pointerup', akhirSeret2DBenda, true);
+$('#m-svg').addEventListener('pointercancel', akhirSeret2DBenda, true);
+$('#m-svg').addEventListener('dblclick', e => {
+  if (!ALAT2D.alat) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (ALAT2D.alat === 'polyline' || ALAT2D.alat === 'arsir') {
+    // klik ganda menambah dua titik yang sama; buang duplikat lalu selesaikan
+    akhiriPoly2D(ALAT2D.alat === 'arsir');
+    segarPanel2D();
+  }
+}, true);
+/* ---- bilah alat dan gaya ---- */
+document.querySelectorAll('[data-alat2d]').forEach(b => b.addEventListener('click', () => pakaiAlat2D(b.dataset.alat2d)));
+$('#g2-tebal').addEventListener('change', e => { const v = +e.target.value; if (ALAT2D.pilih.size) ubahPilih2D(d => ({...d, gaya: {...(d.gaya || {}), tebal: v}})); else ALAT2D.gaya.tebal = v; });
+$('#g2-garis').addEventListener('change', e => { const v = e.target.value; if (ALAT2D.pilih.size) ubahPilih2D(d => ({...d, gaya: {...(d.gaya || {}), garis: v}})); else ALAT2D.gaya.garis = v; });
+$('#g2-warna').addEventListener('change', e => { const v = e.target.value; if (ALAT2D.pilih.size) ubahPilih2D(d => ({...d, gaya: {...(d.gaya || {}), warna: v}})); else ALAT2D.gaya.warna = v; });
+$('#g2-pola').addEventListener('change', e => { const v = e.target.value; if (ALAT2D.pilih.size) ubahPilih2D(d => (d.bentuk === 'arsir' ? {...d, pola: v} : d)); else ALAT2D.pola = v; });
+$('#g2-ukuran').addEventListener('change', e => {
+  const v = angka(e.target.value);
+  if (!(v >= 1 && v <= 20)) { toast('Ukuran teks 1 sampai 20 mm.'); return; }
+  if (ALAT2D.pilih.size) ubahPilih2D(d => (d.bentuk === 'teks' ? {...d, ukuran: r2(v)} : d)); else ALAT2D.ukuran = r2(v);
+});
+$('#g2-tempel').addEventListener('change', e => { ALAT2D.tempel = e.target.value; segarPanel2D(); });
+$('#g2-teks').addEventListener('change', e => { const t = e.target.value.trim(); if (!t) return toast('Teks tidak boleh kosong.'); ubahPilih2D(d => (d.bentuk === 'teks' ? {...d, teks: t} : d)); });
+$('#g2-hapus').addEventListener('click', hapusPilih2D);
+$('#g2-salin').addEventListener('click', salinPilih2D);
+$('#g2-panjang').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') { panjangDiketik2D(e.target.value); e.target.value = ''; }
+  if (e.key === 'Escape') { e.target.value = ''; e.target.blur(); }
+});
+['#g2-teks', '#g2-ukuran'].forEach(s => $(s).addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); e.stopPropagation(); }));
+// tombol keyboard di Ruang Lembar; dipanggil dari penangan keydown utama. true = sudah ditangani
+function kunci2D(e) {
+  if (ALAT2D.alat && e.key === 'Escape') { if (ALAT2D.titik.length) { if (ALAT2D.alat === 'polyline' || ALAT2D.alat === 'arsir') akhiriPoly2D(false); else batalBentuk2D(); } else pakaiAlat2D('pilih'); segarPanel2D(); return true; }
+  if (ALAT2D.alat && e.key === 'Enter') { if (ALAT2D.alat === 'polyline' || ALAT2D.alat === 'arsir') akhiriPoly2D(ALAT2D.alat === 'arsir'); else batalBentuk2D(); segarPanel2D(); return true; }
+  // angka langsung menjadi panjang ketikan
+  if (ALAT2D.alat && ALAT2D.titik.length && /^[0-9.,]$/.test(e.key)) { const i = $('#g2-panjang'); i.value = e.key; i.focus(); e.preventDefault(); return true; }
+  if (!ALAT2D.alat && ALAT2D.pilih.size && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); hapusPilih2D(); return true; }
+  if (!ALAT2D.alat && ALAT2D.pilih.size && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); salinPilih2D(); return true; }
+  if (!ALAT2D.alat && ALAT2D.pilih.size && e.key === 'Escape') { ALAT2D.pilih.clear(); segarPilih2D(); return true; }
+  return false;
+}
 
 /* ============ Notifikasi ============ */
 function toast(teks, dariClaude) {
