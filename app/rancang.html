@@ -7135,6 +7135,18 @@ function buatSVG(o) {
     const uniq = arr => { const a = [...arr].sort((p, q) => p - q), r = []; for (const v of a) if (!r.length || v - r[r.length - 1] > 0.02) r.push(v); return r; };
     let ax0 = Infinity, ax1 = -Infinity, ay0 = Infinity, ay1 = -Infinity;
     for (const w of ws) for (const q of [w.awal, w.akhir]) { ax0 = Math.min(ax0, q.x); ax1 = Math.max(ax1, q.x); ay0 = Math.min(ay0, q.y); ay1 = Math.max(ay1, q.y); }
+    // baris/lajur kolom struktur di luar dinding (mis. tiang selasar atau teras) ikut diberi as bila berisi ≥ 2 kolom
+    // yang sejajar dan berada dalam bentang bangunan; batas as diperlebar sampai baris itu
+    {
+      const st = kl.filter(k => k.tipe === 'struktur'), ax0d = ax0, ax1d = ax1, ay0d = ay0, ay1d = ay1;
+      const baris = new Map(), lajur = new Map(), kunci = v => Math.round(v * 50) / 50;
+      for (const k of st) {
+        if ((k.y < ay0d - tol || k.y > ay1d + tol) && k.x > ax0d - tol && k.x < ax1d + tol) { const o = baris.get(kunci(k.y)) || {v: k.y, n: 0}; o.n++; baris.set(kunci(k.y), o); }
+        if ((k.x < ax0d - tol || k.x > ax1d + tol) && k.y > ay0d - tol && k.y < ay1d + tol) { const o = lajur.get(kunci(k.x)) || {v: k.x, n: 0}; o.n++; lajur.set(kunci(k.x), o); }
+      }
+      for (const {v, n} of baris.values()) if (n >= 2) { ay0 = Math.min(ay0, v); ay1 = Math.max(ay1, v); }
+      for (const {v, n} of lajur.values()) if (n >= 2) { ax0 = Math.min(ax0, v); ax1 = Math.max(ax1, v); }
+    }
     // garis as dari kolom struktur; bila tidak ada, dari as dinding luar
     // as X = kolom struktur pada muka atas, as Y = kolom struktur pada muka kanan (letak gelembung)
     const ks = kl.filter(k => k.tipe === 'struktur' && k.x > ax0 - tol && k.x < ax1 + tol && k.y > ay0 - tol && k.y < ay1 + tol);
