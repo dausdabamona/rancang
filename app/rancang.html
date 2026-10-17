@@ -145,6 +145,9 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .modal-kepala button:hover{background:var(--hover)}
 .kontrol{display:flex;flex-wrap:wrap;gap:12px 16px;padding:12px 18px;align-items:end}
 .kontrol label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.kontrol input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--fg);font:500 13px var(--f-mono, monospace);width:7ch}
+.kontrol #m-skala-lain-wadah{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--fg)}
+.kontrol #m-skala-lain-wadah[hidden]{display:none}
 .kontrol select{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--fg);font-size:13px}
 .kontrol .cek{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--fg)}
 .anot-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 18px 10px}
@@ -301,7 +304,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
         <select id="m-jenis">
           <option value="sampul">Sampul</option>
           <option value="daftar">Daftar gambar</option>
-          <option value="denah">Denah</option>
+          <option value="denah" selected>Denah</option>
           <option value="atap">Denah atap</option>
           <option value="pondasi">Denah pondasi</option>
           <option value="detail">Detail penulangan</option>
@@ -314,8 +317,11 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
       <label for="m-skala">Skala
         <select id="m-skala">
           <option value="0">Otomatis</option><option value="20">1 : 20</option><option value="50">1 : 50</option>
-          <option value="100">1 : 100</option><option value="200">1 : 200</option><option value="500">1 : 500</option>
+          <option value="100">1 : 100</option><option value="150">1 : 150</option><option value="200">1 : 200</option><option value="500">1 : 500</option>
+          <option value="lain">Lainnya…</option>
         </select></label>
+      <label for="m-skala-lain" id="m-skala-lain-wadah" hidden>1 :
+        <input id="m-skala-lain" type="text" inputmode="numeric" value="75" size="5" aria-label="Skala lainnya, angka penyebut" title="Angka penyebut skala, misalnya 75 untuk 1 : 75 (5 sampai 5000)"></label>
       <label for="m-kertas">Kertas
         <select id="m-kertas"><option value="A4">A4 lanskap</option><option value="A3">A3 lanskap</option></select></label>
       <label class="cek" for="m-dimensi"><input type="checkbox" id="m-dimensi" checked> Garis ukuran</label>
@@ -5509,7 +5515,7 @@ function perbaruiKosong() { $('#kosong').hidden = S.mode === 'muat' || S.elems.s
 
 /* ============ Gambar 2D ============ */
 const KERTAS = {A4: [297, 210], A3: [420, 297]};
-const SKALA = [20, 50, 100, 200, 500, 1000];
+const SKALA = [20, 50, 100, 150, 200, 500, 1000];
 function namaGambar(j) {
   if (j && j.startsWith('potongan:')) { const d = S.elems.get(j.slice(9)); return 'POTONGAN ' + (d ? d.nama + '–' + d.nama : ''); }
   return NAMA_2D[j];
@@ -6496,7 +6502,14 @@ function buatSVG(o) {
   return {svg, info, skala, W, H, peta, anotStat};
 }
 let hasil2D = null;
-function opsi2D() { return {jenis: $('#m-jenis').value, skala: +$('#m-skala').value, kertas: $('#m-kertas').value, dimensi: $('#m-dimensi').checked, dimDinding: $('#m-dimdinding').checked, terhalang: $('#m-terhalang').checked}; }
+// skala lainnya: angka penyebut bulat 5–5000; bila tidak sah dipakai otomatis
+function skala2D() {
+  const v = $('#m-skala').value;
+  if (v !== 'lain') return +v;
+  const n = Math.round(angka($('#m-skala-lain').value));
+  return n >= 5 && n <= 5000 ? n : 0;
+}
+function opsi2D() { return {jenis: $('#m-jenis').value, skala: skala2D(), kertas: $('#m-kertas').value, dimensi: $('#m-dimensi').checked, dimDinding: $('#m-dimdinding').checked, terhalang: $('#m-terhalang').checked}; }
 function segar2D() {
   hasil2D = buatSVG(opsi2D());
   $('#m-svg').innerHTML = hasil2D.svg;
@@ -7239,6 +7252,18 @@ $('#btn-2d').addEventListener('click', () => buka2D());
 $('#m-tutup').addEventListener('click', tutup2D);
 $('#modal2d').addEventListener('click', e => { if (e.target.id === 'modal2d') tutup2D(); });
 ['#m-jenis', '#m-skala', '#m-kertas', '#m-dimensi', '#m-dimdinding', '#m-terhalang'].forEach(s => $(s).addEventListener('change', segar2D));
+$('#m-skala').addEventListener('change', () => {
+  const lain = $('#m-skala').value === 'lain';
+  $('#m-skala-lain-wadah').hidden = !lain;
+  if (lain) { $('#m-skala-lain').focus(); $('#m-skala-lain').select(); }
+});
+$('#m-skala-lain').addEventListener('change', () => {
+  const n = Math.round(angka($('#m-skala-lain').value));
+  if (!(n >= 5 && n <= 5000)) { toast('Isi angka penyebut skala 5 sampai 5000, misalnya 75 untuk 1 : 75.'); return; }
+  $('#m-skala-lain').value = n;
+  segar2D();
+});
+$('#m-skala-lain').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); e.stopPropagation(); });
 $('#m-svgbtn').addEventListener('click', () => simpanBerkas(namaBerkas('svg'), hasil2D.svg));
 $('#m-png').addEventListener('click', async () => {
   const blob = await svgKePng(hasil2D.svg, hasil2D.W, hasil2D.H).catch(() => null);
