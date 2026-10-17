@@ -158,8 +158,15 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 #m-svg [data-anot].pilih text{fill:#1F6FD1;font-weight:700}
 #m-svg [data-anot].pilih line,#m-svg [data-anot].pilih polygon{stroke:#1F6FD1}
 #m-svg.tambah{cursor:crosshair}
-.pratinjau-2d{margin:0 18px;background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:auto;min-height:0;flex:1}
-.pratinjau-2d svg{display:block;width:100%;height:auto;max-height:calc(100vh - 250px)}
+.wadah-2d{position:relative;margin:0 18px;flex:1;min-height:0;display:flex}
+.pratinjau-2d{background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:1;height:calc(100vh - 250px);min-height:260px;touch-action:none;cursor:grab}
+.pratinjau-2d.geser{cursor:grabbing}
+.pratinjau-2d svg{display:block;width:100%;height:100%}
+.zoom-2d{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.zoom-2d button{border:0;background:transparent;min-width:32px;height:32px;border-radius:6px;cursor:pointer;font:600 15px var(--f-ui, inherit);color:var(--ink, inherit)}
+.zoom-2d button:hover{background:var(--hover)}
+.zoom-2d .persen{min-width:54px;font:500 12px var(--f-mono, monospace)}
+.zoom-2d .sesuai{font-size:12px;padding:0 8px}
 .modal-kaki{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 18px 16px}
 .modal-kaki .meta{flex:1 1 240px}
 
@@ -290,7 +297,15 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
       <span class="meta" id="m-anot-info"></span>
       <button class="tombol" type="button" id="m-anot-tampil" hidden>Tampilkan lagi</button>
     </div>
-    <div class="pratinjau-2d" id="m-svg"></div>
+    <div class="wadah-2d">
+      <div class="pratinjau-2d" id="m-svg"></div>
+      <div class="zoom-2d" role="group" aria-label="Zoom gambar 2D">
+        <button type="button" id="m-zoom-keluar" title="Perkecil (−)" aria-label="Perkecil">−</button>
+        <button type="button" class="persen" id="m-zoom-persen" title="Kembali ke 100% (seluruh lembar)">100%</button>
+        <button type="button" id="m-zoom-masuk" title="Perbesar (+)" aria-label="Perbesar">+</button>
+        <button type="button" class="sesuai" id="m-zoom-sesuai" title="Tampilkan seluruh lembar (0)">Sesuaikan</button>
+      </div>
+    </div>
     <div class="modal-kaki">
       <p class="meta" id="m-info"></p>
       <button class="tombol" type="button" id="m-png3d">Unduh tampilan 3D (PNG)</button>
@@ -4621,6 +4636,7 @@ function tekanEsc() {
   if (S.sel.size) { S.sel.clear(); segarPilihan(); }
 }
 window.addEventListener('keyup', e => {
+  if (e.key === ' ' && ZOOM2D.spasi) { ZOOM2D.spasi = false; $('#m-svg').classList.remove('geser'); }
   if (e.key === 'Shift' && alatPindah.kunciShift) { alatPindah.kunciShift = false; S.kunciPaksa = null; tulisPetunjuk(); if (S.eTerakhir && alat().move) alat().move(S.eTerakhir); }
 });
 window.addEventListener('keydown', e => {
@@ -4630,6 +4646,10 @@ window.addEventListener('keydown', e => {
     if (e.key === 'Escape') { if (ANOT2D.tambah || ANOT2D.pilih) { ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.pilih = null; segarAnot2D(); } else tutup2D(); }
     else if ((e.key === 'Delete' || e.key === 'Backspace') && ANOT2D.pilih) { e.preventDefault(); hapusAnot2D(); }
     else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); urungkan(); segar2D(); }
+    else if (!e.ctrlKey && !e.metaKey && (e.key === '+' || e.key === '=')) { e.preventDefault(); zoomTombol2D(1.4); }
+    else if (!e.ctrlKey && !e.metaKey && (e.key === '-' || e.key === '_')) { e.preventDefault(); zoomTombol2D(1 / 1.4); }
+    else if (!e.ctrlKey && !e.metaKey && e.key === '0') { e.preventDefault(); sesuaikan2D(); }
+    else if (e.key === ' ') { e.preventDefault(); ZOOM2D.spasi = true; $('#m-svg').classList.add('geser'); }
     return;
   }
   const t = e.target;
@@ -6226,6 +6246,7 @@ function opsi2D() { return {jenis: $('#m-jenis').value, skala: +$('#m-skala').va
 function segar2D() {
   hasil2D = buatSVG(opsi2D());
   $('#m-svg').innerHTML = hasil2D.svg;
+  pasangZoom2D();
   segarAnot2D();
   const o = opsi2D();
   $('#m-info').textContent = hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, skala 1 : ${hasil2D.skala}, kertas ${o.kertas} lanskap. Ukuran dalam meter.`;
@@ -6579,6 +6600,116 @@ async function eksporRAB(ids) {
   await simpanBerkas(`${dasar}_volume-rab.xlsx`, new Blob([data]));
 }
 
+/* ============ Zoom dan geser pratinjau 2D (v0.25) ============ */
+// Zoom mengubah viewBox SVG pratinjau saja; berkas unduhan tidak terpengaruh.
+const ZOOM2D = {jenis: null, asal: null, vb: null, spasi: false, geser: null, jari: new Map(), cubit: null};
+const ZOOM_MIN = 0.25, ZOOM_MAKS = 16;
+function svg2D() { return $('#m-svg svg'); }
+function terapkanVB() {
+  const svg = svg2D(), v = ZOOM2D.vb;
+  if (!svg || !v) return;
+  svg.setAttribute('viewBox', `${v.x} ${v.y} ${v.w} ${v.h}`);
+  $('#m-zoom-persen').textContent = Math.round(ZOOM2D.asal.w / v.w * 100) + '%';
+}
+// dipanggil setiap SVG baru dipasang: zoom dipertahankan untuk jenis gambar yang sama
+function pasangZoom2D() {
+  const svg = svg2D();
+  if (!svg) return;
+  const vb = svg.viewBox && svg.viewBox.baseVal;
+  const asal = vb && vb.width ? {x: vb.x, y: vb.y, w: vb.width, h: vb.height}
+    : {x: 0, y: 0, w: parseFloat(svg.getAttribute('width')) || 297, h: parseFloat(svg.getAttribute('height')) || 210};
+  svg.removeAttribute('width'); svg.removeAttribute('height');
+  const jenis = opsi2D().jenis, sama = ZOOM2D.jenis === jenis && ZOOM2D.vb;
+  ZOOM2D.asal = asal; ZOOM2D.jenis = jenis;
+  if (sama) {
+    // pertahankan perbesaran, tetapi tetap di dalam lembar (kertas bisa berganti ukuran)
+    const k = Math.min(ZOOM_MAKS, Math.max(ZOOM_MIN, asal.w / ZOOM2D.vb.w));
+    const w = asal.w / k, h = asal.h / k, cx = ZOOM2D.vb.x + ZOOM2D.vb.w / 2, cy = ZOOM2D.vb.y + ZOOM2D.vb.h / 2;
+    ZOOM2D.vb = batasiVB({x: cx - w / 2, y: cy - h / 2, w, h});
+  } else ZOOM2D.vb = {...asal};
+  terapkanVB();
+}
+// pusat tampilan tidak boleh keluar dari lembar
+function batasiVB(v) {
+  const a = ZOOM2D.asal;
+  const cx = Math.min(a.x + a.w, Math.max(a.x, v.x + v.w / 2)), cy = Math.min(a.y + a.h, Math.max(a.y, v.y + v.h / 2));
+  return {x: cx - v.w / 2, y: cy - v.h / 2, w: v.w, h: v.h};
+}
+function zoomDi2D(f, p) {
+  const v = ZOOM2D.vb, a = ZOOM2D.asal;
+  if (!v || !a) return;
+  const k = Math.min(ZOOM_MAKS, Math.max(ZOOM_MIN, a.w / v.w * f)), g = (a.w / k) / v.w;
+  if (Math.abs(g - 1) < 1e-9) return;
+  const q = p || {x: v.x + v.w / 2, y: v.y + v.h / 2};
+  ZOOM2D.vb = batasiVB({x: q.x - (q.x - v.x) * g, y: q.y - (q.y - v.y) * g, w: v.w * g, h: v.h * g});
+  terapkanVB();
+}
+function zoomTombol2D(f) { zoomDi2D(f, null); }
+function sesuaikan2D() { if (ZOOM2D.asal) { ZOOM2D.vb = {...ZOOM2D.asal}; terapkanVB(); } }
+// geser dalam piksel layar
+function geserLayar2D(dx, dy) {
+  const svg = svg2D(), v = ZOOM2D.vb;
+  if (!svg || !v) return;
+  const m = svg.getScreenCTM();
+  if (!m || !m.a) return;
+  ZOOM2D.vb = batasiVB({...v, x: v.x - dx / m.a, y: v.y - dy / m.d});
+  terapkanVB();
+}
+$('#m-svg').addEventListener('wheel', e => {
+  if (!svg2D()) return;
+  e.preventDefault();
+  const kuat = e.deltaMode === 1 ? 0.05 : 0.0015;
+  zoomDi2D(Math.exp(-e.deltaY * kuat), svgTitik(e));
+}, {passive: false});
+$('#m-svg').addEventListener('pointerdown', e => {
+  ZOOM2D.jari.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  if (ZOOM2D.jari.size === 2) {
+    // dua jari: batalkan seret anotasi atau geser satu jari, mulai cubit
+    if (ANOT2D.seret) { ANOT2D.seret.g.removeAttribute('transform'); ANOT2D.seret = null; }
+    const [a, b] = [...ZOOM2D.jari.values()];
+    ZOOM2D.geser = null;
+    ZOOM2D.cubit = {d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2};
+    return;
+  }
+  const kosong = !(e.target.closest && e.target.closest('[data-anot]'));
+  const bolehGeser = e.button === 1 || (e.button === 0 && (ZOOM2D.spasi || (kosong && !ANOT2D.tambah)));
+  if (!bolehGeser) return;
+  if (e.button === 1 || ZOOM2D.spasi) e.preventDefault();
+  ZOOM2D.geser = {x: e.clientX, y: e.clientY, jalan: e.button === 1 || ZOOM2D.spasi, id: e.pointerId};
+  $('#m-svg').setPointerCapture(e.pointerId);
+});
+$('#m-svg').addEventListener('pointermove', e => {
+  if (ZOOM2D.jari.has(e.pointerId)) ZOOM2D.jari.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  if (ZOOM2D.cubit && ZOOM2D.jari.size === 2) {
+    const [a, b] = [...ZOOM2D.jari.values()], c = ZOOM2D.cubit;
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    geserLayar2D(mx - c.mx, my - c.my);
+    if (c.d > 0 && d > 0) zoomDi2D(d / c.d, svgTitik({clientX: mx, clientY: my}));
+    ZOOM2D.cubit = {d, mx, my};
+    return;
+  }
+  const g = ZOOM2D.geser;
+  if (!g || g.id !== e.pointerId) return;
+  const dx = e.clientX - g.x, dy = e.clientY - g.y;
+  if (!g.jalan && Math.hypot(dx, dy) < 4) return;
+  g.jalan = true; $('#m-svg').classList.add('geser');
+  geserLayar2D(dx, dy);
+  g.x = e.clientX; g.y = e.clientY;
+});
+function akhirGeser2D(e) {
+  ZOOM2D.jari.delete(e.pointerId);
+  if (ZOOM2D.jari.size < 2) ZOOM2D.cubit = null;
+  if (ZOOM2D.geser && ZOOM2D.geser.id === e.pointerId) { ZOOM2D.geser = null; if (!ZOOM2D.spasi) $('#m-svg').classList.remove('geser'); }
+}
+$('#m-svg').addEventListener('pointerup', akhirGeser2D);
+$('#m-svg').addEventListener('pointercancel', akhirGeser2D);
+$('#m-svg').addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+$('#m-svg').addEventListener('dblclick', e => { if (!(e.target.closest && e.target.closest('[data-anot]')) && !ANOT2D.tambah) sesuaikan2D(); });
+$('#m-zoom-masuk').addEventListener('click', () => zoomTombol2D(1.4));
+$('#m-zoom-keluar').addEventListener('click', () => zoomTombol2D(1 / 1.4));
+$('#m-zoom-sesuai').addEventListener('click', sesuaikan2D);
+$('#m-zoom-persen').addEventListener('click', sesuaikan2D);
+
 /* ============ Anotasi langsung di gambar 2D: pilih, seret, ubah teks, tambah, sembunyikan, hapus ============ */
 const ANOT2D = {pilih: null, tambah: null, titikA: null, seret: null};
 function svgTitik(e) {
@@ -6627,7 +6758,7 @@ document.querySelectorAll('[data-tambah]').forEach(b => b.addEventListener('clic
   ANOT2D.tambah = ANOT2D.tambah === b.dataset.tambah ? null : b.dataset.tambah; ANOT2D.titikA = null; segarAnot2D();
 }));
 $('#m-svg').addEventListener('pointerdown', e => {
-  if (!hasil2D || !hasil2D.peta || !S.bisaUbah || e.button !== 0) return;
+  if (!hasil2D || !hasil2D.peta || !S.bisaUbah || e.button !== 0 || ZOOM2D.spasi || ZOOM2D.jari.size > 1) return;
   const p = svgTitik(e);
   if (!p) return;
   if (ANOT2D.tambah) { e.preventDefault(); tambahAnot2D(p); return; }
