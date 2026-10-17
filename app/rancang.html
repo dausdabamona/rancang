@@ -3017,7 +3017,8 @@ function bukaMenuKonteks(e) {
     if (kodeOf(satu) === 'G') tambah('k-pecah', 'Pecah grup');
     else if (d && d.jenis === 'instance') tambah('k-pecah', 'Pecah komponen');
     else if (d && d.jenis === 'atap' && d.bentuk !== 'datar') tambah('k-pecah', 'Pecah atap');
-    else if (d && d.jenis === 'volume' && !d.bentuk) tambah('k-pecah', 'Pecah lantai per ruang');
+    // hanya untuk lantai yang memang diduduki dinding/kolom (bukan talang, balok, atau volume lain)
+    else if (d && d.jenis === 'volume' && !d.bentuk && pemotongLantai(d).length) tambah('k-pecah', 'Pecah lantai per ruang');
   }
   if (ubah && pilihanSolid()) {
     pisah();
@@ -5691,7 +5692,7 @@ function htmlLantai(id, d) {
       + medanAngka('p-peil', 'Peil atas lantai (m)', r2((d.z0 || 0) + (d.tinggi || 0))) : '');
   return `<section><h2>Lantai</h2><div class="medan">${isi}</div>
     <p class="meta">${d.lantai ? 'Warna 3D, pola keramik di denah, dan baris RAB mengikuti jenis dan penutup ini.' : 'Tandai sebagai lantai agar warna, pola keramik, dan RAB-nya terpisah per jenis.'} Pecah per ruang memotong lantai ini mengikuti dinding.</p>
-    <div class="aksi-panel">${d.bentuk ? '' : tombol('pecah-lantai', 'Pecah per ruang')}</div></section>`;
+    <div class="aksi-panel">${d.bentuk || !pemotongLantai(d).length ? '' : tombol('pecah-lantai', 'Pecah per ruang')}</div></section>`;
 }
 // Potong lantai oleh dinding dan kolom yang berdiri di atasnya; nama dan jenis dari label ruang di dalam tiap potongan
 // Pecah atap (v0.28): atap parametrik diganti grup berisi bidang (penutup per bidang, gunungan, lisplang, plafon miring)
@@ -5770,13 +5771,21 @@ function pecahAtap(id) {
   const nBid = tulis.filter(x => x.sesudah && x.sesudah.jenis === 'bidang').length, nBtg = tulis.filter(x => x.sesudah && x.sesudah.jenis === 'batang').length;
   toast(`${id} dipecah: ${nBid} bidang, ${nBtg} batang, ${subgrup.size} kuda-kuda. Buka grup ${gid} untuk mengedit bagiannya.`);
 }
+// Dinding/kolom yang berdiri di atas volume ini dan menindih alasnya (syarat lantai bisa dipecah per ruang)
+function pemotongLantai(d) {
+  const atas = (d.z0 || 0) + (d.tinggi || 0), tutup = p => [...p.map(q => [q[0], q[1]]), [p[0][0], p[0][1]]];
+  const [x0, y0, x1, y1] = d.alas.reduce(([a, b, c, e], q) => [Math.min(a, q.x), Math.min(b, q.y), Math.max(c, q.x), Math.max(e, q.y)], [Infinity, Infinity, -Infinity, -Infinity]);
+  return [...S.elems].filter(([wid, w]) => (w.jenis === 'dinding' || w.jenis === 'kolom') && !S.sembunyi.has(wid) && sah(w)
+    && (w.z0 || 0) <= atas + 0.05 && (w.z0 || 0) + (w.tinggi || 0) > atas + 0.05
+    && (pw => { const xs = pw.map(q => q[0]), ys = pw.map(q => q[1]); return Math.min(...xs) < x1 - 0.01 && Math.max(...xs) > x0 + 0.01 && Math.min(...ys) < y1 - 0.01 && Math.max(...ys) > y0 + 0.01; })(poligon(w)))
+    .map(([, w]) => [tutup(poligon(w))]);
+}
 function pecahLantai(id) {
   const d = S.elems.get(id), pc = window.polygonClipping;
   if (!d || d.jenis !== 'volume' || d.bentuk) return;
   if (!pc) return toast('Pustaka poligon belum termuat. Coba lagi sebentar.');
-  const atas = (d.z0 || 0) + (d.tinggi || 0), tutup = p => [...p.map(q => [q[0], q[1]]), [p[0][0], p[0][1]]];
-  const pemotong = [...S.elems].filter(([wid, w]) => (w.jenis === 'dinding' || w.jenis === 'kolom') && !S.sembunyi.has(wid) && sah(w)
-    && (w.z0 || 0) <= atas + 0.05 && (w.z0 || 0) + (w.tinggi || 0) > atas + 0.05).map(([, w]) => [tutup(poligon(w))]);
+  const tutup = p => [...p.map(q => [q[0], q[1]]), [p[0][0], p[0][1]]];
+  const pemotong = pemotongLantai(d);
   if (!pemotong.length) return toast('Tidak ada dinding di atas lantai ini untuk memotongnya.');
   let hasil;
   try { hasil = pc.difference([tutup(poligon(d))], ...pemotong); } catch (_) { return toast('Lantai gagal dipotong. Periksa dinding yang saling tumpuk.'); }
