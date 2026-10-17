@@ -161,6 +161,8 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 #m-svg [data-anot].pilih text{fill:#1F6FD1;font-weight:700}
 #m-svg [data-anot].pilih line,#m-svg [data-anot].pilih polygon{stroke:#1F6FD1}
 #m-svg.tambah{cursor:crosshair}
+#m-svg .peil-oto{cursor:move}
+#m-svg .peil-oto:hover text{fill:#1F6FD1}
 .wadah-2d{position:relative;margin:0 18px;flex:1;min-height:0;display:flex}
 .pratinjau-2d{background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:1;min-height:260px;touch-action:none;cursor:grab}
 /* Ruang Lembar (v0.26): layar penuh, daftar lembar di kiri */
@@ -554,7 +556,21 @@ function atapGeomDasar(d) {
   // dan penutup 3 cm (tegak lurus bidang atap), sehingga bidang atap naik sebesar susunan itu.
   const SK = susunKayu(d), naik = (d.rangka || 'bajaringan') === 'kayu' ? SK.tarik + (SK.penutup + SK.kaki + SK.gording) / cs
     : tn * (d.tebalGunung ?? S.setel.tebalDinding ?? 0.15) / 2 + 0.005;
-  for (const p of permukaan) p.titik = p.titik.map(q => (p.jenis === 'atap' || q[2] > z0 + 1e-6 ? [q[0], q[1], q[2] + naik] : q));
+  const kayuR = (d.rangka || 'bajaringan') === 'kayu';
+  // Rangka kayu: puncak dinding gunung (sopi-sopi) berhenti di bawah gording, sejajar bidang atap:
+  // naik tarik + kaki/cos (bukan setebal susunan penuh), dengan bahu tegak di as dinding agar tidak menembus kuda-kuda
+  const eG = kayuR ? SK.tarik + SK.kaki / cs : naik;
+  for (const p of permukaan) {
+    if (p.jenis === 'atap') { p.titik = p.titik.map(q => [q[0], q[1], q[2] + naik]); continue; }
+    const t = p.titik, baru = [], atas = q => q[2] > z0 + 1e-6, sama = (q, r) => Math.abs(q[0] - r[0]) < 1e-6 && Math.abs(q[1] - r[1]) < 1e-6;
+    for (let i = 0; i < t.length; i++) {
+      const q = t[i], r = t[(i + 1) % t.length];
+      baru.push(atas(q) ? [q[0], q[1], q[2] + eG] : q);
+      if (kayuR && !atas(q) && atas(r) && !sama(q, r)) baru.push([q[0], q[1], z0 + eG]);
+      if (kayuR && atas(q) && !atas(r) && !sama(q, r)) baru.push([r[0], r[1], z0 + eG]);
+    }
+    p.titik = baru;
+  }
   u.puncak += naik;
   return {permukaan, ukur: u};
 }
@@ -6056,6 +6072,29 @@ function buatSVG(o) {
   const DEF_ARSIR = '<pattern id="arsir-bata" patternUnits="userSpaceOnUse" width="1.1" height="1.1" patternTransform="rotate(45)"><rect width="1.1" height="1.1" fill="#fff"/><line x1="0" y1="0" x2="0" y2="1.1" stroke="#000" stroke-width="0.14"/></pattern>'
     + '<pattern id="arsir-rabat" patternUnits="userSpaceOnUse" width="16" height="16"><path d="M2.5 3.2l1.8 0.5-1.2 1.3z M10.2 8.6l1.5-0.9 0.3 1.8z M5.4 12.4l1.7 0.7-1.5 1z M13.2 2.4l1.2 1.3-1.7 0.2z" fill="none" stroke="#666" stroke-width="0.13"/><circle cx="8.2" cy="4.6" r="0.22" fill="#777"/><circle cx="3.6" cy="8.8" r="0.2" fill="#777"/><circle cx="12.6" cy="13.4" r="0.24" fill="#777"/><circle cx="14.8" cy="7.2" r="0.18" fill="#777"/></pattern>';
   const lantaiTeras = g => g.lantai === 'teras' || (!g.lantai && /teras|selasar/i.test(g.nama || ''));
+  // Tanda peil di sisi kanan tampak/potongan (v0.26.4): tidak bertumpuk, bisa diseret, garis penunjuk ikut
+  const peilKanan = (levels, xBangunan, xl, Y) => {
+    const out = [], geser = (S.setel && S.setel.peilGeser) || {};
+    const urut = [...new Set(levels.map(z => Math.round(z * 1000) / 1000))].sort((a, b) => a - b);
+    let yAtasTerakhir = Infinity;
+    for (const z of urut) {
+      const y = Y(z), label = Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z), tw = label.length * 2.2 * 0.56;
+      // posisi otomatis: di atas garis; bila menabrak teks di bawahnya, dinaikkan dan digeser ke kanan
+      let lx = xl + 2, ly = y - 0.8, otomatis = false;
+      if (ly > yAtasTerakhir - 3) { ly = yAtasTerakhir - 3; lx = xl + 5; otomatis = true; }
+      const kunci = `${o.jenis}|${z.toFixed(3)}`, g = geser[kunci];
+      if (g) { lx += g.dx; ly += g.dy; }
+      yAtasTerakhir = Math.min(yAtasTerakhir, ly);
+      const pindah = otomatis || (g && Math.hypot(g.dx, g.dy) > 0.3);
+      out.push(garis(xBangunan + 1, y, pindah ? xl + 1.6 : xl + 9, y, 0.13),
+        `<polygon points="${n2(xl)},${n2(y)} ${n2(xl - 1.3)},${n2(y - 1.8)} ${n2(xl + 1.3)},${n2(y - 1.8)}" fill="#000"/>`);
+      const isiLabel = pindah
+        ? garis(xl + 0.6, y - 0.9, lx - 0.4, ly + 0.7, 0.13) + garis(lx - 0.4, ly + 0.7, lx + tw + 0.6, ly + 0.7, 0.13) + teks(lx, ly, label, 2.2)
+        : teks(lx, ly, label, 2.2);
+      out.push(`<g data-peil="${esc(kunci)}" class="peil-oto">${isiLabel}<rect x="${n2(lx - 1)}" y="${n2(ly - 2.6)}" width="${n2(tw + 2)}" height="3.6" fill="transparent"/></g>`);
+    }
+    return out;
+  };
 
   if (o.jenis === 'denah') {
     const daftar = geos.filter(g => g.jenis !== 'atap' && g.jenis !== 'slof' && g.jenis !== 'ringbalk' && g.jenis !== 'pondasi' && g.jenis !== 'plafon').map(g => ({g, p: poligon(g)}));
@@ -6532,12 +6571,7 @@ function buatSVG(o) {
         // level yang terlalu rapat di kertas (kurang dari 4,5 mm) digabung agar teks peil tidak bertumpuk
         const level = [];
         for (const z of [...new Set(levelSet.map(z => n2(z)))].sort((a, b) => a - b)) if (!level.length || (z - level[level.length - 1]) * s >= 4.5) level.push(z);
-        const xl = X(h1) + 4;
-        for (const z of level) {
-          const y = Y(z);
-          isi.push(garis(X(h1) + 1, y, xl + 9, y, 0.13), `<polygon points="${n2(xl)},${n2(y)} ${n2(xl - 1.3)},${n2(y - 1.8)} ${n2(xl + 1.3)},${n2(y - 1.8)}" fill="#000"/>`,
-            teks(xl + 2, y - 0.8, Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z), 2.2));
-        }
+        isi.push(...peilKanan(levelSet, X(h1), X(h1) + 4, Y));
         if (o.dimensi) {
           // ukuran tinggi bertingkat di sisi kiri
           const xd = X(h0) - 1.4 * s;
@@ -6591,7 +6625,10 @@ function buatSVG(o) {
     for (const g of geos.filter(x => x.jenis === 'atap')) for (const bd of [...susunTepiAtap(g).papan, ...susunTepiAtap(g).plafon]) for (const t of bd.muka) {
       const poly = t.map(([x, y, z]) => [pr.u(x, y), z]), us = poly.map(q => q[0]), zs = poly.map(q => q[1]);
       if (Math.max(...us) - Math.min(...us) < 0.005) continue;
-      daftar.push({poly, jenis: 'lisplang', u0: Math.min(...us), u1: Math.max(...us), z0: Math.min(...zs), z1: Math.max(...zs), dekat: Math.min(...t.map(([x, y]) => pr.jauh(x, y))) - 0.002, buk: []});
+      // kedalaman = rata-rata titik muka: muka depan papan selalu digambar sesudah muka bawah/belakang/ujung sambungan
+      // (memakai titik terdekat membuat muka di sambungan bubungan sama dalamnya dan garisnya menembus)
+      const jarak = t.map(([x, y]) => pr.jauh(x, y));
+      daftar.push({poly, jenis: 'lisplang', u0: Math.min(...us), u1: Math.max(...us), z0: Math.min(...zs), z1: Math.max(...zs), dekat: jarak.reduce((a2, b2) => a2 + b2, 0) / jarak.length - 0.002, buk: []});
     }
     if (!daftar.length) info = 'Belum ada volume atau dinding untuk dibuat tampaknya.';
     else {
@@ -6635,12 +6672,7 @@ function buatSVG(o) {
       }
       isi.push(garis(X(u0 - 0.8), Y(0), X(u1 + 0.8), Y(0), 0.7));
       const level = [...new Set([0, ...daftar.filter(d => d.jenis !== 'lisplang').map(d => n2(d.z1))])].sort((a, b) => a - b).slice(-6);
-      const xl = X(u1) + 4;
-      for (const z of level) {
-        const y = Y(z);
-        isi.push(garis(X(u1) + 1, y, xl + 9, y, 0.13), `<polygon points="${n2(xl)},${n2(y)} ${n2(xl - 1.3)},${n2(y - 1.8)} ${n2(xl + 1.3)},${n2(y - 1.8)}" fill="#000"/>`,
-          teks(xl + 2, y - 0.8, z === 0 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z), 2.2));
-      }
+      isi.push(...peilKanan(level, X(u1), X(u1) + 4, Y));
       const tertutup = q => {
         const u = pr.u(q.x, q.y), z = zDari(q), j = pr.jauh(q.x, q.y);
         return daftar.some(it => (it.jenis === 'dinding' || it.jenis === 'atap') && it.dekat < j - 0.05 &&
@@ -7283,7 +7315,7 @@ $('#m-svg').addEventListener('pointerdown', e => {
     ZOOM2D.cubit = {d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2};
     return;
   }
-  const kosong = !(e.target.closest && e.target.closest('[data-anot]'));
+  const kosong = !(e.target.closest && e.target.closest('[data-anot], [data-peil]'));
   const bolehGeser = e.button === 1 || (e.button === 0 && (ZOOM2D.spasi || (kosong && !ANOT2D.tambah)));
   if (!bolehGeser) return;
   if (e.button === 1 || ZOOM2D.spasi) e.preventDefault();
@@ -7316,7 +7348,17 @@ function akhirGeser2D(e) {
 $('#m-svg').addEventListener('pointerup', akhirGeser2D);
 $('#m-svg').addEventListener('pointercancel', akhirGeser2D);
 $('#m-svg').addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
-$('#m-svg').addEventListener('dblclick', e => { if (!(e.target.closest && e.target.closest('[data-anot]')) && !ANOT2D.tambah) sesuaikan2D(); });
+$('#m-svg').addEventListener('dblclick', e => {
+  const gp = e.target.closest && e.target.closest('[data-peil]');
+  // klik dua kali teks peil otomatis: kembali ke posisi otomatis
+  if (gp) {
+    if (!S.bisaUbah) return;
+    const pg = {...(S.setel.peilGeser || {})};
+    if (pg[gp.dataset.peil]) { delete pg[gp.dataset.peil]; S.setel.peilGeser = pg; simpanSetelan(); segar2D(); toast('Posisi peil dikembalikan otomatis.'); }
+    return;
+  }
+  if (!(e.target.closest && e.target.closest('[data-anot]')) && !ANOT2D.tambah) sesuaikan2D();
+});
 $('#m-zoom-masuk').addEventListener('click', () => zoomTombol2D(1.4));
 $('#m-zoom-keluar').addEventListener('click', () => zoomTombol2D(1 / 1.4));
 $('#m-zoom-sesuai').addEventListener('click', sesuaikan2D);
@@ -7370,9 +7412,17 @@ document.querySelectorAll('[data-tambah]').forEach(b => b.addEventListener('clic
   ANOT2D.tambah = ANOT2D.tambah === b.dataset.tambah ? null : b.dataset.tambah; ANOT2D.titikA = null; segarAnot2D();
 }));
 $('#m-svg').addEventListener('pointerdown', e => {
-  if (!hasil2D || !hasil2D.peta || !S.bisaUbah || e.button !== 0 || ZOOM2D.spasi || ZOOM2D.jari.size > 1) return;
+  if (!hasil2D || !S.bisaUbah || e.button !== 0 || ZOOM2D.spasi || ZOOM2D.jari.size > 1) return;
   const p = svgTitik(e);
   if (!p) return;
+  const gp = !ANOT2D.tambah && e.target.closest && e.target.closest('[data-peil]');
+  if (gp) {
+    e.preventDefault();
+    ANOT2D.seret = {peil: gp.dataset.peil, g: gp, x0: p.x, y0: p.y, dx: 0, dy: 0};
+    $('#m-svg').setPointerCapture(e.pointerId);
+    return;
+  }
+  if (!hasil2D.peta) return;
   if (ANOT2D.tambah) { e.preventDefault(); tambahAnot2D(p); return; }
   const g = e.target.closest && e.target.closest('[data-anot]');
   if (!g) { if (ANOT2D.pilih) pilihAnot2D(null); return; }
@@ -7392,6 +7442,15 @@ function akhirSeret2D() {
   const sr = ANOT2D.seret;
   ANOT2D.seret = null;
   if (!sr || Math.hypot(sr.dx, sr.dy) < 0.4) { if (sr) sr.g.removeAttribute('transform'); return; }
+  if (sr.peil) {
+    // peil otomatis: simpan geseran teks (mm kertas); garis penunjuk digambar ulang
+    const pg = {...(S.setel.peilGeser || {})}, lama = pg[sr.peil] || {dx: 0, dy: 0};
+    pg[sr.peil] = {dx: r2(lama.dx + sr.dx), dy: r2(lama.dy + sr.dy)};
+    S.setel.peilGeser = pg;
+    simpanSetelan();
+    segar2D();
+    return;
+  }
   const d = S.elems.get(sr.id);
   if (!d) return;
   const v = hasil2D.peta.geser(sr.dx, sr.dy), b = salin(d);
@@ -7564,6 +7623,7 @@ function langganan() {
     if (d.sampul && typeof d.sampul === 'object') S.setel.sampul = d.sampul;
     if (d.lembar && typeof d.lembar === 'object') S.setel.lembar = d.lembar;
     if (d.kop && typeof d.kop === 'object') S.setel.kop = d.kop;
+    if (d.peilGeser && typeof d.peilGeser === 'object') S.setel.peilGeser = d.peilGeser;
     if (!$('#modal2d').hidden) renderLembar();
     tampilNamaProyek(); S.panelKunci = ''; renderPanel();
   }, () => {});
