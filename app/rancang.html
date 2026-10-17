@@ -184,6 +184,12 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .lembar-sampul{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:7px;max-height:48%;overflow:auto}
 .lembar-sampul label{display:grid;gap:3px;font-size:11.5px;color:var(--muted)}
 .lembar-sampul input{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--fg);font-size:13px}
+.lembar-kop{border-top:1px solid var(--line);padding:10px 14px;display:grid;gap:7px;max-height:42%;overflow:auto}
+.lembar-kop label{display:grid;gap:3px;font-size:11.5px;color:var(--muted)}
+.lembar-kop select,.lembar-kop input{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--fg);font-size:13px}
+.lembar-kop summary{cursor:pointer;font-size:12.5px;color:var(--fg);padding:2px 0}
+.lembar-kop details[open] summary{margin-bottom:6px}
+.lembar-kop details > div{display:grid;gap:7px}
 .lembar-kaki{border-top:1px solid var(--line);padding:10px 14px;display:grid;gap:6px}
 .lembar-kaki .meta{font-size:11.5px}
 @media (max-width:760px){.ruang-badan{flex-direction:column}.lembar-daftar{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid var(--line)}}
@@ -293,6 +299,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
       <h3>Lembar</h3>
       <ol id="m-lembar"></ol>
       <div class="lembar-sampul" id="m-sampul" hidden></div>
+      <div class="lembar-kop" id="m-kop"></div>
       <div class="lembar-kaki">
         <button class="tombol utama" type="button" id="m-pdf">Unduh PDF semua lembar</button>
         <p class="meta" id="m-lembar-info"></p>
@@ -5650,30 +5657,187 @@ function judulLembar(j) {
   if (j === 'daftar') return 'Daftar gambar';
   const op = [...$('#m-jenis').options].find(x => x.value === j);
   if (op) return op.textContent;
+  if (j.startsWith('potongan:')) { const d = S.elems.get(j.slice(9)); return `Potongan ${d ? d.nama + '–' + d.nama : ''}`; }
   const n = namaGambar(j) || j;
   return n.charAt(0) + n.slice(1).toLowerCase();
 }
 function infoLembar(jenis) { return daftarLembar().find(l => l.jenis === jenis) || null; }
-// bingkai dan kop: PROYEK | GAMBAR | SKALA | KERTAS | TANGGAL | LEMBAR | DIBUAT
+/* ---- model kop gambar (v0.26.3): bawah, kanan sederhana, kanan lengkap ---- */
+const MODEL_KOP = {kanan: 'Kanan sederhana', kananLengkap: 'Kanan lengkap', bawah: 'Bawah (satu baris)'};
+const ISIAN_KOP = [['satker', 'Satuan kerja / instansi'], ['pekerjaan', 'Nama pekerjaan'], ['digambar', 'Digambar oleh'], ['pemeriksa', 'Diperiksa oleh'],
+  ['mengetahuiInstansi', 'Mengetahui/Menyetujui: instansi'], ['mengetahuiNama', 'Mengetahui: nama'], ['mengetahuiJabatan', 'Mengetahui: jabatan'],
+  ['diperiksaJudul', 'Diperiksa/Diajukan: jabatan atas'], ['diperiksaNama', 'Diperiksa: nama'], ['diperiksaJabatan', 'Diperiksa: jabatan'],
+  ['konsultan', 'Tim desain: konsultan'], ['konsultanKet', 'Tim desain: keterangan'], ['direktur', 'Tim desain: direktur']];
+const modelKop = () => (S.setel.kop && MODEL_KOP[S.setel.kop.model]) ? S.setel.kop.model : 'kanan';
+const lebarLajurKop = W => (W >= 400 ? 55 : 45);
+// bidang gambar sesudah dikurangi bingkai dan kop
+function areaGambar(W, H) {
+  const m = 10;
+  if (modelKop() === 'bawah') return {x: m + 4, y: m + 4, w: W - 2 * m - 8, h: H - 2 * m - 22 - 10};
+  return {x: m + 4, y: m + 4, w: W - 2 * m - lebarLajurKop(W) - 8, h: H - 2 * m - 8};
+}
+// data kop: isian kop, bila kosong memakai data sampul
+function dataKop() {
+  const k = S.setel.kop || {}, sp = S.setel.sampul || {};
+  return {...k, satker: k.satker || sp.pemilik || '', pekerjaan: k.pekerjaan || (S.setel.nama || '').toUpperCase(),
+    konsultan: k.konsultan || sp.perencana || '', digambar: k.digambar || sp.penggambar || '',
+    tanggal: sp.tanggal || new Date().toLocaleDateString('id-ID')};
+}
+// pecah teks menjadi baris yang muat di lebar tertentu (perkiraan lebar huruf: 0,56 × ukuran, huruf besar 0,68)
+function bungkusTeks(t, lebar, uk, maks = 3) {
+  const lebarHuruf = String(t || '') === String(t || '').toUpperCase() ? 0.68 : 0.56;
+  const kata = String(t || '').split(/\s+/).filter(Boolean), baris = [];
+  let kini = '';
+  for (const w of kata) {
+    const coba = kini ? kini + ' ' + w : w;
+    if (coba.length * uk * lebarHuruf <= lebar || !kini) kini = coba; else { baris.push(kini); kini = w; }
+  }
+  if (kini) baris.push(kini);
+  if (baris.length > maks) { baris.length = maks; baris[maks - 1] += '…'; }
+  return baris;
+}
 function kopGambar(o, W, H, skalaTeks) {
-  const m = 10, kopH = 22, ky = H - m - kopH, l = o.lembar !== undefined ? o.lembar : infoLembar(o.jenis);
-  const nomor = l && l.kode ? `${l.kode} · ${l.urut}/${l.total}` : '–';
-  const kolom = [['PROYEK', S.setel.nama, 0.31], ['GAMBAR', namaGambar(o.jenis), 0.24], ['SKALA', skalaTeks, 0.10], ['KERTAS', o.kertas, 0.07],
-    ['TANGGAL', (S.setel.sampul && S.setel.sampul.tanggal) || new Date().toLocaleDateString('id-ID'), 0.10], ['LEMBAR', nomor, 0.10], ['DIBUAT', 'RANCANG', 0.08]];
+  const m = 10, l = o.lembar !== undefined ? o.lembar : infoLembar(o.jenis), model = modelKop(), dk = dataKop();
   const gr = (x1, y1, x2, y2, w) => `<line x1="${n2k(x1)}" y1="${n2k(y1)}" x2="${n2k(x2)}" y2="${n2k(y2)}" stroke="#000" stroke-width="${w}"/>`;
-  const tk = (x, y, t, uk, extra) => `<text x="${n2k(x)}" y="${n2k(y)}" font-size="${uk}" ${extra}>${esk(t)}</text>`;
-  let kop = `<rect x="${m}" y="${m}" width="${W - 2 * m}" height="${H - 2 * m}" fill="none" stroke="#000" stroke-width="0.5"/>` + gr(m, ky, W - m, ky, 0.5);
-  let kx = m;
-  kolom.forEach(([lbl, nilai, lebar], i) => {
-    const w = (W - 2 * m) * lebar;
-    if (i) kop += gr(kx, ky, kx, H - m, 0.25);
-    kop += tk(kx + 2.5, ky + 6, lbl, 2, 'fill="#555" letter-spacing="0.3"');
-    // teks dipersempit agar muat di kolomnya
-    const uk = Math.min(i === 0 ? 3.6 : 3.2, (w - 4) / Math.max(1, String(nilai || '').length * 0.56));
-    kop += tk(kx + 2.5, ky + 14, nilai || '', n2k(uk), 'font-weight="700"');
-    kx += w;
+  const tk = (x, y, t, uk, extra = '') => `<text x="${n2k(x)}" y="${n2k(y)}" font-size="${n2k(uk)}" ${extra}>${esk(t)}</text>`;
+  const bingkai = `<rect x="${m}" y="${m}" width="${W - 2 * m}" height="${H - 2 * m}" fill="none" stroke="#000" stroke-width="0.5"/>`;
+  const judulG = namaGambar(o.jenis) || '';
+  if (model === 'bawah') {
+    const kopH = 22, ky = H - m - kopH;
+    const nomor = l && l.kode ? `${l.kode} · ${l.urut}/${l.total}` : '–';
+    const kolom = [['PROYEK', S.setel.nama, 0.31], ['GAMBAR', judulG, 0.24], ['SKALA', skalaTeks, 0.10], ['KERTAS', o.kertas, 0.07],
+      ['TANGGAL', dk.tanggal, 0.10], ['LEMBAR', nomor, 0.10], ['DIBUAT', 'RANCANG', 0.08]];
+    let kop = bingkai + gr(m, ky, W - m, ky, 0.5);
+    let kx = m;
+    kolom.forEach(([lbl, nilai, lebar], i) => {
+      const w = (W - 2 * m) * lebar;
+      if (i) kop += gr(kx, ky, kx, H - m, 0.25);
+      kop += tk(kx + 2.5, ky + 6, lbl, 2, 'fill="#555" letter-spacing="0.3"');
+      // teks dipersempit agar muat di kolomnya
+      const uk = Math.min(i === 0 ? 3.6 : 3.2, (w - 4) / Math.max(1, String(nilai || '').length * 0.56));
+      kop += tk(kx + 2.5, ky + 14, nilai || '', uk, 'font-weight="700"');
+      kx += w;
+    });
+    return kop;
+  }
+  // lajur kanan: dibangun dari blok-blok bertinggi tetap (mm pada A3), diskalakan ke tinggi bingkai
+  const lw = lebarLajurKop(W), x0 = W - m - lw, x1 = W - m, cx = (x0 + x1) / 2, tinggi = H - 2 * m;
+  const f = Math.min(1, tinggi / 277), fu = Math.max(0.78, f);   // f: skala tinggi, fu: skala huruf (tidak terlalu kecil)
+  const out = [bingkai, gr(x0, m, x0, H - m, 0.5)];
+  const pisah = (y, w = 0.3) => out.push(gr(x0, y, x1, y, w));
+  const label = (y, t) => out.push(tk(x0 + 1.6, y, t, 1.7 * fu, 'fill="#555" letter-spacing="0.2"'));
+  const tengah = (y, t, uk, extra = '') => out.push(tk(cx, y, t, uk, `text-anchor="middle" ${extra}`));
+  const banyakBaris = (y, t, uk, extra = '', maks = 3) => {
+    const b = bungkusTeks(t, lw - 4, uk, maks);
+    b.forEach((s2, i) => tengah(y + i * uk * 1.18, s2, uk, extra));
+    return b.length * uk * 1.18;
+  };
+  const nomorL = l && l.urut ? String(l.urut) : '–', jumlahL = l && l.total ? String(l.total) : '–', kodeL = (l && l.kode) || '–';
+  // blok-blok
+  const blokSatker = h => (y) => {
+    const sl = 15 * f;
+    out.push(`<rect x="${n2k(cx - sl / 2)}" y="${n2k(y + 3 * f)}" width="${n2k(sl)}" height="${n2k(sl)}" fill="none" stroke="#999" stroke-width="0.2" stroke-dasharray="1 0.8"/>`,
+      tk(cx, y + 3 * f + sl / 2 + 0.6, 'LOGO', 1.8 * fu, 'text-anchor="middle" fill="#aaa"'));
+    label(y + 3 * f + sl + 4 * fu, 'SATUAN KERJA');
+    if (dk.satker) banyakBaris(y + 3 * f + sl + 8 * fu, dk.satker.toUpperCase(), 2.3 * fu, 'font-weight="700"', 3);
+    return h;
+  };
+  const blokDokumen = h => (y) => {
+    tengah(y + 6 * fu, 'DOKUMEN GAMBAR', 3.4 * fu, 'font-weight="700" letter-spacing="0.3"');
+    out.push(gr(x0 + 3, y + 8.5 * fu, x1 - 3, y + 8.5 * fu, 0.25));
+    if (dk.pekerjaan) banyakBaris(y + 13 * fu, dk.pekerjaan, 2.6 * fu, 'font-weight="700"', 3);
+    return h;
+  };
+  const blokRevisi = h => (y) => {
+    const kol = [x0, x0 + lw * 0.5, x0 + lw * 0.78, x1], bt = (h - 5 * f) / 3;
+    [['Revisi', 0], ['Tanggal', 1], ['Paraf', 2]].forEach(([t, i]) => out.push(tk(kol[i] + 1.4, y + 3.6 * fu, t, 1.8 * fu)));
+    pisah(y + 5 * f, 0.2);
+    for (let i = 1; i <= 3; i++) pisah(y + 5 * f + bt * i, 0.12);
+    for (const xk of kol.slice(1, 3)) out.push(gr(xk, y, xk, y + h, 0.15));
+    return h;
+  };
+  const blokTtd = (judul, atas, nama, jabatan) => h => (y) => {
+    label(y + 3.6 * fu, judul);
+    let yy = y + 7.8 * fu;
+    if (atas) yy += banyakBaris(yy, atas, 2.3 * fu, '', 3);
+    const yNama = y + h - 7 * fu;
+    if (nama) tengah(yNama, nama, 2.3 * fu, 'font-weight="700" text-decoration="underline"');
+    out.push(gr(cx - lw * 0.32, yNama + 0.9, cx + lw * 0.32, yNama + 0.9, 0.15));
+    if (jabatan) tengah(yNama + 3.4 * fu, jabatan, 2 * fu);
+    return h;
+  };
+  const blokTim = h => (y) => {
+    label(y + 3.6 * fu, 'TIM DESAIN');
+    if (dk.konsultan) banyakBaris(y + 9 * fu, dk.konsultan, 2.8 * fu, 'font-weight="700"', 2);
+    if (dk.konsultanKet) tengah(y + 15.5 * fu, dk.konsultanKet, 2 * fu);
+    const yNama = y + h - 7 * fu;
+    if (dk.direktur) tengah(yNama, dk.direktur, 2.3 * fu, 'font-weight="700" text-decoration="underline"');
+    out.push(gr(cx - lw * 0.32, yNama + 0.9, cx + lw * 0.32, yNama + 0.9, 0.15));
+    tengah(yNama + 3.4 * fu, 'Direktur', 2 * fu);
+    return h;
+  };
+  const blokParaf = h => (y) => {
+    const kol = [x0, x0 + lw * 0.34, x0 + lw * 0.78, x1], bt = h / 3;
+    [['', 0], ['Nama', 1], ['Paraf', 2]].forEach(([t, i]) => t && out.push(tk(kol[i] + 1.4, y + bt * 0.68, t, 1.8 * fu)));
+    [['Digambar', dk.digambar], ['Diperiksa', dk.pemeriksa]].forEach(([t, v], i) => {
+      const yy = y + bt * (i + 1);
+      out.push(tk(x0 + 1.4, yy + bt * 0.66, t, 1.8 * fu));
+      if (v) { const uk = Math.min(2.1 * fu, (lw * 0.44 - 2) / Math.max(1, v.length * 0.55)); out.push(tk(kol[1] + 1.2, yy + bt * 0.66, v, uk)); }
+    });
+    for (let i = 1; i < 3; i++) pisah(y + bt * i, 0.12);
+    for (const xk of kol.slice(1, 3)) out.push(gr(xk, y, xk, y + h, 0.15));
+    return h;
+  };
+  const blokJudul = (denganSkala) => h => (y) => {
+    const ws = denganSkala ? lw * 0.66 : lw;
+    out.push(tk(x0 + 1.6, y + 3.6 * fu, 'JUDUL GAMBAR', 1.7 * fu, 'fill="#555" letter-spacing="0.2"'));
+    const b = bungkusTeks(judulG, ws - 4, 2.9 * fu, 3);
+    b.forEach((t, i) => out.push(tk(x0 + ws / 2, y + h / 2 + 1.5 * fu + (i - (b.length - 1) / 2) * 3.4 * fu, t, 2.9 * fu, 'text-anchor="middle" font-weight="700"')));
+    if (denganSkala) {
+      const xs = x0 + ws;
+      out.push(gr(xs, y, xs, y + h, 0.2), tk(xs + 1.4, y + 3.6 * fu, 'SKALA', 1.7 * fu, 'fill="#555"'),
+        tk((xs + x1) / 2, y + h / 2 + 1.5 * fu, skalaTeks, Math.min(2.9 * fu, (x1 - xs - 2) / Math.max(1, skalaTeks.length * 0.56)), 'text-anchor="middle" font-weight="700"'));
+    }
+    return h;
+  };
+  const blokSel = (sel) => h => (y) => {
+    let x = x0;
+    sel.forEach(([lb, nilai, w], i) => {
+      const ww = lw * w;
+      if (i) out.push(gr(x, y, x, y + h, 0.2));
+      out.push(tk(x + 1.4, y + 3.4 * fu, lb, 1.6 * fu, 'fill="#555"'));
+      const uk = Math.min(3.2 * fu, (ww - 2.4) / Math.max(1, String(nilai).length * 0.58));
+      out.push(tk(x + ww / 2, y + h - 2.6 * fu, nilai, uk, 'text-anchor="middle" font-weight="700"'));
+      x += ww;
+    });
+    return h;
+  };
+  const blokCatatan = () => (y) => { label(y + 3.6 * fu, 'CATATAN'); return 0; };
+  // susunan: [blok, tinggi A3 mm]; tinggi 0 = blok pengisi (sisa ruang)
+  const atas = [], bawah = [];
+  if (model === 'kananLengkap') {
+    atas.push([blokSatker, 40], [blokDokumen, 26], [blokRevisi, 20], [blokTtd('MENGETAHUI / MENYETUJUI', dk.mengetahuiInstansi, dk.mengetahuiNama, dk.mengetahuiJabatan), 36],
+      [blokTtd('DIPERIKSA / DIAJUKAN', dk.diperiksaJudul, dk.diperiksaNama, dk.diperiksaJabatan), 32], [blokTim, 32]);
+    bawah.push([blokParaf, 16], [blokJudul(true), 22], [blokSel([['KODE GAMBAR', kodeL, 0.36], ['JUMLAH GAMBAR', jumlahL, 0.34], ['HALAMAN', nomorL, 0.30]]), 15]);
+  } else {
+    atas.push([blokSatker, 40], [blokDokumen, 26]);
+    bawah.push([blokParaf, 16], [blokJudul(false), 20], [blokSel([['SKALA', skalaTeks, 0.55], ['KERTAS', o.kertas, 0.45]]), 13],
+      [blokSel([['KODE', kodeL, 0.4], ['LEMBAR', nomorL, 0.3], ['JUMLAH', jumlahL, 0.3]]), 13], [blokSel([['TANGGAL', dk.tanggal, 1]]), 12]);
+  }
+  const tAtas = atas.reduce((a, [, t]) => a + t, 0) * f, tBawah = bawah.reduce((a, [, t]) => a + t, 0) * f;
+  // kanan lengkap: sisa ruang dibagi ke blok tanda tangan agar rapat ke bawah
+  let tambah = 0;
+  if (model === 'kananLengkap') tambah = Math.max(0, tinggi - tAtas - tBawah) / 3;
+  let y = m;
+  atas.forEach(([b, t], i) => {
+    const h = t * f + (model === 'kananLengkap' && i >= 3 ? tambah : 0);
+    b(h)(y); y += h; pisah(y, i === 1 ? 0.4 : 0.3);
   });
-  return kop;
+  if (model !== 'kananLengkap') blokCatatan()(y);
+  y = H - m - tBawah;
+  pisah(y, 0.4);
+  bawah.forEach(([b, t], i) => { const h = t * f; b(h)(y); y += h; if (i < bawah.length - 1) pisah(y, 0.3); });
+  return out.join('');
 }
 function lembarKhusus(o) {
   const [W, H] = KERTAS[o.kertas], f = W / 297, sp = S.setel.sampul || {}, m = 10;
@@ -5701,10 +5865,10 @@ function lembarKhusus(o) {
   }
   // daftar gambar: tabel lembar yang masuk set
   const lembar = daftarLembar().filter(l => l.masuk && l.jenis !== 'sampul');
-  const x0 = m + 12, lebar = W - 2 * m - 24, kol = [['NO', 0.07], ['KODE', 0.12], ['JUDUL GAMBAR', 0.51], ['SKALA', 0.15], ['KERTAS', 0.15]];
+  const ag = areaGambar(W, H), x0 = ag.x + 8, lebar = ag.w - 16, kol = [['NO', 0.07], ['KODE', 0.12], ['JUDUL GAMBAR', 0.51], ['SKALA', 0.15], ['KERTAS', 0.15]];
   isi.push(tk(x0, m + 18, 'DAFTAR GAMBAR', 6, 'font-weight="700" letter-spacing="0.8"'));
   let y = m + 26;
-  const tinggiBaris = Math.min(9, (H - m - 22 - 12 - y) / (lembar.length + 1));
+  const tinggiBaris = Math.min(9, (ag.y + ag.h - 4 - y) / (lembar.length + 1));
   const barisTabel = (sel, tebal) => {
     let x = x0;
     sel.forEach((t, i) => { isi.push(tk(x + 2, y + tinggiBaris * 0.66, t, Math.min(3.4, tinggiBaris * 0.45), tebal ? 'font-weight="700"' : '')); x += lebar * kol[i][1]; });
@@ -5727,8 +5891,8 @@ function lembarKhusus(o) {
 }
 function buatSVG(o) {
   if (o.jenis === 'sampul' || o.jenis === 'daftar') return lembarKhusus(o);
-  const [W, H] = KERTAS[o.kertas], m = 10, kopH = 22;
-  const area = {x: m + 4, y: m + 4, w: W - 2 * m - 8, h: H - 2 * m - kopH - 10};
+  const [W, H] = KERTAS[o.kertas], m = 10;
+  const area = areaGambar(W, H);
   const geos = geometriSemua();
   const isi = [];
   let info = '', skala = o.skala;
@@ -6546,7 +6710,32 @@ function renderLembar() {
   const adaSampul = daftar.some(l => l.jenis === 'sampul' && l.masuk);
   $('#m-lembar-info').textContent = `PDF ${n} halaman${adaSampul ? ` (sampul + ${n - 1} lembar)` : ''}, kertas ${$('#m-kertas').value}. Centang untuk memilih, seret untuk mengubah urutan.`;
   renderSampul(aktif === 'sampul');
+  renderKop();
 }
+// pilihan model kop dan isian data kop (panel kiri)
+let kopTerbuka = false;
+function renderKop() {
+  const box = $('#m-kop');
+  if (!box || box.contains(document.activeElement)) return;
+  const k = S.setel.kop || {}, dk = dataKop(), model = modelKop();
+  const ph = {satker: dk.satker, pekerjaan: dk.pekerjaan, konsultan: dk.konsultan, digambar: dk.digambar};
+  box.innerHTML = `<label>Model kop<select id="m-kop-model" ${dis()}>${Object.entries(MODEL_KOP).map(([v, t]) => `<option value="${v}" ${v === model ? 'selected' : ''}>${esk(t)}</option>`).join('')}</select></label>
+    <details id="m-kop-data" ${kopTerbuka ? 'open' : ''}><summary>Data kop</summary><div>
+    ${ISIAN_KOP.filter(([key]) => model === 'kananLengkap' || !/^(mengetahui|diperiksa|konsultan|direktur)/.test(key) || model === 'bawah' && false)
+      .map(([key, lbl]) => `<label>${esk(lbl)}<input type="text" data-kop="${key}" value="${esk(k[key] || '')}" placeholder="${esk(ph[key] || '')}" ${dis()}></label>`).join('')}
+    <p class="meta">Isian kosong memakai data sampul bila ada; bila tetap kosong, ruangnya dibiarkan untuk ditulis tangan.</p></div></details>`;
+  box.querySelector('#m-kop-data').addEventListener('toggle', e => { kopTerbuka = e.target.open; });
+}
+$('#m-kop').addEventListener('change', e => {
+  if (!S.bisaUbah) return;
+  if (e.target.id === 'm-kop-model') S.setel.kop = {...(S.setel.kop || {}), model: e.target.value};
+  else if (e.target.dataset && e.target.dataset.kop) S.setel.kop = {...(S.setel.kop || {}), [e.target.dataset.kop]: e.target.value.trim()};
+  else return;
+  simpanSetelan();
+  if (e.target.id === 'm-kop-model') { $('#m-kop').innerHTML = ''; }
+  segar2D();
+});
+$('#m-kop').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') e.target.blur(); e.stopPropagation(); });
 function renderSampul(tampil) {
   const box = $('#m-sampul');
   box.hidden = !tampil;
@@ -7374,6 +7563,7 @@ function langganan() {
     if (d.faktorBesi >= 0) S.setel.faktorBesi = d.faktorBesi;
     if (d.sampul && typeof d.sampul === 'object') S.setel.sampul = d.sampul;
     if (d.lembar && typeof d.lembar === 'object') S.setel.lembar = d.lembar;
+    if (d.kop && typeof d.kop === 'object') S.setel.kop = d.kop;
     if (!$('#modal2d').hidden) renderLembar();
     tampilNamaProyek(); S.panelKunci = ''; renderPanel();
   }, () => {});
