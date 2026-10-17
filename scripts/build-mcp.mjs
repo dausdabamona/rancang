@@ -12,6 +12,7 @@ const {version} = JSON.parse(fs.readFileSync(path.join(akar, 'package.json'), 'u
 fs.rmSync(keluar, {recursive: true, force: true});
 fs.mkdirSync(path.join(keluar, 'server'), {recursive: true});
 
+try {
 await build({
   entryPoints: [path.join(akar, 'mcp', 'server.mjs')],
   outfile: path.join(keluar, 'server', 'index.mjs'),
@@ -28,4 +29,9 @@ const manifest = fs.readFileSync(path.join(akar, 'mcp', 'manifest.json'), 'utf8'
 JSON.parse(manifest);
 fs.writeFileSync(path.join(keluar, 'manifest.json'), manifest);
 fs.copyFileSync(path.join(akar, 'assets', 'icon-512.png'), path.join(keluar, 'icon.png'));
+} catch (err) {
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=build-mcp::${String(err.message).split('\n')[0]}`);
+  console.error(err);
+  process.exit(1);
+}
 console.log('[build-mcp] selesai → build/mcp (versi ' + version + ')');

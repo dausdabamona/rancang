@@ -286,6 +286,7 @@ async function ujiAsap() {
   const teks = JSON.stringify(hasil, null, 1);
   console.log(teks);
   if (process.env.RANCANG_UJI_HASIL) fs.writeFileSync(process.env.RANCANG_UJI_HASIL, teks);
+  if (!hasil.ok && process.env.GITHUB_ACTIONS) console.log(`::error title=uji-asap::${hasil.galat}`);
   app.exit(hasil.ok ? 0 : 1);
 }
 
