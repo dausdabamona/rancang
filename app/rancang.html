@@ -159,7 +159,31 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 #m-svg [data-anot].pilih line,#m-svg [data-anot].pilih polygon{stroke:#1F6FD1}
 #m-svg.tambah{cursor:crosshair}
 .wadah-2d{position:relative;margin:0 18px;flex:1;min-height:0;display:flex}
-.pratinjau-2d{background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:1;height:calc(100vh - 250px);min-height:260px;touch-action:none;cursor:grab}
+.pratinjau-2d{background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:1;min-height:260px;touch-action:none;cursor:grab}
+/* Ruang Lembar (v0.26): layar penuh, daftar lembar di kiri */
+.modal.penuh{padding:0}
+.modal.penuh .modal-isi{width:100%;height:100%;max-height:none;border-radius:0;border:0}
+.ruang-badan{display:flex;flex:1;min-height:0}
+.ruang-kerja{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.lembar-daftar{width:270px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--bg)}
+.lembar-daftar h3{margin:0;padding:12px 14px 6px;font:600 12px var(--f-ui, inherit);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lembar-daftar ol{list-style:none;margin:0;padding:0 8px 8px;overflow:auto;flex:1;min-height:0}
+.lembar-daftar li{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:7px;cursor:pointer;font-size:13px;border:1px solid transparent}
+.lembar-daftar li:hover{background:var(--hover)}
+.lembar-daftar li.aktif{background:var(--panel);border-color:var(--accent)}
+.lembar-daftar li.keluar .nama{color:var(--muted);text-decoration:line-through}
+.lembar-daftar li.seret-atas{box-shadow:inset 0 2px 0 var(--accent)}
+.lembar-daftar li.seret-bawah{box-shadow:inset 0 -2px 0 var(--accent)}
+.lembar-daftar .pegang{cursor:grab;color:var(--muted);font-size:14px;line-height:1;padding:0 2px}
+.lembar-daftar .kode{font:500 11.5px var(--f-mono, monospace);color:var(--muted);min-width:38px}
+.lembar-daftar .nama{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lembar-daftar input[type=checkbox]{margin:0;width:16px;height:16px}
+.lembar-sampul{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:7px;max-height:48%;overflow:auto}
+.lembar-sampul label{display:grid;gap:3px;font-size:11.5px;color:var(--muted)}
+.lembar-sampul input{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 8px;color:var(--fg);font-size:13px}
+.lembar-kaki{border-top:1px solid var(--line);padding:10px 14px;display:grid;gap:6px}
+.lembar-kaki .meta{font-size:11.5px}
+@media (max-width:760px){.ruang-badan{flex-direction:column}.lembar-daftar{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid var(--line)}}
 .pratinjau-2d.geser{cursor:grabbing}
 .pratinjau-2d svg{display:block;width:100%;height:100%}
 .zoom-2d{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
@@ -258,12 +282,25 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
   </div>
 </footer>
 
-<div class="modal" id="modal2d" hidden role="dialog" aria-modal="true" aria-labelledby="m2d-judul">
+<div class="modal penuh" id="modal2d" hidden role="dialog" aria-modal="true" aria-labelledby="m2d-judul">
   <div class="modal-isi">
-    <div class="modal-kepala"><h2 id="m2d-judul">Gambar 2D</h2><button type="button" id="m-tutup" aria-label="Tutup">×</button></div>
+    <div class="modal-kepala"><h2 id="m2d-judul">Ruang Lembar</h2><button type="button" id="m-tutup" aria-label="Tutup">×</button></div>
+    <div class="ruang-badan">
+    <aside class="lembar-daftar" aria-label="Daftar lembar">
+      <h3>Lembar</h3>
+      <ol id="m-lembar"></ol>
+      <div class="lembar-sampul" id="m-sampul" hidden></div>
+      <div class="lembar-kaki">
+        <button class="tombol utama" type="button" id="m-pdf">Unduh PDF semua lembar</button>
+        <p class="meta" id="m-lembar-info"></p>
+      </div>
+    </aside>
+    <div class="ruang-kerja">
     <div class="kontrol">
-      <label for="m-jenis">Gambar
+      <label for="m-jenis" hidden>Gambar
         <select id="m-jenis">
+          <option value="sampul">Sampul</option>
+          <option value="daftar">Daftar gambar</option>
           <option value="denah">Denah</option>
           <option value="atap">Denah atap</option>
           <option value="pondasi">Denah pondasi</option>
@@ -310,7 +347,9 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
       <p class="meta" id="m-info"></p>
       <button class="tombol" type="button" id="m-png3d">Unduh tampilan 3D (PNG)</button>
       <button class="tombol" type="button" id="m-png">Unduh PNG</button>
-      <button class="tombol utama" type="button" id="m-svgbtn">Unduh SVG</button>
+      <button class="tombol" type="button" id="m-svgbtn">Unduh SVG</button>
+    </div>
+    </div>
     </div>
   </div>
 </div>
@@ -5474,7 +5513,7 @@ function namaGambar(j) {
   if (j && j.startsWith('potongan:')) { const d = S.elems.get(j.slice(9)); return 'POTONGAN ' + (d ? d.nama + '–' + d.nama : ''); }
   return NAMA_2D[j];
 }
-const NAMA_2D = {denah: 'DENAH', atap: 'DENAH ATAP', pondasi: 'DENAH PONDASI', detail: 'DETAIL PENULANGAN', kusen: 'DAFTAR KUSEN', depan: 'TAMPAK DEPAN (SELATAN)', belakang: 'TAMPAK BELAKANG (UTARA)', kanan: 'TAMPAK KANAN (TIMUR)', kiri: 'TAMPAK KIRI (BARAT)'};
+const NAMA_2D = {sampul: 'SAMPUL', daftar: 'DAFTAR GAMBAR', denah: 'DENAH', atap: 'DENAH ATAP', pondasi: 'DENAH PONDASI', detail: 'DETAIL PENULANGAN', kusen: 'DAFTAR KUSEN', depan: 'TAMPAK DEPAN (SELATAN)', belakang: 'TAMPAK BELAKANG (UTARA)', kanan: 'TAMPAK KANAN (TIMUR)', kiri: 'TAMPAK KIRI (BARAT)'};
 // Arah pandang tampak: u = sumbu mendatar di kertas, jauh = jarak dari pengamat
 const PROYEKSI = {
   depan: {u: (x, y) => x, jauh: (x, y) => y},
@@ -5572,7 +5611,115 @@ function irisanBenda(B, Dp, Hh) {
   }
   return potongan;
 }
+/* ============ Ruang Lembar: kop bernomor, sampul, daftar gambar, PDF set (v0.26) ============ */
+const n2k = v => Math.round(v * 100) / 100;
+const esk = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const LEMBAR_BAKU = ['sampul', 'daftar', 'denah', 'atap', 'pondasi', 'depan', 'belakang', 'kanan', 'kiri', 'potongan:*', 'kusen', 'detail'];
+const LEMBAR_STRUKTUR = new Set(['pondasi', 'detail']);
+const rankLembar = j => { const i = LEMBAR_BAKU.indexOf(j.startsWith('potongan:') ? 'potongan:*' : j); return i < 0 ? 99 : i; };
+const ISIAN_SAMPUL = [['judul', 'Judul', 'GAMBAR KERJA'], ['nama', 'Nama proyek', ''], ['lokasi', 'Lokasi', ''], ['pemilik', 'Pemilik / instansi', ''],
+  ['tahun', 'Tahun anggaran', ''], ['perencana', 'Perencana', ''], ['penggambar', 'Digambar oleh', ''], ['tanggal', 'Tanggal', '']];
+// semua lembar yang tersedia, mengikuti urutan tersimpan; lembar baru masuk di posisi bakunya
+function daftarLembar() {
+  const ada = ['sampul', 'daftar', ...[...$('#m-jenis').options].map(op => op.value).filter(v => v !== 'sampul' && v !== 'daftar')];
+  for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && !ada.includes('potongan:' + id)) ada.push('potongan:' + id);
+  const sim = S.setel.lembar || {}, urut = (sim.urutan || []).filter(j => ada.includes(j));
+  for (const j of ada) {
+    if (urut.includes(j)) continue;
+    const r = rankLembar(j), i = urut.findIndex(x => rankLembar(x) > r);
+    if (i < 0) urut.push(j); else urut.splice(i, 0, j);
+  }
+  const keluar = new Set(sim.keluar || []);
+  let a = 0, st = 0, k = 0;
+  const masuk = urut.filter(j => !keluar.has(j) && j !== 'sampul').length;
+  return urut.map(j => {
+    const l = {jenis: j, nama: j === 'sampul' ? 'Sampul' : j === 'daftar' ? 'Daftar gambar' : judulLembar(j), masuk: !keluar.has(j), kode: '', urut: 0, total: masuk};
+    if (l.masuk && j !== 'sampul') { l.urut = ++k; l.kode = LEMBAR_STRUKTUR.has(j) ? 'S-' + String(++st).padStart(2, '0') : 'A-' + String(++a).padStart(2, '0'); }
+    return l;
+  });
+}
+function judulLembar(j) {
+  if (j === 'sampul') return 'Sampul';
+  if (j === 'daftar') return 'Daftar gambar';
+  const op = [...$('#m-jenis').options].find(x => x.value === j);
+  if (op) return op.textContent;
+  const n = namaGambar(j) || j;
+  return n.charAt(0) + n.slice(1).toLowerCase();
+}
+function infoLembar(jenis) { return daftarLembar().find(l => l.jenis === jenis) || null; }
+// bingkai dan kop: PROYEK | GAMBAR | SKALA | KERTAS | TANGGAL | LEMBAR | DIBUAT
+function kopGambar(o, W, H, skalaTeks) {
+  const m = 10, kopH = 22, ky = H - m - kopH, l = o.lembar !== undefined ? o.lembar : infoLembar(o.jenis);
+  const nomor = l && l.kode ? `${l.kode} · ${l.urut}/${l.total}` : '–';
+  const kolom = [['PROYEK', S.setel.nama, 0.31], ['GAMBAR', namaGambar(o.jenis), 0.24], ['SKALA', skalaTeks, 0.10], ['KERTAS', o.kertas, 0.07],
+    ['TANGGAL', (S.setel.sampul && S.setel.sampul.tanggal) || new Date().toLocaleDateString('id-ID'), 0.10], ['LEMBAR', nomor, 0.10], ['DIBUAT', 'RANCANG', 0.08]];
+  const gr = (x1, y1, x2, y2, w) => `<line x1="${n2k(x1)}" y1="${n2k(y1)}" x2="${n2k(x2)}" y2="${n2k(y2)}" stroke="#000" stroke-width="${w}"/>`;
+  const tk = (x, y, t, uk, extra) => `<text x="${n2k(x)}" y="${n2k(y)}" font-size="${uk}" ${extra}>${esk(t)}</text>`;
+  let kop = `<rect x="${m}" y="${m}" width="${W - 2 * m}" height="${H - 2 * m}" fill="none" stroke="#000" stroke-width="0.5"/>` + gr(m, ky, W - m, ky, 0.5);
+  let kx = m;
+  kolom.forEach(([lbl, nilai, lebar], i) => {
+    const w = (W - 2 * m) * lebar;
+    if (i) kop += gr(kx, ky, kx, H - m, 0.25);
+    kop += tk(kx + 2.5, ky + 6, lbl, 2, 'fill="#555" letter-spacing="0.3"');
+    // teks dipersempit agar muat di kolomnya
+    const uk = Math.min(i === 0 ? 3.6 : 3.2, (w - 4) / Math.max(1, String(nilai || '').length * 0.56));
+    kop += tk(kx + 2.5, ky + 14, nilai || '', n2k(uk), 'font-weight="700"');
+    kx += w;
+  });
+  return kop;
+}
+function lembarKhusus(o) {
+  const [W, H] = KERTAS[o.kertas], f = W / 297, sp = S.setel.sampul || {}, m = 10;
+  const tk = (x, y, t, uk, extra = '') => `<text x="${n2k(x)}" y="${n2k(y)}" font-size="${n2k(uk)}" ${extra}>${esk(t)}</text>`;
+  const gr = (x1, y1, x2, y2, w, warna = '#000') => `<line x1="${n2k(x1)}" y1="${n2k(y1)}" x2="${n2k(x2)}" y2="${n2k(y2)}" stroke="${warna}" stroke-width="${w}"/>`;
+  const isi = [];
+  if (o.jenis === 'sampul') {
+    const lembar = daftarLembar().filter(l => l.masuk && l.jenis !== 'sampul');
+    isi.push(`<rect x="${m}" y="${m}" width="${W - 2 * m}" height="${H - 2 * m}" fill="none" stroke="#000" stroke-width="0.8"/>`,
+      `<rect x="${m + 2.5}" y="${m + 2.5}" width="${W - 2 * m - 5}" height="${H - 2 * m - 5}" fill="none" stroke="#000" stroke-width="0.25"/>`);
+    const cx = W / 2;
+    isi.push(tk(cx, 52 * f, sp.judul || 'GAMBAR KERJA', 13 * f, 'text-anchor="middle" font-weight="700" letter-spacing="1.5"'));
+    isi.push(gr(cx - 60 * f, 60 * f, cx + 60 * f, 60 * f, 0.6));
+    isi.push(tk(cx, 76 * f, (S.setel.nama || '').toUpperCase(), 8 * f, 'text-anchor="middle" font-weight="700"'));
+    const baris = [['Lokasi', sp.lokasi], ['Pemilik / instansi', sp.pemilik], ['Tahun anggaran', sp.tahun], ['Perencana', sp.perencana], ['Digambar oleh', sp.penggambar]].filter(([, v]) => v);
+    let y = 96 * f;
+    for (const [l, v] of baris) {
+      isi.push(tk(cx - 4 * f, y, l, 3.6 * f, 'text-anchor="end" fill="#555"'), tk(cx + 4 * f, y, v, 3.8 * f, 'font-weight="700"'));
+      y += 9 * f;
+    }
+    isi.push(tk(cx, H - 34 * f, `${lembar.length} lembar · kertas ${o.kertas}`, 3.4 * f, 'text-anchor="middle" fill="#555"'),
+      tk(cx, H - 26 * f, sp.tanggal || new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), 3.6 * f, 'text-anchor="middle"'));
+    return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}</svg>`,
+      info: '', skala: '-', W, H, peta: null, anotStat: null};
+  }
+  // daftar gambar: tabel lembar yang masuk set
+  const lembar = daftarLembar().filter(l => l.masuk && l.jenis !== 'sampul');
+  const x0 = m + 12, lebar = W - 2 * m - 24, kol = [['NO', 0.07], ['KODE', 0.12], ['JUDUL GAMBAR', 0.51], ['SKALA', 0.15], ['KERTAS', 0.15]];
+  isi.push(tk(x0, m + 18, 'DAFTAR GAMBAR', 6, 'font-weight="700" letter-spacing="0.8"'));
+  let y = m + 26;
+  const tinggiBaris = Math.min(9, (H - m - 22 - 12 - y) / (lembar.length + 1));
+  const barisTabel = (sel, tebal) => {
+    let x = x0;
+    sel.forEach((t, i) => { isi.push(tk(x + 2, y + tinggiBaris * 0.66, t, Math.min(3.4, tinggiBaris * 0.45), tebal ? 'font-weight="700"' : '')); x += lebar * kol[i][1]; });
+    isi.push(gr(x0, y + tinggiBaris, x0 + lebar, y + tinggiBaris, tebal ? 0.5 : 0.15));
+    y += tinggiBaris;
+  };
+  isi.push(gr(x0, y, x0 + lebar, y, 0.5));
+  barisTabel(kol.map(k => k[0]), true);
+  for (const l of lembar) {
+    let skala = '-';
+    if (l.jenis !== 'daftar') { try { skala = '1 : ' + buatSVG({...o, jenis: l.jenis, lembar: l}).skala; } catch (_) { skala = '?'; } }
+    barisTabel([String(l.urut), l.kode, judulLembar(l.jenis), skala, o.kertas], false);
+  }
+  let x = x0;
+  for (const [, w] of kol) { isi.push(gr(x, m + 26, x, y, 0.15)); x += lebar * w; }
+  isi.push(gr(x0 + lebar, m + 26, x0 + lebar, y, 0.15));
+  const kop = kopGambar(o, W, H, '-');
+  return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`,
+    info: '', skala: '-', W, H, peta: null, anotStat: null};
+}
 function buatSVG(o) {
+  if (o.jenis === 'sampul' || o.jenis === 'daftar') return lembarKhusus(o);
   const [W, H] = KERTAS[o.kertas], m = 10, kopH = 22;
   const area = {x: m + 4, y: m + 4, w: W - 2 * m - 8, h: H - 2 * m - kopH - 10};
   const geos = geometriSemua();
@@ -6228,16 +6375,7 @@ function buatSVG(o) {
   }
   if (info && !skala) skala = o.skala || 100;
   // bingkai dan kop gambar
-  const ky = H - m - kopH, kolom = [['PROYEK', S.setel.nama, 0.34], ['GAMBAR', namaGambar(o.jenis), 0.25], ['SKALA', '1 : ' + skala, 0.11], ['KERTAS', o.kertas, 0.08], ['TANGGAL', new Date().toLocaleDateString('id-ID'), 0.12], ['DIBUAT', 'RANCANG', 0.10]];
-  let kop = `<rect x="${m}" y="${m}" width="${W - 2 * m}" height="${H - 2 * m}" fill="none" stroke="#000" stroke-width="0.5"/>` + garis(m, ky, W - m, ky, 0.5);
-  let kx = m;
-  kolom.forEach(([lbl, nilai, lebar], i) => {
-    const w = (W - 2 * m) * lebar;
-    if (i) kop += garis(kx, ky, kx, H - m, 0.25);
-    kop += teks(kx + 2.5, ky + 6, lbl, 2, 'fill="#555" letter-spacing="0.3"');
-    kop += teks(kx + 2.5, ky + 14, nilai, i === 0 ? 3.6 : 3.2, 'font-weight="700"');
-    kx += w;
-  });
+  const kop = kopGambar(o, W, H, '1 : ' + skala);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`;
   return {svg, info, skala, W, H, peta, anotStat};
 }
@@ -6247,11 +6385,12 @@ function segar2D() {
   hasil2D = buatSVG(opsi2D());
   $('#m-svg').innerHTML = hasil2D.svg;
   pasangZoom2D();
+  renderLembar();
   segarAnot2D();
   const o = opsi2D();
-  $('#m-info').textContent = hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, skala 1 : ${hasil2D.skala}, kertas ${o.kertas} lanskap. Ukuran dalam meter.`;
+  $('#m-info').textContent = o.jenis === 'sampul' ? 'Sampul set gambar. Isi data proyek di panel kiri.' : o.jenis === 'daftar' ? 'Daftar gambar dibuat otomatis dari lembar yang dicentang.' : hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, skala 1 : ${hasil2D.skala}, kertas ${o.kertas} lanskap. Ukuran dalam meter.`;
   const bisa = !!S.unduh;
-  ['#m-svgbtn', '#m-png', '#m-png3d'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? '' : 'Unduhan tidak tersedia di tampilan ini'; });
+  ['#m-svgbtn', '#m-png', '#m-png3d', '#m-pdf'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? '' : 'Unduhan tidak tersedia di tampilan ini'; });
 }
 function isiPilihan2D(pilih) {
   const sel = $('#m-jenis'), lama = pilih || sel.value;
@@ -6260,6 +6399,161 @@ function isiPilihan2D(pilih) {
   for (const [id, d] of daftar) { const op = document.createElement('option'); op.value = 'potongan:' + id; op.textContent = `Potongan ${d.nama}–${d.nama}`; sel.appendChild(op); }
   sel.value = [...sel.options].some(op => op.value === lama) ? lama : 'denah';
 }
+/* ---- daftar lembar di panel kiri ---- */
+function simpanLembar(ubah) {
+  const l = daftarLembar();
+  S.setel.lembar = {urutan: l.map(x => x.jenis), keluar: l.filter(x => !x.masuk).map(x => x.jenis), ...ubah};
+  simpanSetelan();
+}
+function renderLembar() {
+  const ol = $('#m-lembar');
+  if (!ol) return;
+  const aktif = $('#m-jenis').value, daftar = daftarLembar();
+  ol.innerHTML = daftar.map(l => `<li draggable="true" data-lembar="${esk(l.jenis)}" class="${l.jenis === aktif ? 'aktif' : ''} ${l.masuk ? '' : 'keluar'}">
+    <span class="pegang" title="Seret untuk mengubah urutan" aria-hidden="true">⋮⋮</span>
+    <input type="checkbox" ${l.masuk ? 'checked' : ''} ${dis()} title="Masuk PDF" aria-label="${esk(l.nama)} masuk PDF">
+    <span class="kode">${l.kode || (l.jenis === 'sampul' ? '—' : '')}</span><span class="nama" title="${esk(l.nama)}">${esk(l.nama)}</span></li>`).join('');
+  const n = daftar.filter(l => l.masuk).length;
+  const adaSampul = daftar.some(l => l.jenis === 'sampul' && l.masuk);
+  $('#m-lembar-info').textContent = `PDF ${n} halaman${adaSampul ? ` (sampul + ${n - 1} lembar)` : ''}, kertas ${$('#m-kertas').value}. Centang untuk memilih, seret untuk mengubah urutan.`;
+  renderSampul(aktif === 'sampul');
+}
+function renderSampul(tampil) {
+  const box = $('#m-sampul');
+  box.hidden = !tampil;
+  if (!tampil || box.contains(document.activeElement)) return;
+  const sp = S.setel.sampul || {};
+  box.innerHTML = ISIAN_SAMPUL.map(([k, l, bawaan]) => {
+    const v = k === 'nama' ? S.setel.nama : (sp[k] ?? '');
+    const ph = k === 'tanggal' ? new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) : bawaan;
+    return `<label>${l}<input type="text" data-sampul="${k}" value="${esk(v)}" placeholder="${esk(ph)}" ${dis()}></label>`;
+  }).join('') + '<p class="meta">Isian kosong tidak ditampilkan di sampul.</p>';
+}
+$('#m-sampul').addEventListener('change', e => {
+  const k = e.target.dataset && e.target.dataset.sampul;
+  if (!k || !S.bisaUbah) return;
+  // nama proyek di sampul = nama proyek di kop dan panel Proyek
+  if (k === 'nama') { const v = e.target.value.trim(); if (!v) { e.target.value = S.setel.nama; return; } S.setel.nama = v; tampilNamaProyek(); }
+  else S.setel.sampul = {...(S.setel.sampul || {}), [k]: e.target.value.trim()};
+  simpanSetelan();
+  segar2D();
+});
+$('#m-sampul').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); e.stopPropagation(); });
+$('#m-lembar').addEventListener('click', e => {
+  const li = e.target.closest('li[data-lembar]');
+  if (!li) return;
+  const j = li.dataset.lembar;
+  if (e.target.matches('input[type=checkbox]')) {
+    if (!S.bisaUbah) return;
+    const l = daftarLembar(), keluar = new Set(l.filter(x => !x.masuk).map(x => x.jenis));
+    if (e.target.checked) keluar.delete(j); else keluar.add(j);
+    simpanLembar({keluar: [...keluar]});
+    segar2D();
+    return;
+  }
+  if ($('#m-jenis').value === j) return;
+  if (![...$('#m-jenis').options].some(op => op.value === j)) isiPilihan2D(j);
+  $('#m-jenis').value = j;
+  segar2D();
+});
+let seretLembar = null;
+$('#m-lembar').addEventListener('dragstart', e => {
+  const li = e.target.closest('li[data-lembar]');
+  if (!li || !S.bisaUbah) { e.preventDefault(); return; }
+  seretLembar = li.dataset.lembar;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', seretLembar); } catch (_) {}
+});
+$('#m-lembar').addEventListener('dragover', e => {
+  const li = e.target.closest('li[data-lembar]');
+  if (!li || !seretLembar) return;
+  e.preventDefault();
+  const r = li.getBoundingClientRect(), atas = e.clientY < r.top + r.height / 2;
+  $('#m-lembar').querySelectorAll('li').forEach(x => x.classList.remove('seret-atas', 'seret-bawah'));
+  li.classList.add(atas ? 'seret-atas' : 'seret-bawah');
+});
+$('#m-lembar').addEventListener('drop', e => {
+  const li = e.target.closest('li[data-lembar]');
+  if (!li || !seretLembar) return;
+  e.preventDefault();
+  const r = li.getBoundingClientRect(), atas = e.clientY < r.top + r.height / 2;
+  const urut = daftarLembar().map(x => x.jenis).filter(j => j !== seretLembar);
+  let i = urut.indexOf(li.dataset.lembar);
+  if (i < 0) i = urut.length; else if (!atas) i++;
+  urut.splice(i, 0, seretLembar);
+  seretLembar = null;
+  simpanLembar({urutan: urut});
+  segar2D();
+});
+$('#m-lembar').addEventListener('dragend', () => { seretLembar = null; $('#m-lembar').querySelectorAll('li').forEach(x => x.classList.remove('seret-atas', 'seret-bawah')); });
+
+/* ---- PDF semua lembar (jsPDF + svg2pdf, vektor; cadangan raster 200 dpi) ---- */
+let pustakaPDF = null;
+function muatSkrip(src) {
+  return new Promise((ok, gagal) => {
+    const sc = document.createElement('script');
+    sc.src = src; sc.onload = ok; sc.onerror = () => gagal(new Error('Gagal memuat ' + src));
+    document.head.appendChild(sc);
+  });
+}
+function muatPDF() {
+  if (pustakaPDF) return pustakaPDF;
+  pustakaPDF = (async () => {
+    if (!(window.jspdf && window.jspdf.jsPDF)) await muatSkrip('https://cdn.jsdelivr.net/npm/jspdf@3.0.4/dist/jspdf.umd.min.js');
+    if (!(window.svg2pdf && window.svg2pdf.svg2pdf)) await muatSkrip('https://cdn.jsdelivr.net/npm/svg2pdf.js@2.7.0/dist/svg2pdf.umd.min.js');
+    if (!(window.jspdf && window.jspdf.jsPDF && window.svg2pdf && window.svg2pdf.svg2pdf)) throw new Error('Pustaka PDF tidak lengkap');
+    return {jsPDF: window.jspdf.jsPDF, svg2pdf: window.svg2pdf.svg2pdf};
+  })();
+  pustakaPDF.catch(() => { pustakaPDF = null; });
+  return pustakaPDF;
+}
+async function buatPDFSet(o = opsi2D(), lapor = () => {}) {
+  const {jsPDF, svg2pdf} = await muatPDF();
+  const lembar = daftarLembar().filter(l => l.masuk);
+  if (!lembar.length) throw new Error('Belum ada lembar yang dicentang untuk PDF.');
+  const fmtK = o.kertas.toLowerCase();
+  const doc = new jsPDF({orientation: 'landscape', unit: 'mm', format: fmtK, compress: true});
+  doc.setProperties({title: `${S.setel.nama || 'RANCANG'} — set gambar`, creator: 'RANCANG', subject: 'Gambar kerja'});
+  const wadah = document.createElement('div');
+  wadah.style.cssText = 'position:fixed;left:-10000px;top:0;width:10px;height:10px;overflow:hidden';
+  document.body.appendChild(wadah);
+  const raster = [];
+  try {
+    for (const [i, l] of lembar.entries()) {
+      lapor(i + 1, lembar.length, l.nama);
+      await new Promise(r => setTimeout(r, 0));
+      const h = buatSVG({...o, jenis: l.jenis, lembar: l});
+      if (i) doc.addPage(fmtK, 'landscape');
+      try {
+        wadah.innerHTML = h.svg;
+        await svg2pdf(wadah.firstElementChild, doc, {x: 0, y: 0, width: h.W, height: h.H});
+      } catch (err) {
+        console.error('[pdf] lembar', l.jenis, err);
+        const blob = await svgKePng(h.svg, h.W, h.H, 200);
+        doc.addImage(await keDataURL(blob), 'PNG', 0, 0, h.W, h.H);
+        raster.push(l.nama);
+      }
+    }
+  } finally { wadah.remove(); }
+  return {blob: doc.output('blob'), jumlah: lembar.length, raster};
+}
+$('#m-pdf').addEventListener('click', async () => {
+  if (!S.unduh) return toast('Unduhan tidak tersedia di tampilan ini.');
+  const tombol = $('#m-pdf'), info = $('#m-lembar-info');
+  tombol.disabled = true;
+  try {
+    const r = await buatPDFSet(opsi2D(), (k, n, nama) => { info.textContent = `Menyusun PDF ${k}/${n}: ${nama}…`; });
+    const dasar = (S.setel.nama || 'rancang').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'rancang';
+    await simpanBerkas(`${dasar}_set-gambar_${$('#m-kertas').value}.pdf`, r.blob);
+    if (r.raster.length) toast(`${r.raster.length} lembar disimpan sebagai gambar (bukan vektor): ${r.raster.join(', ')}.`);
+  } catch (err) {
+    console.error('[pdf]', err);
+    toast(/memuat|Pustaka/.test(err.message) ? 'Pustaka PDF gagal dimuat. Periksa koneksi lalu coba lagi.' : err.message);
+  } finally {
+    tombol.disabled = false;
+    renderLembar();
+  }
+});
 function buka2D(pilih) { if (S.edit) keluarKomponen(); isiPilihan2D(typeof pilih === 'string' ? pilih : null); $('#modal2d').hidden = false; segar2D(); $('#m-jenis').focus(); }
 function tutup2D() { ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.pilih = null; $('#modal2d').hidden = true; canvas.focus({preventScroll: true}); }
 const namaBerkas = ext => {
@@ -6277,8 +6571,8 @@ async function simpanBerkas(filename, data) {
     else toast('Unduhan tidak bisa dilakukan di tampilan ini.');
   }
 }
-async function svgKePng(svg, W, H) {
-  const dpi = 150, w = Math.round(W / 25.4 * dpi), h = Math.round(H / 25.4 * dpi);
+async function svgKePng(svg, W, H, dpi = 150) {
+  const w = Math.round(W / 25.4 * dpi), h = Math.round(H / 25.4 * dpi);
   const url = URL.createObjectURL(new Blob([svg], {type: 'image/svg+xml'}));
   try {
     const img = new Image(); img.src = url; await img.decode();
@@ -6937,6 +7231,9 @@ function langganan() {
     if (d.kemiringanAtap > 0) S.setel.kemiringanAtap = d.kemiringanAtap;
     if (d.overstekAtap >= 0) S.setel.overstekAtap = d.overstekAtap;
     if (d.faktorBesi >= 0) S.setel.faktorBesi = d.faktorBesi;
+    if (d.sampul && typeof d.sampul === 'object') S.setel.sampul = d.sampul;
+    if (d.lembar && typeof d.lembar === 'object') S.setel.lembar = d.lembar;
+    if (!$('#modal2d').hidden) renderLembar();
     tampilNamaProyek(); S.panelKunci = ''; renderPanel();
   }, () => {});
 }
@@ -7008,6 +7305,8 @@ window.rancangAPI = Object.freeze({
   gambar2D,
   gambar2DPng,
   tangkap3D,
+  daftarLembar: () => daftarLembar(),
+  pdfSet: async (o = {}) => { const r = await buatPDFSet({...opsi2D(), ...o}); return {jumlah: r.jumlah, raster: r.raster, pdf: await keDataURL(r.blob)}; },
   rab: ids => { const r = dataRAB(ids && ids.length ? ids : semuaId()); return r.divisi; },
   ringkasan: ids => total(ids && ids.length ? ids : semuaId()),
   ukurElemen: id => { const d = S.elems.get(id); return d ? ukur(d) : null; }

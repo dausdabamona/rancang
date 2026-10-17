@@ -49,6 +49,8 @@ function susun() {
   html = ganti(html, '<script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>',
     '<script src="vendor/polygon-clipping.umd.min.js"></script>', 'polygon-clipping CDN');
   html = ganti(html, "'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'", "'vendor/xlsx.full.min.js'", 'xlsx CDN');
+  html = ganti(html, "'https://cdn.jsdelivr.net/npm/jspdf@3.0.4/dist/jspdf.umd.min.js'", "'vendor/jspdf.umd.min.js'", 'jspdf CDN');
+  html = ganti(html, "'https://cdn.jsdelivr.net/npm/svg2pdf.js@2.7.0/dist/svg2pdf.umd.min.js'", "'vendor/svg2pdf.umd.min.js'", 'svg2pdf CDN');
   const sisa = html.match(/https:\/\/(cdn|fonts)[^\s"'`)]*/g);
   if (sisa) throw new Error('[build-renderer] masih ada sumber luar: ' + sisa.join(', '));
 
@@ -60,6 +62,8 @@ function susun() {
   fs.copyFileSync(nm('three/build/three.min.js'), path.join(keluar, 'vendor', 'three.min.js'));
   fs.copyFileSync(nm('polygon-clipping/dist/polygon-clipping.umd.min.js'), path.join(keluar, 'vendor', 'polygon-clipping.umd.min.js'));
   fs.copyFileSync(nm('xlsx/dist/xlsx.full.min.js'), path.join(keluar, 'vendor', 'xlsx.full.min.js'));
+  fs.copyFileSync(nm('jspdf/dist/jspdf.umd.min.js'), path.join(keluar, 'vendor', 'jspdf.umd.min.js'));
+  fs.copyFileSync(nm('svg2pdf.js/dist/svg2pdf.umd.min.js'), path.join(keluar, 'vendor', 'svg2pdf.umd.min.js'));
 
   const css = [];
   for (const [paket, keluarga, bobot] of FONT) {
