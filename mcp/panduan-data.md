@@ -38,7 +38,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 - G (grup): `{"nama":"Rumah","induk":null}`. Elemen masuk grup lewat isian `grup`.
 - K (komponen): `{"nama":"Kloset","elemen":[…data elemen lokal…]}`; dipasang lewat instance.
-- T (tipe kusen): `{"kode":"P1","untuk":"pintu","nama":"Pintu panil","daun":1,"isi":"panil6","buka":"kiri","profil":0.06,"boven":{"tinggi":0.4,"kolom":2,"baris":1}}`. isi: panil6, kaca, polos, jalusi; buka: kiri, kanan, kupu, tetap. Berlaku untuk semua bukaan berkode sama.
+- T (tipe kusen): `{"kode":"P1","untuk":"pintu","nama":"Pintu panil","daun":1,"isi":"panil6","buka":"kiri","profil":0.06,"boven":{"tinggi":0.4,"kolom":2,"baris":1}}`. isi: panil6, kaca, polos, jalusi, kosong (tanpa daun, kusen saja); buka: kiri, kanan, kupu, tetap. Berlaku untuk semua bukaan berkode sama.
 
 ## Kebiasaan yang baik
 
