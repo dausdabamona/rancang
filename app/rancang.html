@@ -2394,6 +2394,7 @@ function prisma(g, id, p, z0, h, mat, tepi, wajahAtas, tanpaGaris, lewati, halus
   g.add(new THREE.LineSegments(lg, matGaris(tepi)));
 }
 function lepas(id) {
+  hapusCacheSnap(id);
   const g = objek.get(id);
   if (!g) return;
   if (S.sorot) { let o = S.sorot; while (o && o !== g) o = o.parent; if (o === g) S.sorot = null; }
@@ -2416,6 +2417,7 @@ function pasang(id, d) {
 }
 function pasangInti(id) {
   IRIS.kotor = true;
+  hapusCacheSnap(id);
   lepas(id);
   const d = pratDunia.has(id) ? pratDunia.get(id) : S.elems.get(id);
   tandaSambung.delete(id);
@@ -2765,7 +2767,8 @@ function hitObjekDi(e, kecuali) {
   arahkan(e);
   ray.params.Line.threshold = 0.001;
   const padat = [], tembus = [], lihat = new Set();
-  for (const h of ray.intersectObjects(root.children, true)) {
+  // hanya elemen yang kotak pembatasnya dipotong sinar (lihat kandidatSinar di bagian SNAP)
+  for (const h of ray.intersectObjects(kandidatSinar(Infinity, kecuali), true)) {
     const id = h.object.userData.elemId;
     if (!h.object.isMesh || !id || lihat.has(id) || (kecuali && kecuali.has(id))) continue;
     if (IRIS.arr.length && terbuangIris(h.point.x, h.point.y, h.point.z)) continue;
@@ -2783,8 +2786,16 @@ function hitObjekDi(e, kecuali) {
 }
 function pilihObjek(e, kecuali, toleran = false) { return hitObjek(e, kecuali, toleran)[0] || null; }
 function titikTanah(e) { arahkan(e); const v = V(); return ray.ray.intersectPlane(bidangTanah, v) ? v : null; }
-// Titik dan rusuk 3D benda miring (atap, bidang, batang) dari bentuk sebenarnya: ujung seng, sopi-sopi, ujung kasau.
-// Sebelumnya atap hanya memberi pojok alas datar di z0 (tanpa overstek) dan bidang memberi titik di lantai.
+/* ===== SNAP ===== */
+// Semua kode snap ada di bagian ini supaya kelak mudah dipindah ke modul sendiri (snap.ts):
+// 1. rangka3D / titikTengah: titik dan rusuk sebuah elemen dari bentuk sebenarnya.
+// 2. cacheSnap: titik snap tiap elemen dihitung sekali dan disimpan; dihapus di pasangInti(id) dan lepas(id),
+//    yaitu jalur tunggal setiap perubahan elemen (edit manual, Undo/Redo, Claude, MCP, pratinjau alat).
+//    Sebelum v0.30 semua geometri dihitung ulang setiap gerak kursor (±28 ms di model 592 elemen).
+// 3. terlihatSnap: titik yang tertutup benda lain tidak dipakai (seperti SketchUp), kecuali Tembus pandang aktif.
+// 4. titikSnap: pencarian titik di bawah kursor; tanda tangan dan bentuk hasilnya tetap untuk semua alat.
+
+// Titik dan rusuk 3D benda miring (atap, bidang, batang, sapuan) dari bentuk sebenarnya: ujung seng, sopi-sopi, ujung kasau.
 function rangka3D(g) {
   let muka = null, ujung = [];
   if (g.jenis === 'atap') muka = atapGeom(g).permukaan.map(f => f.titik);
@@ -2801,83 +2812,6 @@ function rangka3D(g) {
   for (const q of ujung) titik.set(k(q), q);
   return {titik: [...titik.values()], rusuk: [...rusuk.values()]};
 }
-// opsi.atas: ujung elemen juga dicari di puncaknya; opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap
-function titikSnap(e, kecuali, opsi = {}) {
-  const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, v = V();
-  let best = null, bd = 16, bz = Infinity;
-  for (const [id, d] of S.elems) {
-    if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
-    for (const g of geometriElemen(id, d)) {
-      const r3 = rangka3D(g);
-      const dasar = g.z0 || 0, tinggiG = g.jenis === 'pondasi' && g.tipe === 'batukali' ? 0 : (g.tinggi ?? g.h ?? 0);
-      const zs = opsi.atas && g.jenis !== 'atap' ? [dasar + tinggiG, dasar] : [dasar];
-      const calon = r3 ? r3.titik.map(q => [q, 'ujung']) : titikKunci(g).map(q => [q, 'ujung']);
-      if (opsi.tengah) {
-        if (r3) for (const [a, b] of r3.rusuk) calon.push([[(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], 'tengah']);
-        else for (const q of titikTengah(g)) calon.push([q, 'tengah']);
-      }
-      for (const [[x, y, z3], jenis] of calon) for (const z of r3 ? [z3] : zs) {
-        if (IRIS.arr.length && terbuangIris(x, y, z)) continue;
-        v.set(x, y, z).project(camera);
-        if (v.z > 1 || v.z < -1) continue;
-        // ujung didahulukan dari titik tengah
-        const dd = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my) + (jenis === 'tengah' ? 4 : 0);
-        // titik yang bertumpuk di layar (tampak samping/paralel): yang paling dekat ke kamera didahulukan
-        if (dd < bd - 0.5 || (dd <= bd + 0.5 && v.z < bz)) { bd = Math.min(bd, dd); bz = v.z; best = {x: r2(x), y: r2(y), z: r2(z), jenis, id}; }
-      }
-    }
-  }
-  if (best) return best;
-  // pada tepi (seperti "On Edge" SketchUp): titik terdekat di rusuk alas, rusuk atas, dan rusuk tegak, dalam 8 px
-  if (opsi.tepi) {
-    arahkan(e);
-    let bt = 8, btz = Infinity, hasil = null, idKini = null;
-    const o = ray.ray.origin, rd = ray.ray.direction;
-    const cek = (P, Q) => {
-      // titik pada ruas PQ yang paling dekat dengan sinar kursor
-      const u = [Q[0] - P[0], Q[1] - P[1], Q[2] - P[2]], w = [P[0] - o.x, P[1] - o.y, P[2] - o.z];
-      const a = u[0] * u[0] + u[1] * u[1] + u[2] * u[2], b = u[0] * rd.x + u[1] * rd.y + u[2] * rd.z, c = rd.x * rd.x + rd.y * rd.y + rd.z * rd.z;
-      const d = u[0] * w[0] + u[1] * w[1] + u[2] * w[2], f = rd.x * w[0] + rd.y * w[1] + rd.z * w[2], den = a * c - b * b;
-      if (a < 1e-8 || Math.abs(den) < 1e-12) return;
-      const t = Math.max(0, Math.min(1, (b * f - c * d) / den)), q = [P[0] + u[0] * t, P[1] + u[1] * t, P[2] + u[2] * t];
-      if (IRIS.arr.length && terbuangIris(q[0], q[1], q[2])) return;
-      v.set(q[0], q[1], q[2]).project(camera);
-      if (v.z > 1 || v.z < -1) return;
-      const dd = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my);
-      if (dd < bt - 0.5 || (dd <= bt + 0.5 && v.z < btz)) { bt = Math.min(bt, dd); btz = v.z; hasil = {x: r2(q[0]), y: r2(q[1]), z: r2(q[2]), jenis: 'tepi', id: idKini}; }
-    };
-    for (const [id, d] of S.elems) {
-      if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
-      idKini = id;
-      for (const g of geometriElemen(id, d)) {
-        const r3 = rangka3D(g);
-        if (r3) { for (const [a, b] of r3.rusuk) cek(a, b); continue; }
-        const t = titikKunci(g);
-        if (!t.length) continue;
-        const dasar = g.z0 || 0, tinggiG = g.jenis === 'atap' || (g.jenis === 'pondasi' && g.tipe === 'batukali') ? 0 : (g.tinggi ?? g.h ?? 0);
-        const zs = tinggiG > 0 ? [dasar, dasar + tinggiG] : [dasar];
-        const tutup = t.length > 2 ? t.length : t.length - 1;
-        for (const z of zs) for (let i = 0; i < tutup; i++) { const a = t[i], b = t[(i + 1) % t.length]; cek([a[0], a[1], z], [b[0], b[1], z]); }
-        if (tinggiG > 0) for (const a of t) cek([a[0], a[1], dasar], [a[0], a[1], dasar + tinggiG]);
-      }
-    }
-    if (hasil) return hasil;
-  }
-  if (opsi.bidang) {
-    const h = pilihObjek(e, kecuali);
-    if (h && h.object.userData.face !== 'penanda') return {x: h.point.x, y: h.point.y, z: h.point.z, jenis: 'bidang', id: h.object.userData.elemId};
-  }
-  const z = opsi.bidangZ || 0;
-  arahkan(e);
-  const g = V();
-  if (!ray.ray.intersectPlane(new THREE.Plane(V(0, 0, 1), -z), g)) return null;
-  if (opsi.halus) { const l = langkahHalus(); return {x: bulatHalus(g.x, l), y: bulatHalus(g.y, l), z, jenis: 'grid'}; }
-  return {x: r2(snapG(g.x)), y: r2(snapG(g.y)), z, jenis: 'grid'};
-}
-// Langkah gerak mengikuti zoom: kelipatan rapi (5 cm, 1 cm, 5 mm, 1 mm) yang di layar tak lebih dari ±1,5 px,
-// jadi gerakan terasa mulus seperti SketchUp tetapi angkanya tetap bulat
-function langkahHalus() { const m = meterPerPiksel() * 1.5; return [0.05, 0.01, 0.005, 0.001].find(l => l <= m) || 0.001; }
-const bulatHalus = (v, l) => r2(Math.round(v / l) * l);
 // Titik tengah ruas: as dinding/slof/ring balk/pondasi, tepi alas bidang, tepi as atap
 function titikTengah(g) {
   if (g.bentuk || g.jenis === 'anotasi' || g.jenis === 'kolom') return [];
@@ -2886,6 +2820,206 @@ function titikTengah(g) {
   if (t.length < 3) return [];
   return t.map((q, i) => { const w = t[(i + 1) % t.length]; return [(q[0] + w[0]) / 2, (q[1] + w[1]) / 2]; });
 }
+// Langkah gerak mengikuti zoom: kelipatan rapi (5 cm, 1 cm, 5 mm, 1 mm) yang di layar tak lebih dari ±1,5 px,
+// jadi gerakan terasa mulus seperti SketchUp tetapi angkanya tetap bulat
+function langkahHalus() { const m = meterPerPiksel() * 1.5; return [0.05, 0.01, 0.005, 0.001].find(l => l <= m) || 0.001; }
+const bulatHalus = (v, l) => r2(Math.round(v / l) * l);
+
+// Cache per elemen: titik [x, y, z, jenis, puncak] (puncak = titik di atas elemen, hanya dipakai bila opsi.atas),
+// rusuk [[a, b], …] untuk snap "pada tepi", dan kotak pembatas mesh (THREE.Box3) untuk menyaring sinar.
+const SNAP = {cache: new Map(), kotak: new Map()};
+function hapusCacheSnap(id) { SNAP.cache.delete(id); SNAP.kotak.delete(id); if (SNAP.proy) SNAP.proy.delete(id); }
+function cacheSnap(id, d) {
+  let c = SNAP.cache.get(id);
+  if (c) return c;
+  const titik = [], rusuk = [];
+  for (const g of geometriElemen(id, d)) {
+    const r3 = rangka3D(g);
+    if (r3) {
+      for (const q of r3.titik) titik.push([q[0], q[1], q[2], 'ujung', false]);
+      for (const [a, b] of r3.rusuk) { rusuk.push([a, b]); titik.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, 'tengah', false]); }
+      continue;
+    }
+    const t = titikKunci(g);
+    if (!t.length) continue;
+    const dasar = g.z0 || 0, atapKah = g.jenis === 'atap';
+    const tinggiG = atapKah || (g.jenis === 'pondasi' && g.tipe === 'batukali') ? 0 : (g.tinggi ?? g.h ?? 0);
+    for (const [x, y] of t) { titik.push([x, y, dasar, 'ujung', false]); if (tinggiG > 0) titik.push([x, y, dasar + tinggiG, 'ujung', true]); }
+    for (const [x, y] of titikTengah(g)) { titik.push([x, y, dasar, 'tengah', false]); if (tinggiG > 0) titik.push([x, y, dasar + tinggiG, 'tengah', true]); }
+    // rusuk alas, rusuk atas, dan rusuk tegak
+    const zs = tinggiG > 0 ? [dasar, dasar + tinggiG] : [dasar], tutup = t.length > 2 ? t.length : t.length - 1;
+    for (const z of zs) for (let i = 0; i < tutup; i++) { const a = t[i], b = t[(i + 1) % t.length]; rusuk.push([[a[0], a[1], z], [b[0], b[1], z]]); }
+    if (tinggiG > 0) for (const a of t) rusuk.push([[a[0], a[1], dasar], [a[0], a[1], dasar + tinggiG]]);
+  }
+  c = {titik, rusuk};
+  SNAP.cache.set(id, c);
+  return c;
+}
+// Kotak pembatas mesh elemen (dari objek 3D yang terpasang), dihitung sekali per pemasangan
+function kotakSnap(id) {
+  let b = SNAP.kotak.get(id);
+  if (b !== undefined) return b;
+  const g = objek.get(id);
+  b = g ? new THREE.Box3().setFromObject(g) : null;
+  SNAP.kotak.set(id, b);
+  return b;
+}
+// Grup elemen yang kotaknya dipotong sinar `ray` dalam jarak `far`, diurutkan dari yang terdekat
+// (penyaring sebelum raycast segitiga yang mahal; dipakai seleksi dan uji keterlihatan)
+const _titikKotak = new THREE.Vector3();
+function kandidatSinar(far, kecuali) {
+  const hasil = [];
+  for (const [id, g] of objek) {
+    if (kecuali && kecuali.has(id)) continue;
+    const b = kotakSnap(id);
+    if (!b || b.isEmpty()) continue;
+    const p = ray.ray.intersectBox(b, _titikKotak);
+    if (!p) continue;
+    const j = p.distanceTo(ray.ray.origin);
+    if (j <= far) hasil.push({g, j});
+  }
+  hasil.sort((a, b) => a.j - b.j);
+  return hasil.map(h => h.g);
+}
+// Apakah titik (x, y, z) terlihat dari kamera? px, py = posisi titik di layar (piksel kanvas).
+// Tertutup bila ada mesh lain yang kena sinar lebih dekat dari titik itu melebihi toleransi (2 cm atau 0,1 % jarak),
+// sehingga titik di permukaan bendanya sendiri tetap dianggap terlihat. Saat Tembus aktif, material transparan
+// bukan penghalang (aturan yang sama dengan hitObjekDi). Mesh yang terbuang irisan 3D, penanda, dan benda yang
+// sedang digeser (kecuali) juga bukan penghalang. Berhenti pada penghalang pertama (tidak mengurutkan semua hit).
+const _kena = [];
+function terlihatSnap(x, y, z, px, py, kecuali, rc) {
+  ndc.set(px / rc.width * 2 - 1, -(py / rc.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const o = ray.ray.origin, rd = ray.ray.direction;
+  const jarak = (x - o.x) * rd.x + (y - o.y) * rd.y + (z - o.z) * rd.z;
+  if (jarak <= 0) return true;
+  const far = jarak - Math.max(0.02, 0.001 * jarak);
+  if (far <= 0) return true;
+  ray.near = 0; ray.far = far;
+  // mesh elemen bersarang (grup elemen → grup bagian → mesh); berhenti di mesh pertama yang menghalangi
+  const terhalang = o => {
+    if (o.isMesh) {
+      if ((o.userData && o.userData.face === 'penanda') || (S.tembus && o.material && o.material.transparent && o.material.opacity < 0.4)) return false;
+      _kena.length = 0;
+      o.raycast(ray, _kena);
+      for (const h of _kena) if (!(IRIS.arr.length && terbuangIris(h.point.x, h.point.y, h.point.z))) return true;
+      return false;
+    }
+    for (const anak of o.children) if (terhalang(anak)) return true;
+    return false;
+  };
+  let terlihat = true;
+  for (const g of kandidatSinar(far, kecuali)) if (terhalang(g)) { terlihat = false; break; }
+  ray.far = Infinity;
+  return terlihat;
+}
+// Proyeksi titik dan rusuk cache ke layar, disimpan selama kamera dan ukuran kanvas tidak berubah.
+// Saat kursor bergerak kamera biasanya diam, jadi per gerak tinggal menghitung jarak piksel, bukan memproyeksikan ulang.
+// Bentuk: titik Float64Array [px, py, kz] per titik (kz = NaN bila di luar jangkauan kamera); rusuk sama untuk kedua ujungnya.
+SNAP.proy = new Map(); SNAP.kunciKamera = null;
+function proyeksiSnap(id, c, rc) {
+  const kunci = [rc.width, rc.height, ...camera.matrixWorldInverse.elements, ...camera.projectionMatrix.elements];
+  if (!SNAP.kunciKamera || SNAP.kunciKamera.some((v, i) => v !== kunci[i])) { SNAP.kunciKamera = kunci; SNAP.proy.clear(); }
+  let pr = SNAP.proy.get(id);
+  if (pr) return pr;
+  const v = _titikKotak, isi = (arr, i, x, y, z) => {
+    v.set(x, y, z).project(camera);
+    if (v.z > 1 || v.z < -1) { arr[i] = arr[i + 1] = arr[i + 2] = NaN; return; }
+    arr[i] = (v.x + 1) / 2 * rc.width; arr[i + 1] = (1 - v.y) / 2 * rc.height; arr[i + 2] = v.z;
+  };
+  const titik = new Float64Array(c.titik.length * 3), rusuk = new Float64Array(c.rusuk.length * 6);
+  c.titik.forEach((q, i) => isi(titik, i * 3, q[0], q[1], q[2]));
+  c.rusuk.forEach(([a, b], i) => { isi(rusuk, i * 6, a[0], a[1], a[2]); isi(rusuk, i * 6 + 3, b[0], b[1], b[2]); });
+  pr = {titik, rusuk};
+  SNAP.proy.set(id, pr);
+  return pr;
+}
+// Titik di bawah kursor. Urutan: ujung dan titik tengah (16 px, titik tengah diberi penalti 4 px) → pada tepi (8 px)
+// → pada bidang benda (opsi.bidang) → grid lantai. Titik yang bertumpuk di layar: yang terdekat kamera menang.
+// opsi.atas: puncak elemen ikut dicari; opsi.tengah: titik tengah rusuk; opsi.tepi: titik terdekat pada rusuk;
+// opsi.bidang: titik pada muka benda; opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap; opsi.halus: langkah grid halus.
+function titikSnap(e, kecuali, opsi = {}) {
+  const rc = canvas.getBoundingClientRect(), mx = e.clientX - rc.left, my = e.clientY - rc.top;
+  const lewati = id => (kecuali && kecuali.has(id)) || S.sembunyi.has(id);
+  const iris = IRIS.arr.length > 0;
+  // kandidat terbaik yang terlihat: urut jarak layar; yang selisihnya ≤ 0,5 px dibandingkan kedalamannya
+  const pilihTerlihat = calon => {
+    calon.sort((a, b) => a.dd - b.dd);
+    let best = null, uji = 0;
+    for (const c of calon) {
+      if (best && c.dd > best.dd + 0.5) break;
+      if (best && c.kz >= best.kz) continue;
+      // paling banyak 8 uji keterlihatan per gerak kursor agar tetap ringan di tumpukan titik yang semuanya tertutup
+      if (!S.tembus && ++uji > 8) break;
+      if (S.tembus || terlihatSnap(c.x, c.y, c.z, c.px, c.py, kecuali, rc)) best = c;
+    }
+    return best;
+  };
+  // 1. ujung dan titik tengah
+  const calon = [];
+  for (const [id, d] of S.elems) {
+    if (lewati(id)) continue;
+    const c = cacheSnap(id, d), pr = proyeksiSnap(id, c, rc).titik;
+    for (let i = 0; i < c.titik.length; i++) {
+      const px = pr[i * 3], py = pr[i * 3 + 1];
+      if (px !== px) continue; // NaN: di luar jangkauan kamera
+      const dx = px - mx, dy = py - my;
+      if (dx > 16 || dx < -16 || dy > 16 || dy < -16) continue;
+      const [x, y, z, jenis, puncak] = c.titik[i];
+      if ((puncak && !opsi.atas) || (jenis === 'tengah' && !opsi.tengah)) continue;
+      const dd = Math.hypot(dx, dy) + (jenis === 'tengah' ? 4 : 0);
+      if (dd >= 16 || (iris && terbuangIris(x, y, z))) continue;
+      calon.push({dd, kz: pr[i * 3 + 2], px, py, x, y, z, jenis, id});
+    }
+  }
+  let best = pilihTerlihat(calon);
+  if (best) return {x: r2(best.x), y: r2(best.y), z: r2(best.z), jenis: best.jenis, id: best.id};
+  // 2. pada tepi (seperti "On Edge" SketchUp): titik terdekat pada rusuk, dalam 8 px
+  if (opsi.tepi) {
+    arahkan(e);
+    const o = ray.ray.origin, rd = ray.ray.direction, calonTepi = [], v = _titikKotak;
+    for (const [id, d] of S.elems) {
+      if (lewati(id)) continue;
+      const c = cacheSnap(id, d), pr = proyeksiSnap(id, c, rc).rusuk;
+      for (let i = 0; i < c.rusuk.length; i++) {
+        // saring dulu di layar: jarak kursor ke ruas 2D harus < 8 px (bila kedua ujung terproyeksi)
+        const ax = pr[i * 6], ay = pr[i * 6 + 1], bx = pr[i * 6 + 3], by = pr[i * 6 + 4];
+        if (ax === ax && bx === bx) {
+          const ux = bx - ax, uy = by - ay, L2 = ux * ux + uy * uy;
+          const t2 = L2 > 1e-9 ? Math.max(0, Math.min(1, ((mx - ax) * ux + (my - ay) * uy) / L2)) : 0;
+          if (Math.hypot(ax + ux * t2 - mx, ay + uy * t2 - my) >= 8.5) continue;
+        }
+        const [P, Q] = c.rusuk[i];
+        // titik pada ruas PQ yang paling dekat dengan sinar kursor
+        const u = [Q[0] - P[0], Q[1] - P[1], Q[2] - P[2]], w = [P[0] - o.x, P[1] - o.y, P[2] - o.z];
+        const a = u[0] * u[0] + u[1] * u[1] + u[2] * u[2], b = u[0] * rd.x + u[1] * rd.y + u[2] * rd.z;
+        const dw = u[0] * w[0] + u[1] * w[1] + u[2] * w[2], f = rd.x * w[0] + rd.y * w[1] + rd.z * w[2], den = a - b * b;
+        if (a < 1e-8 || Math.abs(den) < 1e-12) continue;
+        const t = Math.max(0, Math.min(1, (b * f - dw) / den)), x = P[0] + u[0] * t, y = P[1] + u[1] * t, z = P[2] + u[2] * t;
+        if (iris && terbuangIris(x, y, z)) continue;
+        v.set(x, y, z).project(camera);
+        if (v.z > 1 || v.z < -1) continue;
+        const px = (v.x + 1) / 2 * rc.width, py = (1 - v.y) / 2 * rc.height, dd = Math.hypot(px - mx, py - my);
+        if (dd < 8) calonTepi.push({dd, kz: v.z, px, py, x, y, z, jenis: 'tepi', id});
+      }
+    }
+    best = pilihTerlihat(calonTepi);
+    if (best) return {x: r2(best.x), y: r2(best.y), z: r2(best.z), jenis: 'tepi', id: best.id};
+  }
+  // 3. pada muka benda
+  if (opsi.bidang) {
+    const h = pilihObjek(e, kecuali);
+    if (h && h.object.userData.face !== 'penanda') return {x: h.point.x, y: h.point.y, z: h.point.z, jenis: 'bidang', id: h.object.userData.elemId};
+  }
+  // 4. grid lantai (atau bidang bantu setinggi opsi.bidangZ)
+  const z = opsi.bidangZ || 0;
+  arahkan(e);
+  const g = V();
+  if (!ray.ray.intersectPlane(new THREE.Plane(V(0, 0, 1), -z), g)) return null;
+  if (opsi.halus) { const l = langkahHalus(); return {x: bulatHalus(g.x, l), y: bulatHalus(g.y, l), z, jenis: 'grid'}; }
+  return {x: r2(snapG(g.x)), y: r2(snapG(g.y)), z, jenis: 'grid'};
+}
+/* ===== akhir SNAP ===== */
 // Batas as dinding dari sekumpulan id (grup diurai); bila tak ada dinding, dari titik elemen lain
 function batasDari(ids) {
   const {el} = ekspansi(ids);
