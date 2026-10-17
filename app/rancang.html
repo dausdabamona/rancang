@@ -509,6 +509,7 @@ const titikSah = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 function sah(d) {
   if (!d || typeof d !== 'object') return false;
   if (d.jenis === 'dinding') return titikSah(d.awal) && titikSah(d.akhir) && d.tebal > 0 && d.tinggi >= 0;
+  if ((d.jenis === 'plafon' || d.jenis === 'volume') && d.lubang !== undefined && !(Array.isArray(d.lubang) && d.lubang.every(r => Array.isArray(r) && r.length >= 3 && r.every(titikSah)))) return false;
   if (d.jenis === 'plafon') return Array.isArray(d.alas) && d.alas.length >= 3 && d.alas.every(titikSah) && Number.isFinite(d.z0);
   if (d.jenis === 'volume' && d.bentuk === 'lingkaran') return titikSah(d.pusat) && d.jari > 0 && d.tinggi >= 0;
   if (d.jenis === 'volume' && d.bentuk === 'busur') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.02 && Number.isFinite(d.tonjolan) && Math.abs(d.tonjolan) > 0.005 && d.tinggi >= 0;
@@ -963,6 +964,13 @@ function poligon(d) {
   if (luasBertanda(p) < 0) p.reverse();
   return p;
 }
+// Lubang di alas volume/plafon (mis. bukaan tangga, kolom yang berdiri bebas): cincin [[x, y]…]
+function lubangDari(d) {
+  if (!Array.isArray(d.lubang) || !d.lubang.length || d.bentuk) return null;
+  return d.lubang.map(r => r.map(q => [q.x, q.y]));
+}
+const luasLubang = d => (lubangDari(d) || []).reduce((s, r) => s + Math.abs(luasBertanda(r)), 0);
+const kelilingCincin = r => r.reduce((s, q, i) => s + Math.hypot(r[(i + 1) % r.length][0] - q[0], r[(i + 1) % r.length][1] - q[1]), 0);
 function ukur(d) {
   const h = d.tinggi || 0;
   if (d.jenis === 'bukaan') return {luasB: d.lebar * d.tinggi};
@@ -983,10 +991,9 @@ function ukur(d) {
     else { const g = geoBusur(d); A = g.R ** 2 / 2 * (g.theta - Math.sin(g.theta)); K = g.R * g.theta + g.c; ext = {jari: g.R, panjangLengkung: g.R * g.theta, tali: g.c}; }
     return {luasAlas: A, keliling: K, luasSisi: K * h, volume: A * h, ...ext};
   }
-  const p = poligon(d), A = Math.abs(luasBertanda(p));
-  let K = 0;
-  for (let i = 0; i < p.length; i++) { const [x1, y1] = p[i], [x2, y2] = p[(i + 1) % p.length]; K += Math.hypot(x2 - x1, y2 - y1); }
-  return {luasAlas: A, keliling: K, luasSisi: K * h, volume: A * h};
+  const p = poligon(d), A = Math.abs(luasBertanda(p)) - luasLubang(d);
+  const K = kelilingCincin(p) + (lubangDari(d) || []).reduce((s, r) => s + kelilingCincin(r), 0);
+  return {luasAlas: A, keliling: K, luasSisi: K * h, volume: A * h, luasLubang: luasLubang(d)};
 }
 function transformasi(d, f, dz) {
   const b = salin(d);
@@ -1024,6 +1031,7 @@ function transformasi(d, f, dz) {
   }
   if (b.pusat) b.pusat = f(b.pusat);
   else if (b.awal && b.akhir) { b.awal = f(b.awal); b.akhir = f(b.akhir); } else if (b.alas) b.alas = b.alas.map(f);
+  if (Array.isArray(d.lubang)) b.lubang = d.lubang.map(r => r.map(f));
   b.z0 = r2((d.z0 || 0) + dz);
   return b;
 }
@@ -1159,6 +1167,7 @@ function geser(d, dx, dy, dz = 0) {
     b.awal = {x: r2(b.awal.x + dx), y: r2(b.awal.y + dy)};
     b.akhir = {x: r2(b.akhir.x + dx), y: r2(b.akhir.y + dy)};
   } else if (b.alas) b.alas = b.alas.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy)}));
+  if (Array.isArray(b.lubang)) b.lubang = b.lubang.map(r => r.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy)})));
   return b;
 }
 function ubahDorong(asli, face, edge, jarak) {
@@ -1460,7 +1469,7 @@ function bangun(id, d, f, kunci) {
     const lengkung = d.bentuk === 'lingkaran' || d.bentuk === 'busur' ? poligonLengkung(d) : null, p = lengkung ? lengkung.p : poligon(d);
     // bidang datar sedikit diangkat (yang lebih kecil lebih tinggi) agar tidak berkedip dengan bidang lain sebidang
     const angkat = h > 0 ? 0 : 0.002 + 0.004 / (1 + Math.abs(luasBertanda(p)));
-    prisma(g, id, p, (d.z0 || 0) + angkat, h, mat, tepi, 'atas', false, null, lengkung && lengkung.halus);
+    prisma(g, id, p, (d.z0 || 0) + angkat, h, mat, tepi, 'atas', false, null, lengkung && lengkung.halus, lubangDari(d));
   }
   return g;
 }
@@ -1960,9 +1969,10 @@ function bangunDinding(g, id, d, mat, tepi, f, kunci) {
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.add(new THREE.LineSegments(lg, matGaris(tepi)));
 }
-function prisma(g, id, p, z0, h, mat, tepi, wajahAtas, tanpaGaris, lewati, halus) {
-  const n = p.length;
-  const geoAtas = new THREE.ShapeGeometry(new THREE.Shape(p.map(([x, y]) => new THREE.Vector2(x, y))));
+function prisma(g, id, p, z0, h, mat, tepi, wajahAtas, tanpaGaris, lewati, halus, lubang) {
+  const n = p.length, bentuk = new THREE.Shape(p.map(([x, y]) => new THREE.Vector2(x, y)));
+  for (const r of lubang || []) bentuk.holes.push(new THREE.Path(r.map(([x, y]) => new THREE.Vector2(x, y))));
+  const geoAtas = new THREE.ShapeGeometry(bentuk);
   const atas = new THREE.Mesh(geoAtas, mat); atas.position.z = z0 + h; atas.userData = {elemId: id, face: wajahAtas}; g.add(atas);
   const garis = [];
   for (let i = 0; i < n; i++) { const [ax, ay] = p[i], [bx, by] = p[(i + 1) % n]; garis.push(ax, ay, z0 + h, bx, by, z0 + h); }
@@ -1980,6 +1990,17 @@ function prisma(g, id, p, z0, h, mat, tepi, wajahAtas, tanpaGaris, lewati, halus
       garis.push(ax, ay, z0, bx, by, z0);
       if (!(halus && halus.has(i))) garis.push(ax, ay, z0, ax, ay, z0 + h);
     }
+  }
+  // dinding dan tepi lubang
+  for (const r of lubang || []) for (let i = 0; i < r.length; i++) {
+    const [ax, ay] = r[i], [bx, by] = r[(i + 1) % r.length];
+    garis.push(ax, ay, z0 + h, bx, by, z0 + h);
+    if (h <= 0) continue;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute([ax, ay, z0, bx, by, z0, bx, by, z0 + h, ax, ay, z0 + h], 3));
+    geo.setIndex([0, 1, 2, 0, 2, 3]); geo.computeVertexNormals();
+    const sisi = new THREE.Mesh(geo, mat); sisi.userData = {elemId: id, face: 'sisi-lubang'}; g.add(sisi);
+    garis.push(ax, ay, z0, bx, by, z0, ax, ay, z0, ax, ay, z0 + h);
   }
   if (tanpaGaris) return;
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(garis, 3));
@@ -2859,6 +2880,14 @@ function bukaMenuKonteks(e) {
     else if (d && d.jenis === 'atap' && d.bentuk !== 'datar') tambah('k-pecah', 'Pecah atap');
     else if (d && d.jenis === 'volume' && !d.bentuk) tambah('k-pecah', 'Pecah lantai per ruang');
   }
+  if (ubah && pilihanSolid()) {
+    pisah();
+    const pem = sel[0];
+    tambah('k-kurangi', `Kurangi (pemotong ${pem.replace('_', '')}, lalu dihapus)`);
+    tambah('k-pangkas', `Pangkas (pemotong ${pem.replace('_', '')} tetap)`);
+    tambah('k-belah', `Belah menurut ${pem.replace('_', '')}`);
+    tambah('k-gabung', 'Gabung');
+  }
   pisah();
   if (ubah && sel.length && !S.edit) tambah('k-grup', 'Buat grup', 'Ctrl+G');
   if (ubah && sel.length && !S.edit) tambah('k-komponen', 'Buat komponen', 'G');
@@ -2888,6 +2917,10 @@ menuKonteksEl.addEventListener('click', e => {
   const k = b.dataset.k, id = [...S.sel][0], d = id ? ambil(id) : null;
   if (k === 'k-masuk') { if (kodeOf(id) === 'G') masukGrup(id); else masukKomponen(id); }
   else if (k === 'k-pecah') { if (kodeOf(id) === 'G') pecahGrup(id); else if (d.jenis === 'instance') pecahKomponen(id); else if (d.jenis === 'atap') pecahAtap(id); else pecahLantai(id); }
+  else if (k === 'k-kurangi') operasiSolid('kurangi');
+  else if (k === 'k-pangkas') operasiSolid('pangkas');
+  else if (k === 'k-belah') operasiSolid('belah');
+  else if (k === 'k-gabung') operasiSolid('gabung');
   else if (k === 'k-grup') buatGrup();
   else if (k === 'k-komponen') jadikanKomponen();
   else if (k === 'k-terhubung') pilihTerhubung([...S.sel], true);
@@ -2907,6 +2940,65 @@ menuKonteksEl.addEventListener('keydown', e => {
 });
 document.addEventListener('pointerdown', e => { if (!menuKonteksEl.hidden && !menuKonteksEl.contains(e.target)) tutupMenuKonteks(); }, true);
 window.addEventListener('blur', tutupMenuKonteks);
+/* ============ Alat solid 2,5D (v0.28.2): Kurangi, Pangkas, Belah, Gabung untuk volume, lantai, dan plafon ============ */
+// Seperti Solid Tools SketchUp, tetapi pada denah (alas) objek yang bertumpuk di ketinggian yang sama; hasilnya tetap objek ber-RAB.
+// Objek yang pertama dipilih = pemotong.
+const SOLID_JENIS = new Set(['volume', 'plafon']);
+function geomSolid(d) { const p = poligon(d); return [[...p, p[0]], ...(lubangDari(d) || []).map(r => [...r, r[0]])]; }
+const rentangZ = d => (d.jenis === 'plafon' ? [(d.z0 || 0) - 0.012, d.z0 || 0] : [d.z0 || 0, (d.z0 || 0) + Math.max(0, d.tinggi || 0)]);
+function tumpangZ(a, b) { const [a0, a1] = rentangZ(a), [b0, b1] = rentangZ(b); return Math.min(a1, b1) >= Math.max(a0, b0) - 0.005; }
+// data objek baru dari satu poligon hasil (cincin luar + lubang), mewarisi isian objek asal
+function dataDariPoly(d, poly) {
+  const bersih = r => { const q = bukaCincin(r).map(([x, y]) => [r2(x), r2(y)]); return q.length >= 3 && Math.abs(luasBertanda(q)) > 1e-4 ? q : null; };
+  const luar = bersih(poly[0]);
+  if (!luar || Math.abs(luasBertanda(luar)) < 0.01) return null;
+  const b = salin(d);
+  for (const k of ['bentuk', 'pusat', 'jari', 'awal', 'akhir', 'tonjolan']) delete b[k];
+  b.alas = luar.map(([x, y]) => ({x, y}));
+  const lb = poly.slice(1).map(bersih).filter(Boolean);
+  if (lb.length) b.lubang = lb.map(r => r.map(([x, y]) => ({x, y}))); else delete b.lubang;
+  return b;
+}
+function pilihanSolid() {
+  const daftar = [...S.sel].map(id => [id, ambil(id)]);
+  return daftar.length >= 2 && daftar.every(([id, d]) => d && kodeOf(id) !== 'G' && SOLID_JENIS.has(d.jenis)) ? daftar : null;
+}
+function operasiSolid(jenis) {
+  const daftar = pilihanSolid();
+  if (!daftar) return toast('Pilih minimal dua volume, lantai, atau plafon.');
+  if (typeof polygonClipping === 'undefined') return toast('Pustaka pemotong poligon belum termuat.');
+  const pc = polygonClipping, nid = pemberiId(), tulis = [], hasil = [];
+  let lewat = 0;
+  const tulisHasil = (id, d, mp, idTetap = true) => {
+    const bagian = mp.map(poly => dataDariPoly(d, poly)).filter(Boolean);
+    bagian.forEach((b, i) => { const bid = i === 0 && idTetap ? id : nid(AWALAN[d.jenis]); tulis.push({id: bid, sesudah: b}); hasil.push(bid); });
+    if (!bagian.length && idTetap) tulis.push({id, sesudah: null});
+  };
+  try {
+    if (jenis === 'gabung') {
+      const [[id0, d0]] = daftar, kunci = d => d.jenis === 'plafon' ? ['plafon', r2(d.z0 || 0), d.bahan || 'grc', d.rangka || 'hollow'].join('|') : ['volume', r2(d.z0 || 0), r2(d.tinggi || 0), d.lantai || '', d.penutupLantai || ''].join('|');
+      const beda = daftar.find(([, d]) => kunci(d) !== kunci(d0));
+      if (beda) return toast(`Gabung ditolak: ${beda[0]} berbeda jenis, peil, tebal, atau penutup dengan ${id0}. Samakan dulu agar RAB tetap benar.`);
+      const r = pc.union(...daftar.map(([, d]) => geomSolid(d)));
+      if (r.length !== 1) return toast('Gabung ditolak: objek tidak saling bersinggungan.');
+      tulisHasil(id0, d0, r);
+      for (const [id] of daftar.slice(1)) tulis.push({id, sesudah: null});
+    } else {
+      const [[pid, pd], ...target] = daftar;
+      for (const [id, d] of target) {
+        if (!tumpangZ(d, pd)) { lewat++; continue; }
+        if (jenis === 'belah') { tulisHasil(id, d, pc.difference(geomSolid(d), geomSolid(pd))); tulisHasil(id, d, pc.intersection(geomSolid(d), geomSolid(pd)), false); }
+        else tulisHasil(id, d, pc.difference(geomSolid(d), geomSolid(pd)));
+      }
+      if (jenis === 'kurangi' && tulis.length) tulis.push({id: pid, sesudah: null});
+    }
+  } catch (_) { return toast('Operasi gagal: bentuk objek terlalu rumit atau saling tumpuk tidak wajar.'); }
+  if (!tulis.length) return toast(lewat ? 'Tidak ada yang dipotong: objek tidak bertumpuk di ketinggian yang sama.' : 'Tidak ada perubahan.');
+  terapkan(tulis);
+  S.sel = new Set(hasil.filter(id => ambil(id))); segarPilihan();
+  const nama = {kurangi: 'Kurangi', pangkas: 'Pangkas', belah: 'Belah', gabung: 'Gabung'}[jenis];
+  toast(`${nama} selesai: ${hasil.length} objek hasil.${lewat ? ` ${lewat} objek dilewati karena beda ketinggian.` : ''}`);
+}
 const alatPilih = {
   petunjuk: '<b>Pilih:</b> klik objek; Ctrl+klik menambah, Shift+klik menambah/mengurangi, Ctrl+Shift+klik mengurangi. Seret kiri→kanan: objek di dalam kotak; kanan→kiri: objek tersentuh. Klik 2× grup/komponen untuk membukanya, objek lain: pilih yang menempel; klik 3×: semua terhubung. Klik kanan: menu.',
   vcb: 'Ukuran',
@@ -4920,18 +5012,19 @@ function rangkaAtap(d) {
 }
 // Plafon: luas, lis, lembar panel, rangka grid 60 × 60 cm
 function ukurPlafon(d) {
-  const p = poligon(d), A = Math.abs(luasBertanda(p));
+  const p = poligon(d), A = Math.abs(luasBertanda(p)) - luasLubang(d);
   let K = 0, xa = Infinity, xb = -Infinity, ya = Infinity, yb = -Infinity;
   for (let i = 0; i < p.length; i++) { const [x1, y1] = p[i], [x2, y2] = p[(i + 1) % p.length]; K += Math.hypot(x2 - x1, y2 - y1); xa = Math.min(xa, x1); xb = Math.max(xb, x1); ya = Math.min(ya, y1); yb = Math.max(yb, y1); }
   const Lx = xb - xa, Ly = yb - ya, isi = A / Math.max(1e-6, Lx * Ly);
   const rangka = ((Math.floor(Lx / 0.6 + 1e-9) + 1) * Ly + (Math.floor(Ly / 0.6 + 1e-9) + 1) * Lx) * isi;
+  K += (lubangDari(d) || []).reduce((s, r) => s + kelilingCincin(r), 0);
   return {luasPlafon: A, lisPlafon: K, lembarPlafon: Math.ceil(A / 2.88 * 1.05), rangkaPlafon: rangka, kayuPlafon: (d.rangka === 'kayu') ? rangka * 0.04 * 0.06 : 0};
 }
 function bangunPlafon(g, id, d, f) {
   let w = '#F4F2EC', tepi = T.edge;
   [w, tepi] = warnaKeadaan(w, f);
   const p = poligon(d), z = d.z0 || 0;
-  prisma(g, id, p, z - 0.012, 0.012, matSelubung(w), tepi, 'atas');
+  prisma(g, id, p, z - 0.012, 0.012, matSelubung(w), tepi, 'atas', false, null, null, lubangDari(d));
   // sambungan panel 1,20 × 2,40 di muka bawah
   let xa = Infinity, ya = Infinity, xb = -Infinity, yb = -Infinity;
   for (const [x, y] of p) { xa = Math.min(xa, x); ya = Math.min(ya, y); xb = Math.max(xb, x); yb = Math.max(yb, y); }
@@ -5524,7 +5617,7 @@ function pecahLantai(id) {
     }
     return p;
   };
-  const potongan = hasil.map(poly => ({p: rapikan(poly[0]), lubang: poly.length - 1})).filter(x => x.p.length >= 3 && Math.abs(luasBertanda(x.p)) >= 0.2);
+  const potongan = hasil.map(poly => ({p: rapikan(poly[0]), lubang: poly.slice(1).map(rapikan).filter(r => r.length >= 3 && Math.abs(luasBertanda(r)) > 1e-4)})).filter(x => x.p.length >= 3 && Math.abs(luasBertanda(x.p)) >= 0.2);
   if (potongan.length < 2) return toast('Lantai ini tidak terbagi oleh dinding, jadi tidak ada yang dipecah.');
   const dalam = (x, y, q) => { let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++) { const [xi, yi] = q[i], [xj, yj] = q[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
   const anot = [...S.elems.values()].filter(a => a.jenis === 'anotasi' && a.titik);
@@ -5538,6 +5631,8 @@ function pecahLantai(id) {
     const top = r2(atas - turun), vid = nid('V');
     const v = {jenis: 'volume', nama: 'Lantai ' + nm, alas: x.p.map(([px, py]) => ({x: r2(px), y: r2(py)})), z0: r2(top - (d.tinggi || 0)), tinggi: d.tinggi || 0,
       lantai: jenis, penutupLantai: penutup, catatan: d.catatan || ''};
+    // kolom yang berdiri bebas di dalam ruang menjadi lubang lantai
+    if (x.lubang.length) v.lubang = x.lubang.map(r => r.map(([px, py]) => ({x: r2(px), y: r2(py)})));
     if (d.grup) v.grup = d.grup;
     tulis.push({id: vid, sesudah: v}); baru.push(vid);
     // peil yang turun diberi tanda bila ruang itu belum punya anotasi peil
@@ -5550,8 +5645,8 @@ function pecahLantai(id) {
   });
   terapkan(tulis);
   S.sel = new Set(baru); segarPilihan();
-  const lb = potongan.filter(x => x.lubang).length;
-  toast(`Lantai dipecah menjadi ${baru.length} ruang. Periksa jenis dan peil tiap ruang di panel.${lb ? ' Ada ' + lb + ' ruang berisi kolom berdiri bebas yang belum dikurangkan.' : ''}`);
+  const lb = potongan.reduce((s, x) => s + x.lubang.length, 0);
+  toast(`Lantai dipecah menjadi ${baru.length} ruang. Periksa jenis dan peil tiap ruang di panel.${lb ? ` ${lb} kolom yang berdiri bebas sudah dikurangkan dari luas lantai.` : ''}`);
 }
 
 function htmlElemen(id, d) {
@@ -6253,10 +6348,10 @@ function kumpulBenda(geos, Dp, Hh) {
         const k = Math.abs(da - db) < 1e-9 ? 0 : da / (da - db);
         if (Math.abs(da - db) > 1e-9) asDinding.push(Hh(g.awal.x + (g.akhir.x - g.awal.x) * k, g.awal.y + (g.akhir.y - g.awal.y) * k));
       }
-    } else if (g.jenis === 'volume') prismaL.push({p: poligon(g), z0: g.z0 || 0, h: Math.max(0, g.tinggi || 0), bahan: 'volume'});
+    } else if (g.jenis === 'volume') prismaL.push({p: poligon(g), lubang: lubangDari(g), z0: g.z0 || 0, h: Math.max(0, g.tinggi || 0), bahan: 'volume'});
     else if (g.jenis === 'atap') { const geo = atapGeom(g); if (geo.prisma) prismaL.push({...geo.prisma, bahan: 'beton'}); else { for (const bid of geo.permukaan) bidAtap.push({...bid, penutup: g.penutup || 'spandek'}); { const rk = rangkaAtap(g); rangkaL.push({kayu: (g.rangka || 'bajaringan') === 'kayu', muka: geo.permukaan.map(b => b.titik), batang: rk.batang, arahA: rk.arahA, klos: rk.klos}); }
       { const su = susunTepiAtap(g); for (const bd of su.papan) cembung.push({muka: bd.muka, bahan: bd.set.bahan === 'grc' ? 'plafon' : 'kayu'}); for (const pf of su.plafon) cembung.push({muka: pf.muka, bahan: 'plafon'}); } } }
-    else if (g.jenis === 'plafon') prismaL.push({p: poligon(g), z0: (g.z0 || 0) - 0.012, h: 0.012, bahan: 'plafon'});
+    else if (g.jenis === 'plafon') prismaL.push({p: poligon(g), lubang: lubangDari(g), z0: (g.z0 || 0) - 0.012, h: 0.012, bahan: 'plafon'});
     else if (STRUKTUR.has(g.jenis)) for (const bd of strukturGeom(g).benda) { if (bd.p) prismaL.push({p: bd.p, z0: bd.z0, h: bd.h, bahan: bd.bahan}); else cembung.push(bd); }
   }
   // batang bebas: satu rangka per atap yang dipecah, dalam bentuk yang sama dengan rangka atap parametrik
@@ -6275,8 +6370,12 @@ function kumpulBenda(geos, Dp, Hh) {
   }
   return {prismaL, cembung, bidAtap, bukL, asDinding, mukaDinding, rangkaL};
 }
-function silangPoligonDi(p, Dp, Hh) {
+function silangPoligonDi(p, Dp, Hh, lubang) {
   const hs = [];
+  for (const r of lubang || []) for (let i = 0; i < r.length; i++) {
+    const [ax, ay] = r[i], [bx, by] = r[(i + 1) % r.length], da = Dp(ax, ay) + 1e-7, db = Dp(bx, by) + 1e-7;
+    if ((da > 0) !== (db > 0)) { const k = da / (da - db); hs.push(Hh(ax + (bx - ax) * k, ay + (by - ay) * k)); }
+  }
   for (let i = 0; i < p.length; i++) {
     const [ax, ay] = p[i], [bx, by] = p[(i + 1) % p.length], da = Dp(ax, ay) + 1e-7, db = Dp(bx, by) + 1e-7;
     if ((da > 0) !== (db > 0)) { const k = da / (da - db); hs.push(Hh(ax + (bx - ax) * k, ay + (by - ay) * k)); }
@@ -6297,7 +6396,7 @@ function silangMukaDi(t, Dp, Hh) {
 // Penampang benda yang terpotong bidang: poligon di (h, z)
 function irisanBenda(B, Dp, Hh) {
   const potongan = [];
-  for (const pr of B.prismaL) for (const [h0, h1] of silangPoligonDi(pr.p, Dp, Hh)) potongan.push({q: [[h0, pr.z0], [h1, pr.z0], [h1, pr.z0 + pr.h], [h0, pr.z0 + pr.h]], bahan: pr.bahan, z1: pr.z0 + pr.h});
+  for (const pr of B.prismaL) for (const [h0, h1] of silangPoligonDi(pr.p, Dp, Hh, pr.lubang)) potongan.push({q: [[h0, pr.z0], [h1, pr.z0], [h1, pr.z0 + pr.h], [h0, pr.z0 + pr.h]], bahan: pr.bahan, z1: pr.z0 + pr.h});
   for (const bd of B.cembung) {
     const tt = bd.muka.flatMap(t => silangMukaDi(t, Dp, Hh));
     if (tt.length < 3) continue;
@@ -6939,7 +7038,9 @@ function buatSVG(o) {
         if (g.jenis === 'dinding' || g.jenis === 'kolom') continue;
         const pu = g.lantai && PENUTUP_LANTAI[g.penutupLantai || BAWAAN_LANTAI[g.lantai].penutup];
         const isiPola = g.jenis === 'volume' && lantaiTeras(g) ? 'url(#arsir-rabat)' : pu && pu.ubin ? `url(#ubin-${Math.round(pu.ubin * 100)})` : 'none';
-        isi.push(`<polygon points="${pts(p)}" fill="${isiPola}" stroke="#000" stroke-width="${(g.tinggi || 0) > 0.5 ? 0.35 : 0.18}"/>`);
+        const lb = lubangDari(g);
+        isi.push(lb ? `<path d="${[p, ...lb].map(r => 'M' + r.map(([x, y]) => `${n2(X(x))} ${n2(Y(y))}`).join(' L') + ' Z').join(' ')}" fill="${isiPola}" fill-rule="evenodd" stroke="#000" stroke-width="${(g.tinggi || 0) > 0.5 ? 0.35 : 0.18}"/>`
+          : `<polygon points="${pts(p)}" fill="${isiPola}" stroke="#000" stroke-width="${(g.tinggi || 0) > 0.5 ? 0.35 : 0.18}"/>`);
       }
       // tepi atap (overstek) di atas bidang potong: garis putus-putus
       for (const p of atapNya) isi.push(`<polygon points="${pts(p)}" fill="none" stroke="#000" stroke-width="0.18" stroke-dasharray="2 1"/>`);
