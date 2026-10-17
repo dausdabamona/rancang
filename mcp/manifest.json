@@ -1,0 +1,45 @@
+{
+  "manifest_version": "0.2",
+  "name": "rancang",
+  "display_name": "RANCANG",
+  "version": "__VERSI__",
+  "description": "Hubungkan Claude dengan aplikasi gambar bangunan RANCANG: baca dan ubah model, buat denah/tampak/potongan, hitung volume RAB, dan lihat tampilan 3D.",
+  "long_description": "RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk gambar kerja 2D dan volume RAB. Ekstensi ini menyambungkan Claude ke aplikasi RANCANG desktop yang terpasang di komputer yang sama lewat jembatan lokal (127.0.0.1, bertoken). Bila aplikasi tertutup, Claude tetap bisa membaca dan mengubah berkas proyek terakhir.",
+  "author": {
+    "name": "Firdaus Dabamona"
+  },
+  "homepage": "https://github.com/dausdabamona/rancang",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.mjs"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {"name": "panduan_data", "description": "Panduan isian data setiap jenis elemen"},
+    {"name": "info_proyek", "description": "Info proyek yang terbuka"},
+    {"name": "daftar_elemen", "description": "Daftar ringkas elemen"},
+    {"name": "ambil_elemen", "description": "Data lengkap elemen berdasarkan id"},
+    {"name": "terapkan_perubahan", "description": "Tambah, ubah, atau hapus elemen"},
+    {"name": "ringkasan_ukuran", "description": "Ringkasan ukuran model"},
+    {"name": "volume_rab", "description": "Volume pekerjaan RAB"},
+    {"name": "gambar_2d", "description": "Gambar kerja 2D (PNG atau SVG)"},
+    {"name": "tangkap_layar_3d", "description": "Tangkapan layar tampilan 3D"},
+    {"name": "buka_proyek", "description": "Buka berkas proyek .rancang"},
+    {"name": "simpan_proyek_sebagai", "description": "Simpan proyek ke berkas baru"}
+  ],
+  "compatibility": {
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "keywords": ["arsitektur", "gambar teknik", "RAB", "bangunan", "CAD"],
+  "license": "UNLICENSED"
+}

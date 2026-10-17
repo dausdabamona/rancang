@@ -1,0 +1,79 @@
+{
+  "name": "rancang",
+  "productName": "RANCANG",
+  "version": "0.24.0",
+  "description": "Aplikasi gambar bangunan ala SketchUp untuk gambar kerja 2D dan volume RAB, bisa berkolaborasi dengan Claude lewat MCP",
+  "author": "Firdaus Dabamona",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "electron/main.js",
+  "homepage": "https://github.com/dausdabamona/rancang",
+  "scripts": {
+    "build:renderer": "node scripts/build-renderer.mjs",
+    "build:mcp": "node scripts/build-mcp.mjs",
+    "build": "npm run build:renderer && npm run build:mcp",
+    "start": "npm run build:renderer && electron .",
+    "test": "node --test test/*.test.js test/*.test.mjs",
+    "uji-asap": "electron . --uji-asap",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "pack:mcpb": "mcpb pack build/mcp build/RANCANG.mcpb"
+  },
+  "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2",
+    "@fontsource/archivo": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0",
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "polygon-clipping": "0.15.7",
+    "three": "0.149.0",
+    "xlsx": "0.18.5"
+  },
+  "build": {
+    "appId": "id.rancang.desktop",
+    "productName": "RANCANG",
+    "copyright": "Firdaus Dabamona",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "build/renderer/**/*",
+      "assets/icon.png",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RANCANG",
+      "artifactName": "RANCANG-Setup-${version}.${ext}",
+      "language": "1057"
+    },
+    "portable": {
+      "artifactName": "RANCANG-Portable-${version}.${ext}"
+    },
+    "fileAssociations": [
+      {
+        "ext": "rancang",
+        "name": "Proyek RANCANG",
+        "description": "Proyek gambar bangunan RANCANG",
+        "icon": "assets/icon.ico",
+        "role": "Editor"
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+// Menyusun paket MCP: server dibundel jadi satu berkas (tanpa node_modules), manifest, dan ikon.
+// Hasil di build/mcp; dipaketkan menjadi RANCANG.mcpb dengan `npm run pack:mcpb`.
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {build} from 'esbuild';
+
+const akar = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const keluar = path.join(akar, 'build', 'mcp');
+const {version} = JSON.parse(fs.readFileSync(path.join(akar, 'package.json'), 'utf8'));
+
+fs.rmSync(keluar, {recursive: true, force: true});
+fs.mkdirSync(path.join(keluar, 'server'), {recursive: true});
+
+await build({
+  entryPoints: [path.join(akar, 'mcp', 'server.mjs')],
+  outfile: path.join(keluar, 'server', 'index.mjs'),
+  bundle: true, platform: 'node', format: 'esm', target: 'node18',
+  loader: {'.md': 'text'},
+  banner: {js: "import {createRequire as __buatRequire} from 'node:module'; const require = __buatRequire(import.meta.url);"},
+  legalComments: 'none',
+  logLevel: 'warning'
+});
+// sisipkan versi
+const f = path.join(keluar, 'server', 'index.mjs');
+fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace(/__VERSI__/g, version));
+const manifest = fs.readFileSync(path.join(akar, 'mcp', 'manifest.json'), 'utf8').replace(/__VERSI__/g, version);
+JSON.parse(manifest);
+fs.writeFileSync(path.join(keluar, 'manifest.json'), manifest);
+fs.copyFileSync(path.join(akar, 'assets', 'icon-512.png'), path.join(keluar, 'icon.png'));
+console.log('[build-mcp] selesai → build/mcp (versi ' + version + ')');

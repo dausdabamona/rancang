@@ -1,0 +1,106 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Uji dan build exe (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pasang dependensi
+        run: npm ci
+
+      - name: Susun renderer luring dan server MCP
+        run: npm run build
+
+      - name: Uji unit, MCP mode berkas, dan MCP mengendalikan aplikasi
+        run: npm test
+        env:
+          RANCANG_UJI_ELECTRON: '1'
+
+      - name: Uji asap aplikasi desktop
+        run: npx electron . --uji-asap --use-angle=swiftshader
+        env:
+          RANCANG_UJI_HASIL: uji-asap.json
+
+      - name: Build Setup.exe dan Portable.exe
+        run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Paketkan RANCANG.mcpb
+        run: |
+          npm run pack:mcpb
+          Copy-Item build/RANCANG.mcpb dist/RANCANG.mcpb
+
+      - name: Unggah hasil build
+        uses: actions/upload-artifact@v4
+        with:
+          name: RANCANG-windows
+          path: |
+            dist/RANCANG-Setup-*.exe
+            dist/RANCANG-Portable-*.exe
+            dist/RANCANG.mcpb
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Unggah hasil uji asap (bila gagal)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uji-asap
+          path: uji-asap.json
+          if-no-files-found: ignore
+
+  release:
+    name: Terbitkan Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cocokkan tag dengan versi package.json
+        run: |
+          VERSI=$(node -p "require('./package.json').version")
+          if [ "v$VERSI" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME tidak sama dengan versi package.json (v$VERSI)."
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: RANCANG-windows
+          path: rilis
+
+      - name: Buat Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" rilis/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "RANCANG $GITHUB_REF_NAME" \
+            --notes-file docs/catatan-rilis.md \
+            --generate-notes
