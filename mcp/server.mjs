@@ -156,7 +156,7 @@ export const ALAT = [
   {name: 'volume_rab', description: 'Volume pekerjaan RAB per divisi (kode HSP, uraian, satuan, volume) seperti ekspor Excel di aplikasi.',
     inputSchema: objek({ids: daftarId})},
   {name: 'gambar_2d', description: 'Buat gambar kerja 2D (denah, denah atap, denah pondasi, detail penulangan, daftar kusen, tampak, potongan). Format png (bawaan) untuk dilihat, svg untuk teks.',
-    inputSchema: objek({jenis: {type: 'string', description: 'denah, atap, pondasi, detail, kusen, depan, belakang, kanan, kiri, atau potongan:X3 (lihat info_proyek)'},
+    inputSchema: objek({jenis: {type: 'string', description: 'denah, atap, pondasi, detail, kusen, depan, belakang, kanan, kiri, potongan:X3, atau lembar detail det:1, det:2 … (lihat info_proyek)'},
       skala: {type: 'integer', minimum: 0, maximum: 5000, description: 'Angka penyebut skala, mis. 100 untuk 1:100 atau 150; 0 = otomatis'}, kertas: {type: 'string', enum: ['A4', 'A3']},
       dimensi: {type: 'boolean', description: 'Tampilkan garis ukuran (bawaan ya)'}, format: {type: 'string', enum: ['png', 'svg']}}, ['jenis'])},
   {name: 'tangkap_layar_3d', description: 'Tangkapan layar tampilan 3D aplikasi.',
