@@ -1848,7 +1848,7 @@ function tandaUntuk(id, d) {
 }
 /* ============ Tipe kusen (v0.15) ============ */
 // Satu tipe per pasangan (kode, untuk). Ukuran mengikuti bukaan di dinding; pola diskalakan.
-const ISI_DAUN = {panil6: 'Panil 6 kotak', kaca: 'Kaca berkotak', polos: 'Polos (papan rata)', jalusi: 'Jalusi kaca'};
+const ISI_DAUN = {panil6: 'Panil 6 kotak', kaca: 'Kaca berkotak', polos: 'Polos (papan rata)', jalusi: 'Jalusi kaca', kosong: 'Tanpa daun (kusen saja)'};
 const BUKA_DAUN = {kiri: 'Engsel kiri', kanan: 'Engsel kanan', kupu: 'Kupu-kupu', tetap: 'Mati (tidak dibuka)'};
 function sahKusen(d) {
   if (!d || typeof d !== 'object' || typeof d.kode !== 'string' || !d.kode.trim()) return false;
@@ -1924,6 +1924,8 @@ function polaKusen(t, W, H, balik) {
       else if (bt) kotak(r.kayu, as - pf / 2, zAmbang + pf / 2, as + pf / 2, H - pf, 'kusen');
       r.batas.push(as);
     }
+    // tanpa daun: hanya kusen (dan bovenlicht bila ada); tidak ada daun, gagang, atau busur buka
+    if (t.isi === 'kosong') { if (bt) isiDaun(r, kotak, 'kaca', t.boven.kolom || 1, t.boven.baris || 1, a, zAmbang + pf / 2, b, H - pf, false); continue; }
     let engsel = t.buka || (pintu ? 'kiri' : 'kupu');
     if (engsel === 'kupu') engsel = n === 1 ? 'kiri' : (i < n / 2 ? 'kiri' : 'kanan');
     if (balik && engsel !== 'tetap') engsel = engsel === 'kiri' ? 'kanan' : 'kiri';
