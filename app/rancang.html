@@ -163,6 +163,8 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 #m-svg.tambah{cursor:crosshair}
 #m-svg .peil-oto{cursor:move}
 #m-svg .peil-oto:hover text{fill:#1F6FD1}
+#m-svg .peil-oto.pilih text{fill:#1F6FD1;font-weight:700}
+#m-svg .peil-oto.pilih line{stroke:#1F6FD1}
 .wadah-2d{position:relative;margin:0 18px;flex:1;min-height:0;display:flex}
 .pratinjau-2d{background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;flex:1;min-height:260px;touch-action:none;cursor:grab}
 /* Ruang Lembar (v0.26): layar penuh, daftar lembar di kiri */
@@ -349,6 +351,10 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
       </span>
       <span class="meta" id="m-anot-info"></span>
       <button class="tombol" type="button" id="m-anot-tampil" hidden>Tampilkan lagi</button>
+      <span class="edit-anot" id="m-peil-edit" hidden><span class="meta" id="m-peil-nama"></span>
+        <button class="tombol" type="button" id="m-peil-sembunyi" title="Hanya disembunyikan di gambar ini (Delete)">Sembunyikan peil ini</button>
+        <button class="tombol" type="button" id="m-peil-pulih" title="Kembalikan posisi teks ke otomatis">Posisi otomatis</button></span>
+      <button class="tombol" type="button" id="m-peil-tampil" hidden></button>
     </div>
     <div class="wadah-2d">
       <div class="pratinjau-2d" id="m-svg"></div>
@@ -4712,8 +4718,9 @@ window.addEventListener('keydown', e => {
   if (!$('#modalProyek').hidden) { if (e.key === 'Escape') $('#mp-batal').click(); return; }
   if (!$('#modal2d').hidden) {
     if (e.target && e.target.matches && e.target.matches('input, textarea, select')) return;
-    if (e.key === 'Escape') { if (ANOT2D.tambah || ANOT2D.pilih) { ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.pilih = null; segarAnot2D(); } else tutup2D(); }
+    if (e.key === 'Escape') { if (ANOT2D.tambah || ANOT2D.pilih || ANOT2D.pilihPeil) { ANOT2D.pilihPeil = null; ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.pilih = null; segarAnot2D(); } else tutup2D(); }
     else if ((e.key === 'Delete' || e.key === 'Backspace') && ANOT2D.pilih) { e.preventDefault(); hapusAnot2D(); }
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && ANOT2D.pilihPeil) { e.preventDefault(); sembunyikanPeil2D(); }
     else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); urungkan(); segar2D(); }
     else if (!e.ctrlKey && !e.metaKey && (e.key === '+' || e.key === '=')) { e.preventDefault(); zoomTombol2D(1.4); }
     else if (!e.ctrlKey && !e.metaKey && (e.key === '-' || e.key === '_')) { e.preventDefault(); zoomTombol2D(1 / 1.4); }
@@ -6074,8 +6081,10 @@ function buatSVG(o) {
   const lantaiTeras = g => g.lantai === 'teras' || (!g.lantai && /teras|selasar/i.test(g.nama || ''));
   // Tanda peil di sisi kanan tampak/potongan (v0.26.4): tidak bertumpuk, bisa diseret, garis penunjuk ikut
   const peilKanan = (levels, xBangunan, xl, Y) => {
-    const out = [], geser = (S.setel && S.setel.peilGeser) || {};
-    const urut = [...new Set(levels.map(z => Math.round(z * 1000) / 1000))].sort((a, b) => a - b);
+    const out = [], geser = (S.setel && S.setel.peilGeser) || {}, sembunyi = new Set((S.setel && S.setel.peilSembunyi) || []);
+    // satu tanda per sentimeter (3,72 dan 3,7249 dianggap sama)
+    const urut = [...new Set(levels.map(z => Math.round(z * 100) / 100))].sort((a, b) => a - b)
+      .filter(z => { const k = `${o.jenis}|${z.toFixed(3)}`; if (sembunyi.has(k)) { anotStat.peil = (anotStat.peil || 0) + 1; return false; } return true; });
     let yAtasTerakhir = Infinity;
     for (const z of urut) {
       const y = Y(z), label = Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z), tw = label.length * 2.2 * 0.56;
@@ -7374,6 +7383,7 @@ function svgTitik(e) {
 }
 function segarAnot2D() {
   const ada = !!(hasil2D && hasil2D.peta) && S.bisaUbah;
+  if (!ada) ANOT2D.pilihPeil = null;
   $('#m-anot').hidden = !ada;
   if (!ada) return;
   if (ANOT2D.pilih && !S.elems.has(ANOT2D.pilih)) ANOT2D.pilih = null;
@@ -7389,6 +7399,15 @@ function segarAnot2D() {
   if (st.terhalang) bagian.push(`${st.terhalang} terhalang dinding atau atap`);
   $('#m-anot-info').textContent = ANOT2D.tambah ? petunjukTambah() : bagian.join(' · ');
   $('#m-anot-tampil').hidden = ANOT2D.tambah || !st.disembunyikan;
+  // peil otomatis terpilih / tersembunyi
+  const kp = ANOT2D.pilihPeil, gp = kp && $('#m-svg').querySelector(`[data-peil="${CSS.escape(kp)}"]`);
+  if (kp && !gp) ANOT2D.pilihPeil = null;
+  $('#m-svg').querySelectorAll('[data-peil]').forEach(g => g.classList.toggle('pilih', g.dataset.peil === ANOT2D.pilihPeil));
+  $('#m-peil-edit').hidden = !ANOT2D.pilihPeil;
+  if (ANOT2D.pilihPeil) $('#m-peil-nama').textContent = 'Peil ' + gp.querySelector('text').textContent + ':';
+  const nP = (hasil2D.anotStat && hasil2D.anotStat.peil) || 0;
+  $('#m-peil-tampil').hidden = !nP;
+  $('#m-peil-tampil').textContent = `Tampilkan ${nP} peil tersembunyi`;
   document.querySelectorAll('[data-tambah]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tambah === ANOT2D.tambah)));
   $('#m-svg').classList.toggle('tambah', !!ANOT2D.tambah);
 }
@@ -7425,7 +7444,8 @@ $('#m-svg').addEventListener('pointerdown', e => {
   if (!hasil2D.peta) return;
   if (ANOT2D.tambah) { e.preventDefault(); tambahAnot2D(p); return; }
   const g = e.target.closest && e.target.closest('[data-anot]');
-  if (!g) { if (ANOT2D.pilih) pilihAnot2D(null); return; }
+  if (!g) { if (ANOT2D.pilih || ANOT2D.pilihPeil) { ANOT2D.pilihPeil = null; pilihAnot2D(null); } return; }
+  ANOT2D.pilihPeil = null;
   e.preventDefault();
   if (ANOT2D.pilih !== g.dataset.anot) pilihAnot2D(g.dataset.anot);
   ANOT2D.seret = {id: g.dataset.anot, g, x0: p.x, y0: p.y, dx: 0, dy: 0};
@@ -7441,6 +7461,7 @@ $('#m-svg').addEventListener('pointermove', e => {
 function akhirSeret2D() {
   const sr = ANOT2D.seret;
   ANOT2D.seret = null;
+  if (sr && sr.peil && Math.hypot(sr.dx, sr.dy) < 0.4) { sr.g.removeAttribute('transform'); ANOT2D.pilih = null; ANOT2D.pilihPeil = sr.peil; segarAnot2D(); return; }
   if (!sr || Math.hypot(sr.dx, sr.dy) < 0.4) { if (sr) sr.g.removeAttribute('transform'); return; }
   if (sr.peil) {
     // peil otomatis: simpan geseran teks (mm kertas); garis penunjuk digambar ulang
@@ -7478,6 +7499,25 @@ $('#m-anot-sembunyi').addEventListener('click', () => {
   terapkan([{id, sesudah: {...salin(d), sembunyiDi: [...new Set([...(d.sembunyiDi || []), j])]}}]);
   ANOT2D.pilih = null; segar2D();
   toast('Anotasi disembunyikan di gambar ini saja. Tombol "Tampilkan lagi" memunculkannya kembali.');
+});
+function sembunyikanPeil2D() {
+  const k = ANOT2D.pilihPeil;
+  if (!k || !S.bisaUbah) return;
+  S.setel.peilSembunyi = [...new Set([...(S.setel.peilSembunyi || []), k])];
+  ANOT2D.pilihPeil = null;
+  simpanSetelan(); segar2D();
+  toast('Peil disembunyikan di gambar ini. Tombol "Tampilkan … peil tersembunyi" mengembalikannya.');
+}
+$('#m-peil-sembunyi').addEventListener('click', sembunyikanPeil2D);
+$('#m-peil-pulih').addEventListener('click', () => {
+  const k = ANOT2D.pilihPeil, pg = {...(S.setel.peilGeser || {})};
+  if (!k || !pg[k]) return;
+  delete pg[k]; S.setel.peilGeser = pg; simpanSetelan(); segar2D();
+});
+$('#m-peil-tampil').addEventListener('click', () => {
+  const awal = opsi2D().jenis + '|';
+  S.setel.peilSembunyi = (S.setel.peilSembunyi || []).filter(k => !k.startsWith(awal));
+  simpanSetelan(); segar2D();
 });
 function hapusAnot2D() {
   const id = ANOT2D.pilih;
@@ -7624,6 +7664,7 @@ function langganan() {
     if (d.lembar && typeof d.lembar === 'object') S.setel.lembar = d.lembar;
     if (d.kop && typeof d.kop === 'object') S.setel.kop = d.kop;
     if (d.peilGeser && typeof d.peilGeser === 'object') S.setel.peilGeser = d.peilGeser;
+    if (Array.isArray(d.peilSembunyi)) S.setel.peilSembunyi = d.peilSembunyi;
     if (!$('#modal2d').hidden) renderLembar();
     tampilNamaProyek(); S.panelKunci = ''; renderPanel();
   }, () => {});
