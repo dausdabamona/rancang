@@ -86,6 +86,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .snap.tepi{border-color:var(--ax-x);border-radius:1px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;rotate:45deg}
 .snap.lacak{border-color:#9A5BD0;border-style:dotted;width:10px;height:10px;margin:-5px 0 0 -5px}
 .snap.bidang{border-color:var(--ax-z);border-radius:2px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;transform-origin:center}
+.snap.bidang-kunci,.snap.tepi-kunci{border-color:#9A5BD0;border-radius:50%;width:12px;height:12px;margin:-6px 0 0 -6px;background:rgba(154,91,208,.18)}
 .snap.sumbu-x{border-color:var(--ax-x)}.snap.sumbu-y{border-color:var(--ax-y)}.snap.sumbu-z{border-color:var(--ax-z)}
 .lbl.inferensi{background:var(--fg);color:var(--panel);border:0;font-size:11px}
 .tampilan{position:absolute;left:10px;top:10px;display:flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--panel);border:1px solid var(--line);border-radius:9px;max-width:calc(100% - 20px)}
@@ -3045,9 +3046,7 @@ function arahkan(e) {
   ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
 }
-// Semua objek di bawah kursor, terdekat dulu (satu hit per elemen). Pintu, jendela, dan benda (komponen)
-// didahulukan dari lantai atau plafon yang menutupinya, agar tidak yang terpilih justru lantainya.
-const BIDANG_LEBAR = new Set(['volume', 'plafon']), BENDA_KECIL = new Set(['bukaan', 'instance']);
+// Semua objek di bawah kursor, terdekat dulu (satu hit per elemen).
 // id elemen pemilik sebuah objek 3D (garis tepi tidak membawa id; diambil dari grup induknya)
 function idPemilik(o) { while (o) { if (o.userData && o.userData.elemId) return o.userData.elemId; o = o.parent; } return null; }
 // ukuran satu piksel layar dalam meter di sekitar titik pandang (untuk toleransi pilih)
@@ -3058,14 +3057,24 @@ function meterPerPiksel() {
 }
 // Pilih ala SketchUp: tepat di kursor dulu; bila tidak mengenai muka apa pun, garis tepi dalam ±5 px,
 // lalu muka terdekat dalam ±3–6 px (benda tipis: batang, lisplang, bidang yang terlihat dari samping)
-function hitObjek(e, kecuali, toleran = false) {
-  let hasil = hitObjekDi(e, kecuali);
-  if (hasil.length || !toleran) return hasil;
+// Garis tepi terdekat kamera dalam ±5 px dari kursor (hasilnya berbentuk hit dengan face 'garis')
+function hitGaris(e, kecuali) {
   arahkan(e);
   ray.params.Line.threshold = 5 * meterPerPiksel();
   const garis = ray.intersectObjects(root.children, true).find(h => h.object.isLineSegments && idPemilik(h.object) && !(kecuali && kecuali.has(idPemilik(h.object))) && !(IRIS.arr.length && terbuangIris(h.point.x, h.point.y, h.point.z)));
   ray.params.Line.threshold = 0.001;
-  if (garis) { const id = idPemilik(garis.object); garis.object = {userData: {elemId: id, face: 'garis'}}; return [garis]; }
+  if (!garis) return null;
+  const id = idPemilik(garis.object);
+  garis.object = {userData: {elemId: id, face: 'garis'}};
+  return garis;
+}
+function hitObjek(e, kecuali, toleran = false) {
+  // Tembus pandang (X-ray): yang bisa diklik adalah rangka garisnya dulu, baru muka padat, terakhir muka transparan
+  if (toleran && S.tembus) { const g = hitGaris(e, kecuali); if (g) return [g]; }
+  let hasil = hitObjekDi(e, kecuali);
+  if (hasil.length || !toleran) return hasil;
+  const garis = hitGaris(e, kecuali);
+  if (garis) return [garis];
   for (const rad of [3, 6]) {
     let terbaik = null;
     for (let k = 0; k < 8; k++) {
@@ -3089,12 +3098,7 @@ function hitObjekDi(e, kecuali) {
     lihat.add(id);
     if (S.tembus && h.object.material && h.object.material.transparent && h.object.material.opacity < 0.4) tembus.push(h); else padat.push(h);
   }
-  const jenis = h => (S.elems.get(h.object.userData.elemId) || {}).jenis;
-  // pintu, jendela, atau komponen yang menempel (≤ 10 cm) di balik lantai/plafon didahulukan
-  if (padat.length > 1 && BIDANG_LEBAR.has(jenis(padat[0]))) {
-    const i = padat.findIndex(h => BENDA_KECIL.has(jenis(h)) && h.distance - padat[0].distance <= 0.10);
-    if (i > 0) padat.unshift(...padat.splice(i, 1));
-  }
+  // seperti SketchUp: yang terlihat di layar itulah yang terpilih (muka terdepan), tanpa pengecualian pintu di balik lantai
   return [...padat, ...tembus];
 }
 function pilihObjek(e, kecuali, toleran = false) { return hitObjek(e, kecuali, toleran)[0] || null; }
@@ -3195,18 +3199,20 @@ function kandidatSinar(far, kecuali) {
   return hasil.map(h => h.g);
 }
 // Apakah titik (x, y, z) terlihat dari kamera? px, py = posisi titik di layar (piksel kanvas).
-// Tertutup bila ada mesh lain yang kena sinar lebih dekat dari titik itu melebihi toleransi (2 cm atau 0,1 % jarak),
-// sehingga titik di permukaan bendanya sendiri tetap dianggap terlihat. Saat Tembus aktif, material transparan
+// Tertutup bila ada mesh lain yang kena sinar lebih dekat dari titik itu melebihi toleransi 30 cm (atau 0,1 % jarak).
+// Toleransinya selebar itu karena titik snap RANCANG sering berada di dalam badan benda: as dinding di dalam kolom 35/35,
+// as slof di dalam pondasi, puncak dinding di dalam ring balk. Titik di balik atap, di balik gedung, atau di dalam
+// rangka atap (> 30 cm di belakang penutup) tetap tertolak. Saat Tembus aktif, material transparan
 // bukan penghalang (aturan yang sama dengan hitObjekDi). Mesh yang terbuang irisan 3D, penanda, dan benda yang
 // sedang digeser (kecuali) juga bukan penghalang. Berhenti pada penghalang pertama (tidak mengurutkan semua hit).
 const _kena = [];
-function terlihatSnap(x, y, z, px, py, kecuali, rc) {
+function terlihatSnap(x, y, z, px, py, kecuali, rc, idSendiri) {
   ndc.set(px / rc.width * 2 - 1, -(py / rc.height) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   const o = ray.ray.origin, rd = ray.ray.direction;
   const jarak = (x - o.x) * rd.x + (y - o.y) * rd.y + (z - o.z) * rd.z;
   if (jarak <= 0) return true;
-  const far = jarak - Math.max(0.02, 0.001 * jarak);
+  const far = jarak - Math.max(0.3, 0.001 * jarak);
   if (far <= 0) return true;
   ray.near = 0; ray.far = far;
   // mesh elemen bersarang (grup elemen → grup bagian → mesh); berhenti di mesh pertama yang menghalangi
@@ -3222,7 +3228,8 @@ function terlihatSnap(x, y, z, px, py, kecuali, rc) {
     return false;
   };
   let terlihat = true;
-  for (const g of kandidatSinar(far, kecuali)) if (terhalang(g)) { terlihat = false; break; }
+  // benda pemilik titik tidak menghalangi titiknya sendiri: titik as dinding/slof/pondasi berada di dalam badan bendanya
+  for (const g of kandidatSinar(far, kecuali)) if (g.userData.elemId !== idSendiri && terhalang(g)) { terlihat = false; break; }
   ray.far = Infinity;
   return terlihat;
 }
@@ -3247,12 +3254,15 @@ function proyeksiSnap(id, c, rc) {
   SNAP.proy.set(id, pr);
   return pr;
 }
-// Titik di bawah kursor. Urutan: ujung dan titik tengah (16 px, titik tengah diberi penalti 4 px) → pada tepi (8 px)
+// Titik di bawah kursor, urutan seperti SketchUp: ujung (12 px) → titik tengah (10 px) → pada tepi (10 px)
 // → pada bidang benda (opsi.bidang) → grid lantai. Titik yang bertumpuk di layar: yang terdekat kamera menang.
-// opsi.atas: puncak elemen ikut dicari; opsi.tengah: titik tengah rusuk; opsi.tepi: titik terdekat pada rusuk;
-// opsi.bidang: titik pada muka benda; opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap; opsi.halus: langkah grid halus.
+// Puncak elemen, titik tengah, dan tepi berlaku di semua alat kecuali dimatikan (opsi.atas/tengah/tepi = false).
+// opsi.bidang: titik pada muka benda (hasil membawa normal `n`); opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap;
+// opsi.halus: langkah grid halus. Hasil tepi membawa `arah` (vektor satuan rusuk) untuk kunci "sejajar tepi" di Pindah.
+const RADIUS_SNAP = {ujung: 12, tengah: 10, tepi: 10};
 function titikSnap(e, kecuali, opsi = {}) {
   const rc = canvas.getBoundingClientRect(), mx = e.clientX - rc.left, my = e.clientY - rc.top;
+  const pakaiAtas = opsi.atas !== false, pakaiTengah = opsi.tengah !== false, pakaiTepi = opsi.tepi !== false;
   const lewati = id => (kecuali && kecuali.has(id)) || S.sembunyi.has(id);
   const iris = IRIS.arr.length > 0;
   // kandidat terbaik yang terlihat: urut jarak layar; yang selisihnya ≤ 0,5 px dibandingkan kedalamannya
@@ -3264,12 +3274,12 @@ function titikSnap(e, kecuali, opsi = {}) {
       if (best && c.kz >= best.kz) continue;
       // paling banyak 8 uji keterlihatan per gerak kursor agar tetap ringan di tumpukan titik yang semuanya tertutup
       if (!S.tembus && ++uji > 8) break;
-      if (S.tembus || terlihatSnap(c.x, c.y, c.z, c.px, c.py, kecuali, rc)) best = c;
+      if (S.tembus || terlihatSnap(c.x, c.y, c.z, c.px, c.py, kecuali, rc, c.id)) best = c;
     }
     return best;
   };
-  // 1. ujung dan titik tengah
-  const calon = [];
+  // 1. ujung (12 px), lalu 2. titik tengah (10 px): ujung selalu menang atas titik tengah
+  const calonUjung = [], calonTengah = [], R = RADIUS_SNAP.ujung;
   for (const [id, d] of S.elems) {
     if (lewati(id)) continue;
     const c = cacheSnap(id, d), pr = proyeksiSnap(id, c, rc).titik;
@@ -3277,18 +3287,18 @@ function titikSnap(e, kecuali, opsi = {}) {
       const px = pr[i * 3], py = pr[i * 3 + 1];
       if (px !== px) continue; // NaN: di luar jangkauan kamera
       const dx = px - mx, dy = py - my;
-      if (dx > 16 || dx < -16 || dy > 16 || dy < -16) continue;
+      if (dx > R || dx < -R || dy > R || dy < -R) continue;
       const [x, y, z, jenis, puncak] = c.titik[i];
-      if ((puncak && !opsi.atas) || (jenis === 'tengah' && !opsi.tengah)) continue;
-      const dd = Math.hypot(dx, dy) + (jenis === 'tengah' ? 4 : 0);
-      if (dd >= 16 || (iris && terbuangIris(x, y, z))) continue;
-      calon.push({dd, kz: pr[i * 3 + 2], px, py, x, y, z, jenis, id});
+      if ((puncak && !pakaiAtas) || (jenis === 'tengah' && !pakaiTengah)) continue;
+      const dd = Math.hypot(dx, dy);
+      if (dd >= RADIUS_SNAP[jenis] || (iris && terbuangIris(x, y, z))) continue;
+      (jenis === 'ujung' ? calonUjung : calonTengah).push({dd, kz: pr[i * 3 + 2], px, py, x, y, z, jenis, id});
     }
   }
-  let best = pilihTerlihat(calon);
+  let best = pilihTerlihat(calonUjung) || pilihTerlihat(calonTengah);
   if (best) return {x: r2(best.x), y: r2(best.y), z: r2(best.z), jenis: best.jenis, id: best.id};
-  // 2. pada tepi (seperti "On Edge" SketchUp): titik terdekat pada rusuk, dalam 8 px
-  if (opsi.tepi) {
+  // 3. pada tepi (seperti "On Edge" SketchUp): titik terdekat pada rusuk, dalam 10 px
+  if (pakaiTepi) {
     arahkan(e);
     const o = ray.ray.origin, rd = ray.ray.direction, calonTepi = [], v = _titikKotak;
     for (const [id, d] of S.elems) {
@@ -3300,7 +3310,7 @@ function titikSnap(e, kecuali, opsi = {}) {
         if (ax === ax && bx === bx) {
           const ux = bx - ax, uy = by - ay, L2 = ux * ux + uy * uy;
           const t2 = L2 > 1e-9 ? Math.max(0, Math.min(1, ((mx - ax) * ux + (my - ay) * uy) / L2)) : 0;
-          if (Math.hypot(ax + ux * t2 - mx, ay + uy * t2 - my) >= 8.5) continue;
+          if (Math.hypot(ax + ux * t2 - mx, ay + uy * t2 - my) >= RADIUS_SNAP.tepi + 0.5) continue;
         }
         const [P, Q] = c.rusuk[i];
         // titik pada ruas PQ yang paling dekat dengan sinar kursor
@@ -3313,18 +3323,21 @@ function titikSnap(e, kecuali, opsi = {}) {
         v.set(x, y, z).project(camera);
         if (v.z > 1 || v.z < -1) continue;
         const px = (v.x + 1) / 2 * rc.width, py = (1 - v.y) / 2 * rc.height, dd = Math.hypot(px - mx, py - my);
-        if (dd < 8) calonTepi.push({dd, kz: v.z, px, py, x, y, z, jenis: 'tepi', id});
+        if (dd < RADIUS_SNAP.tepi) { const la = Math.sqrt(a); calonTepi.push({dd, kz: v.z, px, py, x, y, z, jenis: 'tepi', id, arah: [u[0] / la, u[1] / la, u[2] / la]}); }
       }
     }
     best = pilihTerlihat(calonTepi);
-    if (best) return {x: r2(best.x), y: r2(best.y), z: r2(best.z), jenis: 'tepi', id: best.id};
+    if (best) return {x: r2(best.x), y: r2(best.y), z: r2(best.z), jenis: 'tepi', id: best.id, arah: best.arah};
   }
-  // 3. pada muka benda
+  // 4. pada muka benda (membawa normal muka untuk kunci "pada bidang")
   if (opsi.bidang) {
     const h = pilihObjek(e, kecuali);
-    if (h && h.object.userData.face !== 'penanda') return {x: h.point.x, y: h.point.y, z: h.point.z, jenis: 'bidang', id: h.object.userData.elemId};
+    if (h && h.object.userData.face !== 'penanda') {
+      const n = h.face && h.face.normal && h.object.matrixWorld ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : null;
+      return {x: h.point.x, y: h.point.y, z: h.point.z, jenis: 'bidang', id: h.object.userData.elemId, n: n ? [n.x, n.y, n.z] : null};
+    }
   }
-  // 4. grid lantai (atau bidang bantu setinggi opsi.bidangZ)
+  // 5. grid lantai (atau bidang bantu setinggi opsi.bidangZ)
   const z = opsi.bidangZ || 0;
   arahkan(e);
   const g = V();
@@ -4442,7 +4455,7 @@ function soroti(mesh) {
 }
 
 const alatPindah = {
-  petunjukDasar: '<b>Pindah:</b> klik titik acuan (bila sudah ada pilihan, titik acuan boleh di benda lain; Esc mengosongkan pilihan) (kotak hijau = ujung, bulat biru muda = titik tengah, belah ketupat merah = pada tepi), lalu arahkan; gerakan mulus mengikuti zoom. Sentuh sebentar titik benda lain lalu geser menjauh: garis ungu putus-putus muncul saat sejajar titik itu. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Ketik jarak lalu Enter. Ctrl untuk menyalin.',
+  petunjukDasar: '<b>Pindah:</b> klik titik acuan (bila sudah ada pilihan, titik acuan boleh di benda lain; Esc mengosongkan pilihan) (kotak hijau = ujung, bulat biru muda = titik tengah, belah ketupat merah = pada tepi), lalu arahkan; gerakan mulus mengikuti zoom. Sentuh sebentar titik benda lain lalu geser menjauh: garis ungu putus-putus muncul saat sejajar titik itu. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Sentuh muka lalu tahan Shift: gerakan terkunci pada bidang muka itu; sentuh tepi lalu tahan Shift: sejajar tepi (garis ungu). Ketik jarak lalu Enter. Ctrl untuk menyalin.',
   get petunjuk() { return this.salin ? '<b>Pindah + Salin:</b> klik tujuan salinan. Tekan Ctrl lagi untuk kembali ke memindah.' : this.petunjukDasar; },
   vcb: 'Jarak',
   dasar: null, items: null, asli: null, delta: null, salin: false,
@@ -4451,7 +4464,7 @@ const alatPindah = {
     const lama = this.bukaan && this.bukaan.b.dinding;
     if (this.asli) for (const id of this.asli.keys()) pasang(id);
     if (lama && S.elems.has(lama)) pasang(lama);
-    this.dasar = this.items = this.asli = this.delta = this.bukaan = null; reset(); setVcb('');
+    this.dasar = this.items = this.asli = this.delta = this.bukaan = null; this.kunciBebas = this.sentuhBidang = this.sentuhTepi = null; reset(); setVcb('');
   },
   ubahSalin() { this.salin = !this.salin; tulisPetunjuk(); },
   move(e) {
@@ -4540,6 +4553,27 @@ const alatPindah = {
       const sn = panduan.length ? {x: r[0], y: r[1], z: r[2], jenis: 'lacak'} : snap || {x: r[0], y: r[1], z: r[2], jenis: kunciK ? 'sumbu-' + kunciK : 'grid'};
       return {p: r, kunci: kunciK, snap: sn, panduan};
     };
+    // muka/tepi yang terakhir disentuh menjadi acuan kunci Shift ("pada bidang" / "sejajar tepi")
+    if (s && s.jenis === 'bidang' && s.n) this.sentuhBidang = {n: s.n, p: [s.x, s.y, s.z || 0], id: s.id};
+    if (s && s.jenis === 'tepi' && s.arah) this.sentuhTepi = {u: s.arah, p: [s.x, s.y, s.z || 0], id: s.id};
+    const kb = this.kunciBebas;
+    if (kb && kb.jenis === 'bidang') {
+      // gerakan terkunci di bidang sejajar muka yang disentuh, melalui titik acuan A
+      const n = kb.n, pl = new THREE.Plane().setFromNormalAndCoplanarPoint(V(...n), V(...A));
+      let q;
+      if (titikBenda || (s && s.jenis === 'tepi')) { const k = proyeksi(n, [s.x, s.y, s.z || 0]); q = [s.x - n[0] * k, s.y - n[1] * k, (s.z || 0) - n[2] * k]; }
+      else { const g = V(); if (!ray.ray.intersectPlane(pl, g)) return null; q = bulat([g.x, g.y, g.z], ['x', 'y', 'z']); }
+      return {p: q, kunci: 'bidang', snap: {x: q[0], y: q[1], z: q[2], jenis: 'bidang-kunci'}, acuan: titikBenda ? s : null};
+    }
+    if (kb && kb.jenis === 'tepi') {
+      // gerakan terkunci sejajar tepi yang disentuh, melalui titik acuan A
+      const u = kb.u;
+      let t = titikBenda || (s && (s.jenis === 'tepi' || s.jenis === 'bidang')) ? proyeksi(u, [s.x, s.y, s.z || 0]) : tSinar(u);
+      if (t === null) return null;
+      t = bulatHalus(t, l);
+      const q = [A[0] + u[0] * t, A[1] + u[1] * t, A[2] + u[2] * t];
+      return {p: q, kunci: 'tepi', snap: {x: q[0], y: q[1], z: q[2], jenis: 'tepi-kunci'}, acuan: titikBenda ? s : null};
+    }
     const kunci = S.kunciPaksa;
     if (kunci) {
       if (titikBenda || (s && (s.jenis === 'bidang' || s.jenis === 'tepi'))) { const t = proyeksi(SUMBU[kunci], [s.x, s.y, s.z || 0]); return {p: padaSumbu(kunci, t), kunci, acuan: s, snap: {...s}}; }
@@ -4571,8 +4605,14 @@ const alatPindah = {
     for (const [id, d] of this.asli) pasang(id, geser(d, dx, dy, dz));
     bersihPratinjau();
     const A = this.titikA(), B = [A[0] + dx, A[1] + dy, A[2] + dz];
-    const warna = kunci === 'x' ? T.axX : kunci === 'y' ? T.axY : kunci === 'z' ? T.axZ : T.accent;
+    const warna = kunci === 'x' ? T.axX : kunci === 'y' ? T.axY : kunci === 'z' ? T.axZ : kunci === 'bidang' || kunci === 'tepi' ? '#9A5BD0' : T.accent;
     garisPutus([A, B], warna);
+    // kunci sejajar tepi: garis bantu ungu memanjang sepanjang arah tepi; kunci pada bidang: bingkai kecil di titik tujuan
+    if (kunci === 'tepi' && this.kunciBebas) { const u = this.kunciBebas.u; garisPutus([[A[0] - u[0] * 50, A[1] - u[1] * 50, A[2] - u[2] * 50], [A[0] + u[0] * 50, A[1] + u[1] * 50, A[2] + u[2] * 50]], '#9A5BD0'); }
+    if (kunci === 'bidang' && this.kunciBebas) {
+      const n = V(...this.kunciBebas.n), a = Math.abs(n.z) < 0.9 ? V(0, 0, 1) : V(1, 0, 0), e1 = V().crossVectors(n, a).normalize().multiplyScalar(0.3), e2 = V().crossVectors(n, e1).normalize().multiplyScalar(0.3), c = V(...B);
+      garisPratinjau([[c.x + e1.x + e2.x, c.y + e1.y + e2.y, c.z + e1.z + e2.z], [c.x - e1.x + e2.x, c.y - e1.y + e2.y, c.z - e1.z + e2.z], [c.x - e1.x - e2.x, c.y - e1.y - e2.y, c.z - e1.z - e2.z], [c.x + e1.x - e2.x, c.y + e1.y - e2.y, c.z + e1.z - e2.z]], '#9A5BD0', true);
+    }
     // kepala panah arah pindah
     const L = Math.hypot(dx, dy, dz);
     if (L > 0.05) {
@@ -4588,9 +4628,9 @@ const alatPindah = {
       if (Math.hypot(siku[0] - T[0], siku[1] - T[1]) > 1e-4) garisPutus([T, siku], '#9A5BD0');
       if (Math.abs(T[2] - B[2]) > 1e-4) garisPutus([Math.hypot(siku[0] - T[0], siku[1] - T[1]) > 1e-4 ? siku : T, B], '#9A5BD0');
     }
-    const namaSumbu = {x: 'sumbu merah', y: 'sumbu hijau', z: 'sumbu biru'}[kunci];
+    const namaSumbu = {x: 'sumbu merah', y: 'sumbu hijau', z: 'sumbu biru', bidang: 'pada bidang muka', tepi: 'sejajar tepi'}[kunci];
     const jenisSnap = inf && inf.snap && inf.snap.jenis;
-    const ket = {ujung: 'ke ujung', tengah: 'ke titik tengah', tepi: 'pada tepi', bidang: 'pada bidang', lacak: 'sejajar titik lacak'}[jenisSnap] || '';
+    const ket = {ujung: 'ke ujung', tengah: 'ke titik tengah', tepi: 'pada tepi', bidang: 'pada bidang', lacak: 'sejajar titik lacak'}[jenisSnap] || (inf && inf.acuan ? 'sampai ' + ({ujung: 'ujung', tengah: 'titik tengah'}[inf.acuan.jenis] || 'titik') : '');
     S.label = [{x: (A[0] + B[0]) / 2, y: (A[1] + B[1]) / 2, z: (A[2] + B[2]) / 2, t: (this.salin ? 'Salin ' : '') + fmt(L, L < 1 && Math.abs(L * 100 - Math.round(L * 100)) > 1e-6 ? 3 : 2) + ' m' + [namaSumbu, ket].filter(Boolean).map(x => ' · ' + x).join('')}];
     setVcb(fmtV(L)); minta();
   },
@@ -4623,7 +4663,7 @@ const alatPindah = {
   selesai() {
     if (this.bukaan) {
       const [id, d] = this.bukaanTunggal(), {b, salah} = this.bukaan, lama = b.dinding;
-      this.dasar = this.items = this.asli = this.delta = this.bukaan = null; reset(); setVcb(''); lepasKunci(); S.label = [];
+      this.dasar = this.items = this.asli = this.delta = this.bukaan = null; this.kunciBebas = this.sentuhBidang = this.sentuhTepi = null; reset(); setVcb(''); lepasKunci(); S.label = [];
       pasang(id);
       if (S.elems.has(lama)) pasang(lama);
       if (salah) { toast(salah + ' Pintu/jendela kembali ke tempat semula.'); return; }
@@ -4654,6 +4694,7 @@ const alatPindah = {
     const {dx, dy, dz = 0} = this.delta, l = Math.hypot(dx, dy, dz);
     let u = l > 1e-6 ? [dx / l, dy / l, dz / l] : [1, 0, 0];
     if (l <= 1e-6 && S.kunciPaksa) u = {x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1]}[S.kunciPaksa];
+    if (l <= 1e-6 && this.kunciBebas && this.kunciBebas.jenis === 'tepi') u = this.kunciBebas.u;
     this.delta = {dx: r2(u[0] * L), dy: r2(u[1] * L), dz: r2(u[2] * L)};
     this.selesai();
   }
@@ -6652,7 +6693,8 @@ function batalAlat() { const a = alat(); if (a.batal) a.batal(); else reset(); l
 const NAMA_SUMBU = {x: 'sumbu X (merah)', y: 'sumbu Y (hijau)', z: 'sumbu Z (biru)'};
 function tulisPetunjuk() {
   const panah = S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' ? ` Panah → kunci X, ← kunci Y${S.tool === 'pindah' ? ', ↑ kunci Z' : ''}, ↓ lepas.` : '';
-  const kunci = S.kunciPaksa ? ` <b>Terkunci ke ${NAMA_SUMBU[S.kunciPaksa]}.</b>` : '';
+  const kb = S.tool === 'pindah' && alatPindah.kunciBebas;
+  const kunci = S.kunciPaksa ? ` <b>Terkunci ke ${NAMA_SUMBU[S.kunciPaksa]}.</b>` : kb ? ` <b>Terkunci ${kb.jenis === 'bidang' ? 'pada bidang muka' : 'sejajar tepi'} (lepas Shift untuk bebas).</b>` : '';
   $('#petunjuk').innerHTML = alat().petunjuk + panah + kunci + ' <span>Tombol tengah: putar · Shift+tengah: geser · Scroll: zoom.</span>';
 }
 function lepasKunci() { if (S.kunciPaksa) { S.kunciPaksa = null; tulisPetunjuk(); } }
@@ -6821,7 +6863,7 @@ function tekanEsc() {
 }
 window.addEventListener('keyup', e => {
   if (e.key === ' ' && ZOOM2D.spasi) { ZOOM2D.spasi = false; $('#m-svg').classList.remove('geser'); }
-  if (e.key === 'Shift' && alatPindah.kunciShift) { alatPindah.kunciShift = false; S.kunciPaksa = null; tulisPetunjuk(); if (S.eTerakhir && alat().move) alat().move(S.eTerakhir); }
+  if (e.key === 'Shift' && alatPindah.kunciShift) { alatPindah.kunciShift = false; S.kunciPaksa = null; alatPindah.kunciBebas = null; tulisPetunjuk(); if (S.eTerakhir && alat().move) alat().move(S.eTerakhir); }
 });
 window.addEventListener('keydown', e => {
   if (!$('#modalProyek').hidden) { if (e.key === 'Escape') $('#mp-batal').click(); return; }
@@ -6846,8 +6888,15 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Control' && S.tool === 'putar' && !e.repeat) { alatPutar.ubahSalin(); return; }
   // salinan putar berderet: 4x atau x4
   if (S.tool === 'putar' && alatPutar.terakhir && !alatPutar.pusat && (k === 'x' || e.key === '*') && !ctrl) { e.preventDefault(); S.ketik = true; vcb.value = e.key; vcb.focus(); return; }
-  if (e.key === 'Shift' && S.tool === 'pindah' && alatPindah.dasar && !e.repeat && !S.kunciPaksa && alatPindah.sumbuAkhir) {
-    S.kunciPaksa = alatPindah.sumbuAkhir; alatPindah.kunciShift = true; tulisPetunjuk(); return;
+  // Shift saat Pindah: kunci ke yang sedang disentuh/terdeteksi, seperti SketchUp — muka → "pada bidang",
+  // tepi → "sejajar tepi", selain itu sumbu merah/hijau/biru yang sedang terdeteksi
+  if (e.key === 'Shift' && S.tool === 'pindah' && alatPindah.dasar && !e.repeat && !S.kunciPaksa && !alatPindah.kunciBebas) {
+    const sn = S.snap, sb = alatPindah.sentuhBidang, st = alatPindah.sentuhTepi;
+    if (sn && sn.jenis === 'bidang' && sb) { alatPindah.kunciBebas = {jenis: 'bidang', n: sb.n, p: sb.p}; alatPindah.kunciShift = true; }
+    else if (sn && sn.jenis === 'tepi' && st) { alatPindah.kunciBebas = {jenis: 'tepi', u: st.u, p: st.p}; alatPindah.kunciShift = true; }
+    else if (alatPindah.sumbuAkhir) { S.kunciPaksa = alatPindah.sumbuAkhir; alatPindah.kunciShift = true; }
+    else return;
+    tulisPetunjuk(); if (S.eTerakhir && alat().move) alat().move(S.eTerakhir); return;
   }
   if (e.key === 'Tab' && (S.tool === 'atap' || S.tool === 'plafon' || S.tool === 'kolom' || S.tool === 'pondasi' || S.tool === 'anotasi' || S.tool === 'slof' || S.tool === 'ringbalk' || S.tool === 'persegi' || S.tool === 'lingkaran' || S.tool === 'busur' || S.tool === 'dorong' || S.tool === 'offset' || S.tool === 'sapuan')) { e.preventDefault(); alat().ganti(); return; }
   if (e.key === 'Enter' && S.tool === 'sapuan' && alatSapuan.sibuk()) { e.preventDefault(); alatSapuan.selesai(false); return; }
