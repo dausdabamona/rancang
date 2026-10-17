@@ -300,6 +300,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
     <button class="alat" data-alat="potong" aria-pressed="false" title="Garis potong (X)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2v3M12 8v3M12 14v3M12 20v2" /><path d="M12 4h6M15 1.5l3 2.5-3 2.5M12 20h6M15 17.5l3 2.5-3 2.5"/></svg><span class="teks">Potong</span><kbd>X</kbd></button>
     <button class="alat" data-alat="anotasi" aria-pressed="false" title="Anotasi (N), Tab teks/label/ukuran/peil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20l7-7M4 20l1-4M4 20l4-1"/><path d="M12 6h9M12 10h7M14 14h7"/></svg><span class="teks">Anotasi</span><kbd>N</kbd></button>
     <button class="alat" data-alat="dorong" aria-pressed="false" title="Push/Pull (P), Offset (Q); Tab mengganti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 15l8 4 8-4-8-4z"/><path d="M12 11V3M9 6l3-3 3 3"/></svg><span class="teks">Push/Pull</span><kbd>P</kbd></button>
+    <button class="alat" data-alat="bidang3d" aria-pressed="false" title="Bidang 3D (B): klik sudut-sudut bukaan untuk menutupnya dengan bidang dinding"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 18L9 5l11 4-4 11z"/><circle cx="4" cy="18" r="1.4" fill="currentColor"/><circle cx="9" cy="5" r="1.4" fill="currentColor"/></svg><span class="teks">Bidang 3D</span><kbd>B</kbd></button>
     <button class="alat" data-alat="sapuan" aria-pressed="false" title="Sapuan / Follow Me (J): profil disapukan sepanjang lintasan; Tab mengganti profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 18c3-8 7-10 16-10"/><path d="M3 15h4v5H3z"/></svg><span class="teks">Sapuan</span><kbd>J</kbd></button>
     <button class="alat" data-alat="pindah" aria-pressed="false" title="Pindah (M), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span class="teks">Pindah</span><kbd>M</kbd></button>
     <button class="alat" data-alat="putar" aria-pressed="false" title="Putar (U), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/><circle cx="12" cy="12" r="1.2"/></svg><span class="teks">Putar</span><kbd>U</kbd></button>
@@ -2803,7 +2804,7 @@ function rangka3D(g) {
 // opsi.atas: ujung elemen juga dicari di puncaknya; opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap
 function titikSnap(e, kecuali, opsi = {}) {
   const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, v = V();
-  let best = null, bd = 16;
+  let best = null, bd = 16, bz = Infinity;
   for (const [id, d] of S.elems) {
     if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
     for (const g of geometriElemen(id, d)) {
@@ -2821,7 +2822,8 @@ function titikSnap(e, kecuali, opsi = {}) {
         if (v.z > 1 || v.z < -1) continue;
         // ujung didahulukan dari titik tengah
         const dd = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my) + (jenis === 'tengah' ? 4 : 0);
-        if (dd < bd) { bd = dd; best = {x: r2(x), y: r2(y), z: r2(z), jenis, id}; }
+        // titik yang bertumpuk di layar (tampak samping/paralel): yang paling dekat ke kamera didahulukan
+        if (dd < bd - 0.5 || (dd <= bd + 0.5 && v.z < bz)) { bd = Math.min(bd, dd); bz = v.z; best = {x: r2(x), y: r2(y), z: r2(z), jenis, id}; }
       }
     }
   }
@@ -2829,7 +2831,7 @@ function titikSnap(e, kecuali, opsi = {}) {
   // pada tepi (seperti "On Edge" SketchUp): titik terdekat di rusuk alas, rusuk atas, dan rusuk tegak, dalam 8 px
   if (opsi.tepi) {
     arahkan(e);
-    let bt = 8, hasil = null, idKini = null;
+    let bt = 8, btz = Infinity, hasil = null, idKini = null;
     const o = ray.ray.origin, rd = ray.ray.direction;
     const cek = (P, Q) => {
       // titik pada ruas PQ yang paling dekat dengan sinar kursor
@@ -2842,7 +2844,7 @@ function titikSnap(e, kecuali, opsi = {}) {
       v.set(q[0], q[1], q[2]).project(camera);
       if (v.z > 1 || v.z < -1) return;
       const dd = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my);
-      if (dd < bt) { bt = dd; hasil = {x: r2(q[0]), y: r2(q[1]), z: r2(q[2]), jenis: 'tepi', id: idKini}; }
+      if (dd < bt - 0.5 || (dd <= bt + 0.5 && v.z < btz)) { bt = Math.min(bt, dd); btz = v.z; hasil = {x: r2(q[0]), y: r2(q[1]), z: r2(q[2]), jenis: 'tepi', id: idKini}; }
     };
     for (const [id, d] of S.elems) {
       if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
@@ -4818,6 +4820,86 @@ function tepiBawahAtap(d) {
   return hasil;
 }
 
+/* ============ Alat Bidang 3D (seperti alat Garis SketchUp) ============ */
+// Klik titik-titik di tepi bukaan (menempel ke ujung, tepi, dan muka benda); titik pertama menutup.
+// Hasil: bidang bertebal (H, peran gunung) yang bisa ditebalkan/digeser dengan Push/Pull.
+const alatBidang3D = {
+  titik: [], kursor: null,
+  petunjuk: '<b>Bidang 3D:</b> klik titik-titik sudut bukaan yang mau ditutup (menempel ke ujung, tepi, dan muka benda: atap, dinding, batang); klik titik pertama, klik 2×, atau Enter untuk menutup. Hasilnya bidang setebal dinding baru yang bisa ditarik dengan Push/Pull.',
+  vcb: 'Panjang',
+  sibuk() { return this.titik.length > 0; },
+  batal() { this.titik = []; this.kursor = null; reset(); setVcb(''); },
+  // titik di bawah kursor: snap benda; bila tidak ada dan sudah ada 3 titik, menempel ke bidang ketiganya
+  snap(e) {
+    const t = this.titik, akhir = t[t.length - 1];
+    const s = titikSnap(e, null, {atas: true, tengah: true, tepi: true});
+    // setelah 3 titik bidangnya sudah tertentu: titik snap diproyeksikan tegak lurus ke bidang itu
+    // (mis. puncak atap yang sedikit di belakang muka penutup tetap jatuh di bidang penutup)
+    const nB = t.length >= 3 ? normalNewell(t.map(ke3)) : null;
+    if (s && s.jenis !== 'grid') {
+      if (nB && Math.hypot(...nB) > 0.5) { const k = (s.x - t[0].x) * nB[0] + (s.y - t[0].y) * nB[1] + ((s.z || 0) - t[0].z) * nB[2]; return {x: r2(s.x - nB[0] * k), y: r2(s.y - nB[1] * k), z: r2((s.z || 0) - nB[2] * k), jenis: s.jenis}; }
+      return {x: r2(s.x), y: r2(s.y), z: r2(s.z || 0), jenis: s.jenis};
+    }
+    if (t.length >= 3) {
+      const n = normalNewell(t.map(ke3));
+      if (Math.hypot(...n) > 0.5) {
+        arahkan(e);
+        const v = V(), pl = new THREE.Plane().setFromNormalAndCoplanarPoint(V(...n), V(...ke3(t[0])));
+        if (ray.ray.intersectPlane(pl, v)) return {x: r2(v.x), y: r2(v.y), z: r2(v.z), jenis: 'bidang'};
+      }
+    }
+    const b = titikSnap(e, null, {bidang: true, bidangZ: akhir ? akhir.z : 0});
+    return b ? {x: r2(b.x), y: r2(b.y), z: r2(b.z || 0), jenis: b.jenis} : null;
+  },
+  pratinjau() {
+    bersihPratinjau(); S.label = [];
+    const t = this.kursor ? [...this.titik, this.kursor] : this.titik;
+    if (t.length >= 2) {
+      garisPratinjau(t.map(ke3), T.accent);
+      if (t.length >= 3) garisPutus([ke3(t[t.length - 1]), ke3(t[0])], T.accent);
+      const a = t[t.length - 2], b = t[t.length - 1], L = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
+      S.label = [{x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2, t: fmt(L) + ' m'}];
+      setVcb(fmtV(L));
+    }
+    minta();
+  },
+  move(e) {
+    const s = this.snap(e);
+    S.snap = s; this.kursor = s && this.titik.length ? {x: s.x, y: s.y, z: s.z} : null;
+    this.pratinjau();
+  },
+  down(e) {
+    const s = this.snap(e);
+    if (!s) return;
+    const p = {x: s.x, y: s.y, z: s.z}, t = this.titik, akhir = t[t.length - 1];
+    if (akhir && Math.hypot(p.x - akhir.x, p.y - akhir.y, p.z - akhir.z) < 0.005) return;
+    if (t.length >= 3 && Math.hypot(p.x - t[0].x, p.y - t[0].y, p.z - t[0].z) < 0.02) { this.selesai(); return; }
+    t.push(p); this.pratinjau();
+  },
+  dbl() { if (this.titik.length >= 3) this.selesai(); },
+  ketik(v) {
+    const akhir = this.titik[this.titik.length - 1];
+    if (!akhir) return toast('Klik titik pertama dulu, lalu ketik panjang tepinya.');
+    const L = angka(v);
+    if (!(L > 0)) return toast(`Tulis panjang dalam ${namaSatuan()}, misalnya ${cth(1.5)}.`);
+    const k = this.kursor, dx = k ? k.x - akhir.x : 1, dy = k ? k.y - akhir.y : 0, dz = k ? k.z - akhir.z : 0, l = Math.hypot(dx, dy, dz);
+    if (l < 1e-6) return toast('Arahkan kursor ke arah tepi berikutnya dulu.');
+    this.titik.push({x: r2(akhir.x + dx / l * L), y: r2(akhir.y + dy / l * L), z: r2(akhir.z + dz / l * L)});
+    this.kursor = null; this.pratinjau();
+  },
+  selesai() {
+    const t = this.titik.slice();
+    this.batal();
+    if (t.length < 3) return toast('Bidang perlu sedikitnya 3 titik.');
+    const id = idBaru('H'), d = {jenis: 'bidang', peran: 'gunung', nama: 'Bidang tutup ' + id.replace('_', ''), titik: t, tebal: S.setel.tebalDinding || 0.15, tebalTengah: true, catatan: ''};
+    if (!sah(d)) return toast('Titik-titiknya segaris atau terlalu rapat; bidang tidak terbentuk.');
+    terapkan([{id, sesudah: denganKonteks(d)}]);
+    S.sel = new Set([id]); segarPilihan();
+    const lk = lengkungBidang(d);
+    toast(`Bidang dibuat, luas ${fmt(ukurBidang(d).luas)} m², tebal ${fmtV(d.tebal)}.${lk > 0.01 ? ` Titiknya tidak sebidang (menyimpang ${fmt(lk)} m).` : ''} Tarik mukanya dengan Push/Pull untuk mengubah tebal.`);
+  }
+};
+
 const alatOrbit = {
   petunjuk: '<b>Orbit:</b> seret untuk memutar pandangan. Shift+seret untuk menggeser.',
   vcb: 'Ukuran'
@@ -6063,8 +6145,8 @@ function htmlPlafon(id, d) {
   <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
 
-const ALAT = {pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, pindah: alatPindah, putar: alatPutar, hapus: alatHapus, orbit: alatOrbit, iris: alatIris};
-const UBAH = new Set(['sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'hapus']);
+const ALAT = {pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, hapus: alatHapus, orbit: alatOrbit, iris: alatIris};
+const UBAH = new Set(['bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'hapus']);
 const alat = () => ALAT[S.tool];
 function batalAlat() { const a = alat(); if (a.batal) a.batal(); else reset(); lepasKunci(); }
 const NAMA_SUMBU = {x: 'sumbu X (merah)', y: 'sumbu Y (hijau)', z: 'sumbu Z (biru)'};
@@ -6269,6 +6351,7 @@ window.addEventListener('keydown', e => {
   }
   if (e.key === 'Tab' && (S.tool === 'atap' || S.tool === 'plafon' || S.tool === 'kolom' || S.tool === 'pondasi' || S.tool === 'anotasi' || S.tool === 'slof' || S.tool === 'ringbalk' || S.tool === 'persegi' || S.tool === 'lingkaran' || S.tool === 'busur' || S.tool === 'dorong' || S.tool === 'offset' || S.tool === 'sapuan')) { e.preventDefault(); alat().ganti(); return; }
   if (e.key === 'Enter' && S.tool === 'sapuan' && alatSapuan.sibuk()) { e.preventDefault(); alatSapuan.selesai(false); return; }
+  if (e.key === 'Enter' && S.tool === 'bidang3d' && alatBidang3D.sibuk()) { e.preventDefault(); alatBidang3D.selesai(); return; }
   if (e.key === 'Enter' && alat().dariPilihan && !(alat().sibuk && alat().sibuk())) { e.preventDefault(); alat().dariPilihan(); return; }
   if (e.key.startsWith('Arrow') && S.tool === 'pilih' && S.sel.size && !ctrl) { e.preventDefault(); geserPilihan(e.key, e.shiftKey); return; }
   const PANAH = {ArrowRight: 'x', ArrowLeft: 'y', ArrowUp: 'z', ArrowDown: null};
@@ -6297,7 +6380,7 @@ window.addEventListener('keydown', e => {
   if (e.shiftKey && k === 'z') { zoomSemua(); return; }
   if (k === 'g' && !e.shiftKey) { if (S.bisaUbah) jadikanKomponen(); return; }
   if (k === 'h' && !e.shiftKey) { aturTembus(); return; }
-  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', k: 'kolom', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', m: 'pindah', u: 'putar', e: 'hapus', o: 'orbit'};
+  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', k: 'kolom', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', e: 'hapus', o: 'orbit'};
   if (peta[k] && !e.shiftKey) { e.preventDefault(); setAlat(peta[k]); }
 });
 document.querySelectorAll('[data-alat]').forEach(b => b.addEventListener('click', () => setAlat(b.dataset.alat)));
