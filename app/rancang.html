@@ -1219,8 +1219,21 @@ function geser(d, dx, dy, dz = 0) {
   if (Array.isArray(b.lubang)) b.lubang = b.lubang.map(r => r.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy)})));
   return b;
 }
+// muka ujung dinding: bidang samping yang tegak lurus as dinding (bukan muka tebal)
+function ujungDinding(w, n) {
+  if (!w || w.jenis !== 'dinding' || !n) return null;
+  const {ux, uy} = infoDinding(w), k = n[0] * ux + n[1] * uy;
+  return k > 0.7 ? 'akhir' : k < -0.7 ? 'awal' : null;
+}
 function ubahDorong(asli, face, edge, jarak) {
   const d = salin(asli);
+  if (face === 'ujung') {
+    // panjangkan/pendekkan dinding dari ujung yang ditarik, sepanjang as
+    const {L, ux, uy} = infoDinding(asli), s = edge === 'akhir' ? 1 : -1;
+    if (L + jarak < 0.05) return null;
+    d[edge] = {x: r2(asli[edge].x + s * ux * jarak), y: r2(asli[edge].y + s * uy * jarak)};
+    return d;
+  }
   if (face === 'atas') {
     const min = d.jenis === 'dinding' ? 0.05 : 0;
     d.tinggi = r2(Math.max(min, (asli.tinggi || 0) + jarak));
@@ -3334,7 +3347,7 @@ function buatDinding(a, b) {
 
 const alatDorong = {
   ganti() { setAlat('offset'); toast('Offset'); },
-  petunjuk: '<b>Push/Pull:</b> klik bidang, gerakkan mouse, lalu klik lagi. Ketik jarak lalu Enter. Nilai minus menurunkan. Pada atap: klik dekat tepi atap untuk menarik tepinya ke ujung dinding.',
+  petunjuk: '<b>Push/Pull:</b> klik bidang, gerakkan mouse, lalu klik lagi. Ketik jarak lalu Enter. Nilai minus menurunkan. Pada dinding: tarik bidang ujungnya untuk mengubah panjang. Pada atap: klik dekat tepi atap untuk menarik tepinya ke ujung dinding.',
   vcb: 'Jarak',
   aktif: null,
   sibuk() { return !!this.aktif; },
@@ -3346,7 +3359,7 @@ const alatDorong = {
     if (!this.aktif) {
       const h = pilihObjek(e);
       const u = h && h.object.userData;
-      const bisa = u && (u.face === 'atas' || u.face === 'sisi' || u.face === 'atap') && bisaDiedit(u.elemId, true) && !(u.face === 'sisi' && S.elems.get(u.elemId)?.jenis === 'dinding');
+      const bisa = u && (u.face === 'atas' || u.face === 'sisi' || u.face === 'atap') && bisaDiedit(u.elemId, true) && !(u.face === 'sisi' && S.elems.get(u.elemId)?.jenis === 'dinding' && !ujungDinding(S.elems.get(u.elemId), u.n));
       soroti(bisa ? h.object : null);
       return;
     }
@@ -3417,16 +3430,20 @@ const alatDorong = {
     if (u.face === 'bukaan') return toast('Ubah ukuran pintu atau jendela lewat panel Properti.');
     if (u.face === 'bagian') return toast('Tarik bidang paling atas dinding untuk mengubah tingginya.');
     if (u.face === 'bawah') return toast('Bidang bawah tidak bisa ditarik. Pilih bidang atas atau samping.');
-    if (d.jenis === 'dinding' && u.face === 'sisi') return toast('Ubah tebal dinding lewat panel Properti.');
+    const ujung = d.jenis === 'dinding' && u.face === 'sisi' ? ujungDinding(d, u.n) : null;
+    if (d.jenis === 'dinding' && u.face === 'sisi' && !ujung) return toast('Ubah tebal dinding lewat panel Properti. Untuk panjang dinding, tarik bidang ujungnya.');
     soroti(null);
-    this.aktif = {id: u.elemId, face: u.face, edge: u.edge, n: u.n, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
+    this.aktif = {id: u.elemId, face: ujung ? 'ujung' : u.face, edge: ujung || u.edge, n: u.n, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
   },
   selesai() {
     const a = this.aktif;
     this.aktif = null; reset(); setVcb('');
     if (!a.baru || Math.abs(a.d) < 1e-6) { pasang(a.id); return; }
     if (a.mode === 'atap') a.baru.z0 = a.asli.z0;
-    terapkan([{id: a.id, sesudah: a.baru}]);
+    const ubah = [{id: a.id, sesudah: a.baru}];
+    // ujung awal bergeser: jarak pintu/jendela diukur dari ujung awal, jadi ikut digeser agar tetap di tempatnya
+    if (a.face === 'ujung' && a.edge === 'awal') for (const [id, b] of S.elems) if (b.jenis === 'bukaan' && b.dinding === a.id) ubah.push({id, sesudah: {...salin(b), jarak: r2((b.jarak || 0) + a.d)}});
+    terapkan(ubah);
   },
   ketik(v) {
     if (!this.aktif) return toast('Klik bidang yang mau ditarik dulu, lalu ketik jaraknya.');
