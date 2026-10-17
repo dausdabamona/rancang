@@ -1,7 +1,7 @@
 {
   "name": "rancang",
   "productName": "RANCANG",
-  "version": "0.27.1",
+  "version": "0.28.0",
   "description": "Aplikasi gambar bangunan ala SketchUp untuk gambar kerja 2D dan volume RAB, bisa berkolaborasi dengan Claude lewat MCP",
   "author": "Firdaus Dabamona",
   "license": "UNLICENSED",
