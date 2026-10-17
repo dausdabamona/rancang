@@ -1519,8 +1519,34 @@ function bangun(id, d, f, kunci) {
     // bidang datar sedikit diangkat (yang lebih kecil lebih tinggi) agar tidak berkedip dengan bidang lain sebidang
     const angkat = h > 0 ? 0 : 0.002 + 0.004 / (1 + Math.abs(luasBertanda(p)));
     prisma(g, id, p, (d.z0 || 0) + angkat, h, mat, tepi, 'atas', false, null, lengkung && lengkung.halus, lubangDari(d));
+    // muka yang dibuang (seperti hapus muka di SketchUp) dan muka yang sedang dipilih
+    const hapus = new Set(d.jenis === 'volume' ? d.mukaHapus || [] : []), pilihMuka = S.muka && S.muka.id === id && S.sel.has(id) ? S.muka.k : null;
+    if (hapus.size || pilihMuka) {
+      const dua = mat.clone(); dua.side = THREE.DoubleSide;
+      for (const m of [...g.children]) {
+        if (!m.isMesh) continue;
+        const k = kunciMuka(m.userData);
+        if (hapus.has(k)) { g.remove(m); continue; }
+        if (hapus.size) m.material = dua;
+        if (k && k === pilihMuka) { const ms = matWajah(campur(warna, T.select, 0.85)).clone(); ms.side = THREE.DoubleSide; m.material = ms; }
+      }
+    }
   }
   return g;
+}
+// Muka volume: 'atas', 'bawah', 'sisi:<indeks tepi alas>'
+const kunciMuka = u => (u.face === 'atas' || u.face === 'bawah' ? u.face : u.face === 'sisi' ? 'sisi:' + u.edge : null);
+const namaMuka = k => (k.startsWith('sisi:') ? 'sisi ' + (Number(k.slice(5)) + 1) : k);
+function hapusMuka() {
+  const {id, k} = S.muka, d = S.elems.get(id);
+  S.muka = null;
+  if (!d || !S.bisaUbah) { segarPilihan(); return; }
+  const b = salin(d), set = new Set(b.mukaHapus || []);
+  set.add(k);
+  if (set.size >= (d.alas ? d.alas.length : 4) + 2) { segarPilihan(); return toast('Muka terakhir tidak bisa dibuang; hapus saja bendanya.'); }
+  b.mukaHapus = [...set];
+  terapkan([{id, sesudah: b}]);
+  toast(`Muka ${namaMuka(k)} ${d.nama || id} dibuang. Ctrl+Z untuk membatalkan, atau kembalikan dari panel Properti.`);
 }
 /* ============ Sambungan dinding ============ */
 // Ujung dinding yang bertemu dinding lain dipotong miring (sudut) atau berhenti di muka dinding (T),
@@ -3041,7 +3067,8 @@ function bukaMenuKonteks(e) {
   tambah('k-zoom-semua', 'Zoom semua', 'Shift+Z');
   if (S.konteks || S.edit) tambah('k-tutup', S.edit ? 'Tutup komponen' : 'Tutup grup', 'Esc');
   pisah();
-  if (ubah && sel.length) tambah('k-hapus', 'Hapus', 'Delete', true);
+  if (ubah && S.muka && satu === S.muka.id) tambah('k-hapus-muka', 'Hapus muka ' + namaMuka(S.muka.k), 'Delete', true);
+  else if (ubah && sel.length) tambah('k-hapus', 'Hapus', 'Delete', true);
   if (butir[butir.length - 1] === '-') butir.pop();
   menuKonteksEl.innerHTML = butir.map(b => (b === '-' ? '<hr>' : `<button type="button" role="menuitem" data-k="${b.aksi}"${b.bahaya ? ' class="bahaya"' : ''}><span>${esc(b.teks)}</span>${b.kunci ? `<kbd>${esc(b.kunci)}</kbd>` : ''}</button>`)).join('');
   menuKonteksEl.hidden = false;
@@ -3072,6 +3099,7 @@ menuKonteksEl.addEventListener('click', e => {
   else if (k === 'k-zoom-semua') zoomSemua();
   else if (k === 'k-tutup') tutupKonteks();
   else if (k === 'k-hapus') hapusPilihan();
+  else if (k === 'k-hapus-muka') { if (S.muka) hapusMuka(); }
 });
 menuKonteksEl.addEventListener('keydown', e => {
   const tombolM = [...menuKonteksEl.querySelectorAll('button')], i = tombolM.indexOf(document.activeElement);
@@ -3161,6 +3189,15 @@ const alatPilih = {
     const t = targetDariKlik(h);
     S.lisSisi = h.object.userData.sisi && t === h.object.userData.elemId ? {atap: t, sisi: h.object.userData.sisi} : null;
     if (t === null) return toast('Tekan Esc atau Selesai untuk keluar dari edit komponen.');
+    // klik lagi pada volume yang sudah terpilih sendirian: hanya muka di bawah kursor yang terpilih (seperti SketchUp)
+    const u = h.object.userData, dV = S.elems.get(t), kMuka = dV && dV.jenis === 'volume' && u.elemId === t ? kunciMuka(u) : null;
+    if (kMuka && !sama && !e.shiftKey && !e.ctrlKey && !e.metaKey && S.sel.size === 1 && S.sel.has(t)) {
+      S.muka = S.muka && S.muka.id === t && S.muka.k === kMuka ? null : {id: t, k: kMuka};
+      segarPilihan();
+      if (S.muka) toast(`Muka ${namaMuka(kMuka)} terpilih. Tekan Delete untuk membuangnya; klik lagi untuk memilih seluruh benda.`);
+      return;
+    }
+    S.muka = null;
     terapkanPilihan([t], e);
     segarPilihan();
   },
@@ -5577,8 +5614,9 @@ window.addEventListener('keydown', e => {
   if (/^[0-9.,;\-]$/.test(e.key) && alat().ketik) {
     e.preventDefault(); S.ketik = true; vcb.value = e.key; vcb.focus(); return;
   }
+  if (e.key === 'Escape' && S.muka) { S.muka = null; segarPilihan(); return; }
   if (e.key === 'Escape') { tekanEsc(); return; }
-  if (e.key === 'Delete' || e.key === 'Backspace') { if (S.sel.size) { e.preventDefault(); hapusPilihan(); } return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { if (S.muka) { e.preventDefault(); hapusMuka(); } else if (S.sel.size) { e.preventDefault(); hapusPilihan(); } return; }
   if (e.shiftKey && k === 'z') { zoomSemua(); return; }
   if (k === 'g' && !e.shiftKey) { if (S.bisaUbah) jadikanKomponen(); return; }
   if (k === 'h' && !e.shiftKey) { aturTembus(); return; }
@@ -5590,7 +5628,7 @@ $('#btn-urung').addEventListener('click', urungkan);
 $('#btn-ulang').addEventListener('click', ulangi);
 
 /* ============ Panel properti ============ */
-function segarPilihan() { bangunSemua(); S.panelKunci = ''; renderPanel(true); minta(); }
+function segarPilihan() { if (S.muka && !(S.sel.size === 1 && S.sel.has(S.muka.id))) S.muka = null; bangunSemua(); S.panelKunci = ''; renderPanel(true); minta(); }
 const baris = (label, kunci, satuan) => `<dt>${label}</dt><dd><span data-u="${kunci}"></span><small>${satuan}</small></dd>`;
 const dis = () => (S.bisaUbah ? '' : 'disabled');
 function medanAngka(id, label, nilai) {
@@ -5695,7 +5733,8 @@ function htmlLantai(id, d) {
       + medanAngka('p-peil', 'Peil atas lantai (m)', r2((d.z0 || 0) + (d.tinggi || 0))) : '');
   return `<section><h2>Lantai</h2><div class="medan">${isi}</div>
     <p class="meta">${d.lantai ? 'Warna 3D, pola keramik di denah, dan baris RAB mengikuti jenis dan penutup ini.' : 'Tandai sebagai lantai agar warna, pola keramik, dan RAB-nya terpisah per jenis.'} Pecah per ruang memotong lantai ini mengikuti dinding.</p>
-    <div class="aksi-panel">${d.bentuk || !pemotongLantai(d).length ? '' : tombol('pecah-lantai', 'Pecah per ruang')}</div></section>`;
+    <div class="aksi-panel">${d.bentuk || !pemotongLantai(d).length ? '' : tombol('pecah-lantai', 'Pecah per ruang')}</div></section>`
+    + ((d.mukaHapus || []).length ? `<section><h2>Muka dibuang</h2><p class="meta">${d.mukaHapus.map(namaMuka).join(', ')}. Klik volume yang sudah terpilih untuk memilih satu muka, lalu Delete.</p><div class="aksi-panel">${tombol('kembalikan-muka', 'Kembalikan semua muka')}</div></section>` : '');
 }
 // Potong lantai oleh dinding dan kolom yang berdiri di atasnya; nama dan jenis dari label ruang di dalam tiap potongan
 // Pecah atap (v0.28): atap parametrik diganti grup berisi bidang (penutup per bidang, gunungan, lisplang, plafon miring)
@@ -6221,6 +6260,7 @@ panel.addEventListener('click', e => {
     if (tid) terapkan([{id: tid, sesudah: null}]);
   }
   else if (aksi === 'pecah-lantai' && id) pecahLantai(id);
+  else if (aksi === 'kembalikan-muka' && id) { const b = salin(S.elems.get(id)); delete b.mukaHapus; terapkan([{id, sesudah: b}]); }
   else if (aksi === 'pecah-atap' && id) pecahAtap(id);
   else if (aksi === 'bid-tambah' && id) ubahTitikBidang(id);
   else if (aksi === 'bid-hapus' && id) ubahTitikBidang(id, +e.target.dataset.i);
