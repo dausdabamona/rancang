@@ -1311,6 +1311,20 @@ function ujungDinding(w, n) {
 }
 function ubahDorong(asli, face, edge, jarak) {
   const d = salin(asli);
+  if (face === 'bidang') {
+    // geser seluruh bidang sejajar arah normalnya
+    const [nx, ny, nz] = edge;
+    d.titik = asli.titik.map(q => ({x: r2(q.x + nx * jarak), y: r2(q.y + ny * jarak), z: r2(q.z + nz * jarak)}));
+    return d;
+  }
+  if (face === 'ujung-batang') {
+    // panjangkan/pendekkan batang dari ujung yang ditarik, sepanjang sumbunya
+    const a = asli.awal, b = asli.akhir, L = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
+    if (L + jarak < 0.05) return null;
+    const k = edge === 'akhir' ? 1 : -1, ux = (b.x - a.x) / L, uy = (b.y - a.y) / L, uz = (b.z - a.z) / L, q = asli[edge];
+    d[edge] = {x: r2(q.x + k * ux * jarak), y: r2(q.y + k * uy * jarak), z: r2(q.z + k * uz * jarak)};
+    return d;
+  }
   if (face === 'ujung') {
     // panjangkan/pendekkan dinding dari ujung yang ditarik, sepanjang as
     const {L, ux, uy} = infoDinding(asli), s = edge === 'akhir' ? 1 : -1;
@@ -2731,6 +2745,27 @@ function targetDariKlik(h) {
   if (t === undefined) { S.konteks = null; segarKonteks(); t = targetKlik(h.object.userData.elemId); }
   return t;
 }
+// Alat edit (Push/Pull, Offset): klik dua kali membuka grup satu tingkat, seperti di alat Pilih
+function bukaGrupDiKlik(e) {
+  const h = pilihObjek(e, null, true);
+  if (!h) return false;
+  const t = targetKlik(h.object.userData.elemId);
+  if (!t || kodeOf(t) !== 'G') return false;
+  masukGrup(t);
+  toast(`Grup ${(S.grup.get(t) || {}).nama || t} dibuka. Klik dua kali lagi untuk grup di dalamnya, Esc untuk keluar.`);
+  return true;
+}
+// Tembus pandang aktif: benda di dalam grup langsung bisa diedit (grupnya ikut dibuka)
+function bisaDieditTembus(id, senyap) {
+  const d = S.elems.get(id);
+  if (S.tembus && !S.edit && d && d.jenis !== 'instance') {
+    if (senyap) return true;
+    const induk = (d.jenis === 'bukaan' ? (S.elems.get(d.dinding) || {}).grup : d.grup) || null;
+    if ((S.konteks || null) !== induk) { S.konteks = induk; segarKonteks(); }
+    return true;
+  }
+  return bisaDiedit(id, senyap);
+}
 function bisaDiedit(id, senyap) {
   const d = S.elems.get(id);
   const tolak = m => { if (!senyap) toast(m); return false; };
@@ -2738,7 +2773,7 @@ function bisaDiedit(id, senyap) {
   if (d.jenis === 'bukaan') return bisaDiedit(d.dinding, senyap);
   if (d.jenis === 'instance') return tolak('Klik dua kali komponen untuk mengedit isinya.');
   if (S.edit) return id[0] === '_' || tolak('Saat mengedit komponen, hanya isi komponen yang bisa diubah.');
-  if ((d.grup || null) !== (S.konteks || null)) return tolak('Klik dua kali grup untuk mengedit isinya.');
+  if ((d.grup || null) !== (S.konteks || null)) return tolak('Klik dua kali grup untuk membukanya (bisa juga dengan alat Push/Pull), atau nyalakan Tembus untuk langsung mengedit isinya.');
   return true;
 }
 
@@ -3429,9 +3464,11 @@ function buatDinding(a, b) {
   terapkan([{id, sesudah: denganKonteks({jenis: 'dinding', nama: 'Dinding ' + id.replace('_', ''), awal: {x: r2(a.x), y: r2(a.y)}, akhir: {x: r2(b.x), y: r2(b.y)}, tebal: S.setel.tebalDinding, tinggi: S.setel.tinggiDinding, z0: 0, catatan: ''})}]);
 }
 
+// muka yang bisa ditarik dengan Push/Pull
+const MUKA_DORONG = new Set(['atas', 'sisi', 'atap', 'bidang', 'batang']);
 const alatDorong = {
   ganti() { setAlat('offset'); toast('Offset'); },
-  petunjuk: '<b>Push/Pull:</b> klik bidang, gerakkan mouse, lalu klik lagi. Ketik jarak lalu Enter. Nilai minus menurunkan. Pada dinding: tarik bidang ujungnya untuk mengubah panjang. Pada atap: klik dekat tepi atap untuk menarik tepinya ke ujung dinding.',
+  petunjuk: '<b>Push/Pull:</b> klik bidang, gerakkan mouse, lalu klik lagi. Ketik jarak lalu Enter. Nilai minus menurunkan. Pada dinding: tarik bidang ujungnya untuk mengubah panjang. Bidang lepas digeser tegak lurus permukaannya; batang ditarik dari ujung terdekat. Klik 2× grup untuk membukanya, atau nyalakan Tembus. Pada atap: klik dekat tepi atap untuk menarik tepinya ke ujung dinding.',
   vcb: 'Jarak',
   aktif: null,
   sibuk() { return !!this.aktif; },
@@ -3439,11 +3476,12 @@ const alatDorong = {
     if (this.aktif) pasang(this.aktif.id);
     this.aktif = null; soroti(null); reset(); setVcb('');
   },
+  dbl(e) { if (!this.aktif) bukaGrupDiKlik(e); },
   move(e) {
     if (!this.aktif) {
       const h = pilihObjek(e);
       const u = h && h.object.userData;
-      const bisa = u && (u.face === 'atas' || u.face === 'sisi' || u.face === 'atap') && bisaDiedit(u.elemId, true) && !(u.face === 'sisi' && S.elems.get(u.elemId)?.jenis === 'dinding' && !ujungDinding(S.elems.get(u.elemId), u.n));
+      const bisa = u && MUKA_DORONG.has(u.face) && bisaDieditTembus(u.elemId, true) && !(u.face === 'sisi' && S.elems.get(u.elemId)?.jenis === 'dinding' && !ujungDinding(S.elems.get(u.elemId), u.n));
       soroti(bisa ? h.object : null);
       return;
     }
@@ -3475,6 +3513,13 @@ const alatDorong = {
   hitung(e) {
     const a = this.aktif, v = V();
     arahkan(e);
+    if (a.garis) {
+      // bidang dan batang: jarak diukur sepanjang garis 3D (normal bidang / sumbu batang) yang paling dekat dengan sinar kursor
+      const N = a.garis, o = ray.ray.origin, r = ray.ray.direction, w0 = V().subVectors(a.p, o);
+      const b = N.dot(r), den = 1 - b * b;
+      if (den < 1e-4) return snapG(-(e.clientY - a.y0) * nav.r * 0.0025);
+      return snapG((b * r.dot(w0) - N.dot(w0)) / den);
+    }
     if (a.face === 'atas') {
       const c = camera.position, nh = V(c.x - a.p.x, c.y - a.p.y, 0);
       if (nh.lengthSq() < 1e-6 || nav.phi < 0.12) return snapG(-(e.clientY - a.y0) * nav.r * 0.0025);
@@ -3500,7 +3545,7 @@ const alatDorong = {
     const h = pilihObjek(e);
     if (!h) return;
     const u = h.object.userData, d = S.elems.get(u.elemId);
-    if (!d || !bisaDiedit(u.elemId)) return;
+    if (!d || !bisaDieditTembus(u.elemId)) return;
     if (d.jenis === 'atap') {
       // tepi terdekat dari titik klik yang ditarik
       const {x0, x1, y0, y1} = batasAtap(d), px = h.point.x, py = h.point.y;
@@ -3514,6 +3559,28 @@ const alatDorong = {
     if (u.face === 'bukaan') return toast('Ubah ukuran pintu atau jendela lewat panel Properti.');
     if (u.face === 'bagian') return toast('Tarik bidang paling atas dinding untuk mengubah tingginya.');
     if (u.face === 'bawah') return toast('Bidang bawah tidak bisa ditarik. Pilih bidang atas atau samping.');
+    if (!MUKA_DORONG.has(u.face)) return toast('Bagian ini mengikuti atapnya. Ubah lewat panel Properti atap, atau Pecah atap dulu agar jadi bidang dan batang lepas.');
+    if (d.jenis === 'bidang') {
+      // normal bidang (Newell), diarahkan ke sisi yang menghadap kamera
+      const t = d.titik, N = V();
+      for (let i = 0; i < t.length; i++) { const p = t[i], q = t[(i + 1) % t.length]; N.x += (p.y - q.y) * (p.z + q.z); N.y += (p.z - q.z) * (p.x + q.x); N.z += (p.x - q.x) * (p.y + q.y); }
+      if (N.lengthSq() < 1e-10) return;
+      N.normalize();
+      if (N.dot(V().subVectors(camera.position, h.point)) < 0) N.negate();
+      soroti(null);
+      this.aktif = {id: u.elemId, face: 'bidang', edge: [N.x, N.y, N.z], garis: N, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
+      return toast('Menggeser bidang tegak lurus permukaannya. Gerakkan mouse atau ketik jarak.');
+    }
+    if (d.jenis === 'batang') {
+      // ujung terdekat dari titik klik yang ditarik sepanjang sumbu batang
+      const A = V(d.awal.x, d.awal.y, d.awal.z), B = V(d.akhir.x, d.akhir.y, d.akhir.z), U = V().subVectors(B, A), L = U.length();
+      if (L < 1e-6) return;
+      U.divideScalar(L);
+      const ke = V().subVectors(h.point, A).dot(U) / L < 0.5 ? 'awal' : 'akhir', N = ke === 'akhir' ? U : U.clone().negate();
+      soroti(null);
+      this.aktif = {id: u.elemId, face: 'ujung-batang', edge: ke, garis: N, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
+      return toast(`Menarik ujung ${ke} batang. Gerakkan mouse atau ketik jarak (minus memendekkan).`);
+    }
     const ujung = d.jenis === 'dinding' && u.face === 'sisi' ? ujungDinding(d, u.n) : null;
     if (d.jenis === 'dinding' && u.face === 'sisi' && !ujung) return toast('Ubah tebal dinding lewat panel Properti. Untuk panjang dinding, tarik bidang ujungnya.');
     soroti(null);
@@ -4737,6 +4804,7 @@ const alatOffset = {
   vcb: 'Jarak',
   sibuk() { return !!this.aktif; },
   batal() { this.aktif = null; soroti(null); reset(); setVcb(''); },
+  dbl(e) { if (!this.aktif) bukaGrupDiKlik(e); },
   ganti() { setAlat('dorong'); toast('Push/Pull'); },
   sumber(h) {
     const u = h && h.object.userData, d = u && S.elems.get(u.elemId);
@@ -4783,7 +4851,7 @@ const alatOffset = {
     if (this.aktif) { this.selesai(); return; }
     const h = pilihObjek(e), s = this.sumber(h);
     if (!s) return toast('Klik bidang, volume, lingkaran, busur, atau dinding.');
-    if (!bisaDiedit(s.id)) return;
+    if (!bisaDieditTembus(s.id)) return;
     soroti(null);
     const d = s.d;
     this.aktif = {id: s.id, d: salin(d), z: d.jenis === 'dinding' ? (d.z0 || 0) : (d.z0 || 0) + (d.tinggi || 0), p: d.jenis === 'dinding' ? null : poligon(d), jarak: 0};
