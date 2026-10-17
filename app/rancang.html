@@ -772,6 +772,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  * @property {Map<string, Bukaan | null>} pratBuk
  * @property {boolean} [tembus]
  * @property {'x' | 'y' | 'z' | null} [kunciPaksa]
+ * @property {{anchor: string, lainnya: string[]} | null} [serentak] edit serentak: objek acuan panel dan objek sejenis lain yang ikut berubah
  * @property {{id: string, k: string} | null} [muka]
  * @property {{atap: string, sisi: string} | null} [lisSisi]
  * @property {{clientX: number, clientY: number, shiftKey?: boolean} | null} [eTerakhir]
@@ -3636,8 +3637,76 @@ function cap(d) {
  * @param {Perubahan[]} daftar
  * @param {boolean} [catat] false saat dipanggil Undo/Redo
  */
+/* ===== EDIT SERENTAK ===== */
+// Perubahan pada objek acuan panel disalin ke objek terpilih lain yang sejenis, hanya pada medan yang diubah.
+// Tidak pernah disalin: nama, catatan, posisi/bentuk denah, id dinding dan jarak bukaan, arah atap, dan grup.
+const KUNCI_TAK_SERENTAK = new Set(['nama', 'catatan', 'x', 'y', 'awal', 'akhir', 'pusat', 'alas', 'lubang', 'titik', 'lintasan', 'x0', 'x1', 'y0', 'y1', 'dinding', 'jarak', 'posisi', 'grup', 'arah', 'diubahOleh', 'diubahPada']);
+const JENIS_SERENTAK = new Set(['dinding', 'bukaan', 'volume', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'atap', 'batang', 'sapuan']);
+/**
+ * Daftar id pilihan bila semuanya sejenis (jenis, tipe, peran, profil, bentuk sama; bukan grup), selain itu null.
+ * @returns {string[] | null}
+ */
+function kelompokSejenis() {
+  if (S.sel.size < 2) return null;
+  const ids = [...S.sel];
+  let kunci = null;
+  for (const id of ids) {
+    if (kodeOf(id) === 'G') return null;
+    const d = /** @type {any} */ (ambil(id));
+    if (!d || !JENIS_SERENTAK.has(d.jenis)) return null;
+    const k = [d.jenis, d.tipe, d.peran, d.profil, d.bentuk].join('|');
+    if (kunci === null) kunci = k; else if (k !== kunci) return null;
+  }
+  return ids;
+}
+/**
+ * Selisih dua dokumen per jalur data: [[jalur, nilaiBaru]]; larik dan nilai dasar dibandingkan utuh.
+ * @param {any} a
+ * @param {any} b
+ * @param {string[]} [jalur]
+ * @param {Array<[string[], any]>} [hasil]
+ * @returns {Array<[string[], any]>}
+ */
+function bedaJalur(a, b, jalur = [], hasil = []) {
+  const objek = v => v && typeof v === 'object' && !Array.isArray(v);
+  if (objek(a) && objek(b)) { for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) bedaJalur(a[k], b[k], [...jalur, k], hasil); }
+  else if (JSON.stringify(a) !== JSON.stringify(b)) hasil.push([jalur, b]);
+  return hasil;
+}
+/**
+ * Perluas daftar perubahan objek acuan ke objek sejenis lain pada medan yang sama yang berubah.
+ * @param {Perubahan[]} daftar
+ * @returns {Perubahan[]}
+ */
+function serentakKe(daftar) {
+  const ser = S.serentak;
+  S.serentak = null; // sekali per penerapan
+  if (!ser) return daftar;
+  const e = daftar.find(x => x.id === ser.anchor && x.sesudah), lama = ambil(ser.anchor);
+  if (!e || !lama) return daftar;
+  const perubahan = bedaJalur(lama, e.sesudah).filter(([j]) => !KUNCI_TAK_SERENTAK.has(j[0]));
+  if (!perubahan.length) return daftar;
+  const tambahan = [];
+  let lewat = 0;
+  for (const oid of ser.lainnya) {
+    const d0 = ambil(oid);
+    if (!d0) continue;
+    const o = salin(d0);
+    for (const [jalur, nilai] of perubahan) {
+      let t = o;
+      for (let i = 0; i < jalur.length - 1; i++) { if (!t[jalur[i]] || typeof t[jalur[i]] !== 'object') t[jalur[i]] = {}; t = t[jalur[i]]; }
+      const k = jalur[jalur.length - 1];
+      if (nilai === undefined) delete t[k]; else t[k] = salin(nilai);
+    }
+    if (!sah(o) || (o.jenis === 'bukaan' && cekBukaan(o, oid))) { lewat++; continue; }
+    tambahan.push({id: oid, sesudah: o});
+  }
+  toast(`${tambahan.length + 1} objek diubah${lewat ? `, ${lewat} dilewati karena hasilnya tidak sah` : ''}. Ctrl+Z membatalkan semuanya.`);
+  return [...daftar, ...tambahan];
+}
 function terapkan(daftar, catat = true) {
   if (!S.bisaUbah) { toast('Akun ini hanya bisa melihat.'); return; }
+  if (S.serentak) daftar = serentakKe(daftar);
   const entri = daftar.map(({id, sesudah}) => ({id, sebelum: ambil(id) ? salin(ambil(id)) : null, sesudah: sesudah ? salin(sesudah) : null}));
   let struktur = false;
   for (const {id, sesudah} of entri) {
@@ -7764,6 +7833,34 @@ function isiUkur() {
     el.textContent = ['nD', 'nV', 'nP', 'nJ', 'nA', 'nKP', 'nKS', 'nF', 'lembarPlafon', 'jumlahKuda', 'batangC75', 'batangR32'].includes(k) ? String(v || 0) : fmt(v || 0);
   });
 }
+/** HTML panel untuk satu objek (grup, komponen, atau elemen). */
+function htmlSatu(id, d) {
+  return kodeOf(id) === 'G' ? htmlGrup(id, d) : d.jenis === 'instance' ? htmlInstance(id, d) : d.jenis === 'bukaan' ? htmlBukaan(id, d) : d.jenis === 'atap' ? htmlAtap(id, d) : d.jenis === 'plafon' ? htmlPlafon(id, d) : d.jenis === 'bidang' ? htmlBidang(id, d) : d.jenis === 'batang' ? htmlBatang(id, d) : d.jenis === 'sapuan' ? htmlSapuan(id, d) : d.jenis === 'potong' ? htmlPotong(id, d) : d.jenis === 'anotasi' ? htmlAnotasi(id, d) : STRUKTUR.has(d.jenis) ? htmlStruktur(id, d) : htmlElemen(id, d);
+}
+const BAGIAN_SERENTAK = /^<section><h2>(Properti|Kuda-kuda kayu|Rangka atap|Profil|Posisi profil|Lantai)/;
+/** Panel edit serentak untuk pilihan sejenis: medan objek acuan, ditandai "beragam" bila berbeda antar objek; null bila pilihan tidak sejenis. */
+function htmlSerentak() {
+  const klp = kelompokSejenis();
+  if (!klp) return null;
+  const d = ambil(klp[0]);
+  const bagian = [...htmlSatu(klp[0], d).matchAll(/<section>[\s\S]*?<\/section>/g)].map(m => m[0]).filter(x => BAGIAN_SERENTAK.test(x));
+  return `<section><h2>Edit serentak</h2><p class="judul">${klp.length} ${esc(namaJenis(d).toLowerCase())} terpilih</p>
+    <p class="meta">Mengisi satu medan langsung berlaku untuk semua ${klp.length} objek terpilih. Nama, catatan, posisi, dan objek yang tidak terpilih tidak ikut berubah. "beragam" = nilainya berbeda antar objek.</p></section>${bagian.join('')}${htmlBanyak()}`;
+}
+/** Tandai medan yang nilainya berbeda antar objek terpilih dan buang medan yang tidak ikut serentak (nama, catatan, posisi, panjang). */
+function tandaiBeragam() {
+  const klp = kelompokSejenis();
+  if (!klp) return;
+  panel.querySelectorAll('[id$="-nama"], [id$="-catatan"], [id$="-x"], [id$="-y"], [id$="-panjang"], [id$="-jarak"], [id$="-x0"], [id$="-x1"], [id$="-y0"], [id$="-y1"], [id$="-arah"]').forEach(el => { const lb = panel.querySelector(`label[for="${el.id}"]`); if (lb) lb.remove(); el.remove(); });
+  const lain = klp.slice(1).map(id => { const t = document.createElement('div'); t.innerHTML = htmlSatu(id, ambil(id)); return t; });
+  panel.querySelectorAll('input[id], select[id]').forEach(el => {
+    const beda = lain.some(t => { const o = /** @type {any} */ (t.querySelector('#' + CSS.escape(el.id))); return o && o.value !== /** @type {any} */ (el).value; });
+    if (!beda) return;
+    el.style.fontStyle = 'italic';
+    if (el.matches('select')) { el.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>beragam</option>'); /** @type {any} */ (el).value = ''; }
+    else { /** @type {any} */ (el).value = ''; /** @type {any} */ (el).placeholder = 'beragam'; }
+  });
+}
 function renderPanel(paksa) {
   for (const id of [...S.sel]) if (!ambil(id)) S.sel.delete(id);
   const kunci = [...S.sel].sort().join(',') + '|' + S.bisaUbah + '|' + !!S.edit;
@@ -7775,10 +7872,11 @@ function renderPanel(paksa) {
   let html;
   if (S.sel.size === 1) {
     const id = [...S.sel][0], d = ambil(id);
-    html = kodeOf(id) === 'G' ? htmlGrup(id, d) : d.jenis === 'instance' ? htmlInstance(id, d) : d.jenis === 'bukaan' ? htmlBukaan(id, d) : d.jenis === 'atap' ? htmlAtap(id, d) : d.jenis === 'plafon' ? htmlPlafon(id, d) : d.jenis === 'bidang' ? htmlBidang(id, d) : d.jenis === 'batang' ? htmlBatang(id, d) : d.jenis === 'sapuan' ? htmlSapuan(id, d) : d.jenis === 'potong' ? htmlPotong(id, d) : d.jenis === 'anotasi' ? htmlAnotasi(id, d) : STRUKTUR.has(d.jenis) ? htmlStruktur(id, d) : htmlElemen(id, d);
-  } else if (S.sel.size > 1) html = htmlBanyak();
+    html = htmlSatu(id, d);
+  } else if (S.sel.size > 1) html = htmlSerentak() || htmlBanyak();
   else html = htmlRingkasan();
   panel.innerHTML = html;
+  if (S.sel.size > 1) tandaiBeragam();
   isiUkur();
 }
 panel.addEventListener('click', e => {
@@ -7847,7 +7945,7 @@ panel.addEventListener('change', e => {
   const t = e.target, lb = t.id && t.matches('input') && panel.querySelector(`label[for="${t.id}"]`);
   if (lb && /\(m\)/.test(lb.textContent)) t.value = akhiranKeMeter(t.value);
 }, true);
-panel.addEventListener('change', e => {
+function ubahMedan(e) {
   const t = e.target;
   if (!t.id) return;
   const [awal, f] = t.id.split('-');
@@ -7863,7 +7961,7 @@ panel.addEventListener('change', e => {
     tampilNamaProyek(); simpanSetelan(); S.panelKunci = ''; renderPanel(true);
     return;
   }
-  if (S.sel.size !== 1) return;
+  if (!S.sel.size) return;
   const id = [...S.sel][0], d = ambil(id);
   if (!d) return;
   if ((awal === 'x' && d.jenis === 'potong') || (awal === 'n' && d.jenis === 'anotasi')) return ubahPenanda(id, d, awal, f, t);
@@ -8062,6 +8160,13 @@ panel.addEventListener('change', e => {
     else b[f] = r2(v);
   }
   terapkan([{id, sesudah: b}]);
+}
+// pilihan sejenis: perubahan pada objek acuan (yang pertama dipilih) diteruskan ke objek lain oleh terapkan()
+panel.addEventListener('change', e => {
+  const klp = S.sel.size > 1 ? kelompokSejenis() : null;
+  if (S.sel.size > 1 && !klp) return;
+  S.serentak = klp ? {anchor: klp[0], lainnya: klp.slice(1)} : null;
+  try { ubahMedan(e); } finally { S.serentak = null; }
 });
 function tampilNamaProyek() { $('#nama-proyek').textContent = S.setel.nama; }
 function perbaruiKosong() { $('#kosong').hidden = S.mode === 'muat' || S.elems.size > 0; }
