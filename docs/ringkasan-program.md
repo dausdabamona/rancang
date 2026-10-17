@@ -72,7 +72,7 @@ RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk kebutuhan PPK Poltek 
 ## 4. Fitur pokok yang sudah ada
 
 **Menggambar dan mengedit 3D**
-- Alat gambar: Persegi, Lingkaran, Busur, Dinding, Push/Pull, Offset, Pindah (dengan salin dan larik), Putar, Cermin (dua titik garis cermin; Ctrl = Cermin + Salin), Hapus. Panel Properti mengedit serentak pilihan sejenis (mis. 2 kolom), Bidang 3D, Sapuan.
+- Alat gambar: Persegi, Lingkaran, Busur, Dinding, Push/Pull, Offset, Pindah (dengan salin dan larik), Putar, Cermin (dua titik garis cermin; Ctrl = Cermin + Salin), Garis bantu (V; acuan snap tak terbatas, sejajar berjarak, perpotongan), Hapus. Level (elevasi bernama di panel Proyek) menjadi acuan tinggi untuk Pindah dan Push/Pull. Panel Properti mengedit serentak pilihan sejenis (mis. 2 kolom), Bidang 3D, Sapuan.
 - Ukuran bisa diketik dalam m atau cm.
 - Snap: ujung, tengah, pada tepi, pada bidang, sumbu, dan garis lacak.
 - Grup bersarang, komponen, Tembus pandang, irisan 3D, Undo/Redo.

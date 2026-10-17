@@ -157,6 +157,8 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .tombol.utama{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .tombol.bahaya{color:var(--danger);background:transparent}
 .tombol:disabled{opacity:.45;cursor:not-allowed}
+.baris-level{display:grid;grid-template-columns:1fr 72px auto;gap:6px;margin:4px 0}
+.baris-level input{min-width:0}
 .daftar-komp{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:13px}
 .daftar-komp li{display:flex;justify-content:space-between;gap:8px}
 .daftar-komp span{color:var(--muted);font-family:var(--f-mono);font-size:12px}
@@ -306,6 +308,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
     <button class="alat" data-alat="pindah" aria-pressed="false" title="Pindah (M), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span class="teks">Pindah</span><kbd>M</kbd></button>
     <button class="alat" data-alat="putar" aria-pressed="false" title="Putar (U), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/><circle cx="12" cy="12" r="1.2"/></svg><span class="teks">Putar</span><kbd>U</kbd></button>
     <button class="alat" data-alat="cermin" aria-pressed="false" title="Cermin (I): klik dua titik garis cermin; tekan Ctrl untuk Cermin + Salin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2.4 2.4"/><path d="M9.5 7 3.5 17h6z"/><path d="M14.5 7l6 10h-6z"/></svg><span class="teks">Cermin</span><kbd>I</kbd></button>
+    <button class="alat" data-alat="bantu" aria-pressed="false" title="Garis bantu (V): garis acuan tak terbatas; klik titik lalu arah, atau klik tepi lalu jarak sejajar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 21 5" stroke-dasharray="3 2.4"/><circle cx="8" cy="15.5" r="1.6"/></svg><span class="teks">Garis bantu</span><kbd>V</kbd></button>
     <button class="alat" data-alat="hapus" aria-pressed="false" title="Hapus (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 20h12M5 15l9-10 6 6-9 9H8z"/></svg><span class="teks">Hapus</span><kbd>E</kbd></button>
     <button class="alat" data-alat="orbit" aria-pressed="false" title="Orbit (O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M17 6.5l2 1.8-2.6.8"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg><span class="teks">Orbit</span><kbd>O</kbd></button>
   </div>
@@ -375,6 +378,8 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'), rangka ('hollow'/'kayu'). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
 | X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya) | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
 | N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik, ujung, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah' | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
+| Q | bantu | awal{x,y}, akhir{x,y} (garis tak terbatas di denah melalui dua titik), nama. Acuan snap saja: tidak masuk RAB, volume, atau gambar | `{"jenis":"bantu","nama":"Bantu 1","awal":{"x":0,"y":2},"akhir":{"x":1,"y":2}}` |
+| M | level | nama, z (elevasi dalam meter). Pindah dan Push/Pull menempel ke elevasinya; tidak masuk RAB | `{"jenis":"level","nama":"Lantai 2","z":3.2}` |
 | L | gambar2d | Benda gambar 2D di Ruang Lembar: bentuk ('garis','polyline','persegi','lingkaran','busur','teks','arsir'), lembar (mis. 'denah', 'potongan:X3', 'sampul'), tempel ('gambar' = titik dunia {x,y,z} meter; 'kertas' = titik {x,y} mm kertas), titik (garis 2 titik; persegi 2 sudut; lingkaran pusat + titik tepi; busur awal, akhir, titik pada busur), gaya {tebal mm, garis 'penuh'/'putus'/'as'/'titik', warna 'hitam'/'abu'/'merah'/'biru'}. Teks: teks, ukuran (mm). Arsir: pola ('beton','bata','tanah','pasir','kayu','keramik'). Polyline: tutup. Simbol perabot (`bentuk:'simbol'`, hanya denah/denah atap/denah pondasi, tempel 'gambar', titik = pusat): simbol ('kasur1','kasur2','lemari','mejaMakan','mejaKerja','sofa','klosetDuduk','klosetJongkok','wastafel','shower','bakMandi','kitchenSet','pohon'), rotasi (0/90/180/270). Legenda otomatis: `bentuk:'legenda'`, tempel 'kertas', titik = sudut kiri atas (mm). Di lembar detail, benda di dalam petak Detail bebas memakai `tempel:'petak'`, `petak` = id detail (E…), titik mm dari pojok kiri atas petak | `{"jenis":"gambar2d","bentuk":"teks","lembar":"denah","tempel":"kertas","titik":[{"x":30,"y":180}],"teks":"Catatan: semua ukuran dalam meter","ukuran":2.5,"gaya":{"warna":"hitam"}}` |
 | E | detail | Detail di lembar detail ('det:1', 'det:2', …): template ('pondasiBatuKali','footplat','umpak','kudaKuda','sambunganKayu','bebas'), sumber (id elemen: pondasi untuk tiga template pertama, atap berangka kayu untuk kuda-kuda dan sambungan), lembar, skala (5, 10, 20, 25, 50, 75, 100), judul (opsional). sambunganKayu wajib `sambungan`: 'tumpuan','puncak','makelar','sokong','perpanjangan' | `{"jenis":"detail","template":"sambunganKayu","sumber":"A2","sambungan":"tumpuan","lembar":"det:2","skala":10}` |
 | I | instance | definisi (id komponen K…), posisi{x,y}, rotasi (°), z0 | |
@@ -686,6 +691,16 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  */
 
 /**
+ * Q — garis bantu: garis tak terbatas di bidang denah melalui `awal` dan `akhir`; acuan snap, bukan benda fisik (tidak masuk RAB).
+ * @typedef {DasarElemen & {jenis: 'bantu', awal: Titik2, akhir: Titik2}} Bantu
+ */
+
+/**
+ * M — level: elevasi bernama (z, meter) sebagai acuan snap tinggi; bukan benda fisik (tidak masuk RAB).
+ * @typedef {DasarElemen & {jenis: 'level', nama: string, z: number}} Level
+ */
+
+/**
  * N — anotasi (teks, label berpanah, ukuran dua titik, peil).
  * @typedef {DasarElemen & {jenis: 'anotasi', tipe: 'teks' | 'label' | 'ukuran' | 'peil', titik: Titik3Opsional, ujung?: Titik3Opsional,
  *   teks?: string, pada?: 'semua' | 'denah' | 'tampak' | 'potongan', sembunyiDi?: string[]}} Anotasi
@@ -711,7 +726,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  */
 
 /** Semua jenis dokumen di koleksi `elemen`.
- * @typedef {Dinding | Bukaan | Volume | Plafon | Kolom | Slof | Ringbalk | Pondasi | Atap | Bidang | Batang | Sapuan | Potong | Anotasi | Instance | Gambar2D | Detail} ElemenRancang
+ * @typedef {Dinding | Bukaan | Volume | Plafon | Kolom | Slof | Ringbalk | Pondasi | Atap | Bidang | Batang | Sapuan | Potong | Bantu | Level | Anotasi | Instance | Gambar2D | Detail} ElemenRancang
  */
 
 /**
@@ -875,6 +890,8 @@ function sah(d) {
   if (d.jenis === 'batang') return titikSah3(d.awal) && titikSah3(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y, d.akhir.z - d.awal.z) > 0.005 && d.b > 0 && d.h > 0 && !!PERAN_BATANG[d.peran];
   if (d.jenis === 'atap') return ['x0', 'y0', 'x1', 'y1'].every(k => Number.isFinite(d[k])) && Math.abs(d.x1 - d.x0) > 0.05 && Math.abs(d.y1 - d.y0) > 0.05 && !!BENTUK_ATAP[d.bentuk];
   if (d.jenis === 'potong') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.1 && (d.pandang === 1 || d.pandang === -1) && typeof d.nama === 'string' && !!d.nama;
+  if (d.jenis === 'bantu') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.02;
+  if (d.jenis === 'level') return Number.isFinite(d.z) && typeof d.nama === 'string' && d.nama.length > 0;
   if (d.jenis === 'gambar2d') return typeof d.lembar === 'string' && !!d.lembar && Array.isArray(d.titik) && d.titik.length >= 1 && d.titik.every(titikSah)
     && (d.tempel === 'gambar' || d.tempel === 'kertas' || (d.tempel === 'petak' && typeof d.petak === 'string')) && ['garis', 'polyline', 'persegi', 'lingkaran', 'busur', 'teks', 'arsir', 'rujukan', 'simbol', 'legenda'].includes(d.bentuk)
     && (d.bentuk !== 'simbol' || (d.tempel === 'gambar' && !!(SIMBOL_2D && SIMBOL_2D[d.simbol])))
@@ -897,7 +914,7 @@ function sah(d) {
   }
   return false;
 }
-const AWALAN = {dinding: 'D', volume: 'V', atap: 'A', bidang: 'H', batang: 'J', sapuan: 'U', kolom: 'C', slof: 'S', ringbalk: 'R', plafon: 'P', pondasi: 'F', bukaan: 'B', instance: 'I', potong: 'X', anotasi: 'N'};
+const AWALAN = {dinding: 'D', volume: 'V', atap: 'A', bidang: 'H', batang: 'J', sapuan: 'U', kolom: 'C', slof: 'S', ringbalk: 'R', plafon: 'P', pondasi: 'F', bukaan: 'B', instance: 'I', potong: 'X', bantu: 'Q', level: 'M', anotasi: 'N'};
 const STRUKTUR = new Set(['kolom', 'slof', 'ringbalk', 'pondasi']);
 const BENTUK_ATAP = {pelana: 'Pelana', limas: 'Limas', sandar: 'Sandar', datar: 'Datar / dak'};
 function batasAtap(d) { return {x0: Math.min(d.x0, d.x1), x1: Math.max(d.x0, d.x1), y0: Math.min(d.y0, d.y1), y1: Math.max(d.y0, d.y1)}; }
@@ -1743,13 +1760,13 @@ function bersihkan(d) { const b = salin(d); delete b.diubahOleh; delete b.diubah
  * @returns {any[]}
  */
 function geometriElemen(id, d) {
-  if (!d || d.jenis === 'bukaan' || d.jenis === 'potong' || d.jenis === 'anotasi' || d.jenis === 'gambar2d' || d.jenis === 'detail') return [];
+  if (!d || d.jenis === 'bukaan' || d.jenis === 'potong' || d.jenis === 'bantu' || d.jenis === 'level' || d.jenis === 'anotasi' || d.jenis === 'gambar2d' || d.jenis === 'detail') return [];
   if (d.jenis === 'instance') {
     const def = S.komp.get(d.definisi);
     if (!def) return [];
     const r = [];
     def.elemen.forEach((e, i) => {
-      if (!sah(e) || e.jenis === 'instance' || e.jenis === 'bukaan' || e.jenis === 'potong' || e.jenis === 'anotasi') return;
+      if (!sah(e) || e.jenis === 'instance' || e.jenis === 'bukaan' || e.jenis === 'potong' || e.jenis === 'bantu' || e.jenis === 'level' || e.jenis === 'anotasi') return;
       const w = keDunia(e, d);
       if (w.jenis === 'dinding') w._buk = def.elemen.filter(b => b.jenis === 'bukaan' && b.dinding === '#' + i && sah(b)).map(b => ({...b, _id: id}));
       r.push(w);
@@ -1830,6 +1847,8 @@ function kodeBukaan(tipe, lebar, tinggi, ambang) {
 function titikKunci(d) {
   if (d.jenis === 'bukaan' || d.jenis === 'instance') return [];
   if (d.jenis === 'anotasi') return [[d.titik.x, d.titik.y]];
+  if (d.jenis === 'bantu') return [[d.awal.x, d.awal.y], [d.akhir.x, d.akhir.y]];
+  if (d.jenis === 'level') return [];
   if (d.jenis === 'gambar2d' || d.jenis === 'detail') return [];
   if (d.jenis === 'atap') { const {x0, x1, y0, y1} = batasAtap(d); return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]; }
   if (d.jenis === 'bidang') return d.titik.map(q => [q.x, q.y]);
@@ -1841,7 +1860,7 @@ function titikKunci(d) {
   if (d.bentuk === 'busur') return [[d.awal.x, d.awal.y], [d.akhir.x, d.akhir.y], geoBusur(d).puncak];
   return d.jenis === 'dinding' ? [[d.awal.x, d.awal.y], [d.akhir.x, d.akhir.y]] : d.alas.map(q => [q.x, q.y]);
 }
-const namaJenis = d => (d.jenis === 'sapuan' ? (profilSapuan(d) || {}).nama || 'Sapuan' : d.jenis === 'bidang' ? PERAN_BIDANG[d.peran] || 'Bidang' : d.jenis === 'batang' ? PERAN_BATANG[d.peran] || 'Batang' : d.jenis === 'gambar2d' ? 'Gambar 2D' : d.jenis === 'detail' ? 'Detail' : d.jenis === 'plafon' ? 'Plafon' : d.jenis === 'potong' ? 'Garis potong' : d.jenis === 'anotasi' ? 'Anotasi' : d.jenis === 'kolom' || d.jenis === 'pondasi' ? NAMA_STRUKTUR[d.tipe] || 'Pondasi' : d.jenis === 'slof' ? 'Slof' : d.jenis === 'ringbalk' ? 'Ring balk' : d.jenis === 'atap' ? 'Atap ' + (BENTUK_ATAP[d.bentuk] || '').toLowerCase() : d.jenis === 'dinding' ? 'Dinding' : d.jenis === 'instance' ? 'Komponen' : d.jenis === 'bukaan' ? (d.tipe === 'pintu' ? 'Pintu' : 'Jendela') : ((d.tinggi || 0) > 0 ? 'Volume' : 'Bidang'));
+const namaJenis = d => (d.jenis === 'bantu' ? 'Garis bantu' : d.jenis === 'level' ? 'Level' : d.jenis === 'sapuan' ? (profilSapuan(d) || {}).nama || 'Sapuan' : d.jenis === 'bidang' ? PERAN_BIDANG[d.peran] || 'Bidang' : d.jenis === 'batang' ? PERAN_BATANG[d.peran] || 'Batang' : d.jenis === 'gambar2d' ? 'Gambar 2D' : d.jenis === 'detail' ? 'Detail' : d.jenis === 'plafon' ? 'Plafon' : d.jenis === 'potong' ? 'Garis potong' : d.jenis === 'anotasi' ? 'Anotasi' : d.jenis === 'kolom' || d.jenis === 'pondasi' ? NAMA_STRUKTUR[d.tipe] || 'Pondasi' : d.jenis === 'slof' ? 'Slof' : d.jenis === 'ringbalk' ? 'Ring balk' : d.jenis === 'atap' ? 'Atap ' + (BENTUK_ATAP[d.bentuk] || '').toLowerCase() : d.jenis === 'dinding' ? 'Dinding' : d.jenis === 'instance' ? 'Komponen' : d.jenis === 'bukaan' ? (d.tipe === 'pintu' ? 'Pintu' : 'Jendela') : ((d.tinggi || 0) > 0 ? 'Volume' : 'Bidang'));
 /**
  * Salinan elemen yang digeser (dx, dy, dz). Bukaan bergeser sepanjang dindingnya.
  * @template {ElemenRancang} T
@@ -2829,7 +2848,7 @@ function pasangInti(id) {
   lepas(id);
   const d = pratDunia.has(id) ? pratDunia.get(id) : S.elems.get(id);
   tandaSambung.delete(id);
-  if (d && sah(d) && !S.sembunyi.has(id) && !SEMBUNYI_TAMPIL.has(id) && !HANYA2D.has(d.jenis)) {
+  if (d && sah(d) && !S.sembunyi.has(id) && !SEMBUNYI_TAMPIL.has(id) && !HANYA2D.has(d.jenis) && d.jenis !== 'level') {
     const f = {dipilih: dipilihEl(id), kilat: S.kilat.has(id), redup: redupEl(id)};
     const g = new THREE.Group(); g.userData.elemId = id;
     if (NONFISIK.has(d.jenis)) bangunPenanda(g, id, d, f);
@@ -3239,10 +3258,33 @@ const bulatHalus = (v, l) => r2(Math.round(v / l) * l);
 // Cache per elemen: titik [x, y, z, jenis, puncak] (puncak = titik di atas elemen, hanya dipakai bila opsi.atas),
 // rusuk [[a, b], …] untuk snap "pada tepi", dan kotak pembatas mesh (THREE.Box3) untuk menyaring sinar.
 const SNAP = {cache: new Map(), kotak: new Map()};
-function hapusCacheSnap(id) { SNAP.cache.delete(id); SNAP.kotak.delete(id); if (SNAP.proy) SNAP.proy.delete(id); }
+function hapusCacheSnap(id) { SNAP.cache.delete(id); SNAP.kotak.delete(id); if (SNAP.proy) SNAP.proy.delete(id); if (id[0] === 'Q') SNAP.pot = null; }
+// Garis bantu (Q): dua titik definisi sebagai ujung dan satu rusuk panjang (±BATAS_BANTU m) untuk snap pada tepi.
+// Perpotongan antar garis bantu dihitung sekali (SNAP.pot) dan dibuang setiap ada garis bantu berubah.
+function potonganBantu() {
+  if (SNAP.pot) return SNAP.pot;
+  const g = [];
+  for (const [id, d] of S.elems) if (d.jenis === 'bantu' && sah(d) && !S.sembunyi.has(id)) g.push([id, /** @type {any} */ (d).awal, infoDinding(/** @type {any} */ (d))]);
+  const hasil = [];
+  for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
+    const [id, A, a] = g[i], [, B, b] = g[j], den = a.ux * b.uy - a.uy * b.ux;
+    if (Math.abs(den) < 1e-9) continue; // sejajar
+    const t = ((B.x - A.x) * b.uy - (B.y - A.y) * b.ux) / den;
+    hasil.push({x: r2(A.x + a.ux * t), y: r2(A.y + a.uy * t), id});
+  }
+  return (SNAP.pot = hasil);
+}
+/** Gunakan titik pada garis bantu ini sebagai acuan tanpa uji keterlihatan (garis bantu selalu tampak). */
+const adalahBantu = id => !!id && id[0] === 'Q' && S.elems.get(id)?.jenis === 'bantu';
 function cacheSnap(id, d) {
   let c = SNAP.cache.get(id);
   if (c) return c;
+  if (d && d.jenis === 'bantu' && sah(d)) {
+    const {ux, uy} = infoDinding(d);
+    c = {titik: [[d.awal.x, d.awal.y, 0, 'ujung', false], [d.akhir.x, d.akhir.y, 0, 'ujung', false]], rusuk: [[[d.awal.x - ux * BATAS_BANTU, d.awal.y - uy * BATAS_BANTU, 0], [d.awal.x + ux * BATAS_BANTU, d.awal.y + uy * BATAS_BANTU, 0]]]};
+    SNAP.cache.set(id, c);
+    return c;
+  }
   const titik = [], rusuk = [];
   for (const g of geometriElemen(id, d)) {
     const r3 = rangka3D(g);
@@ -3354,6 +3396,7 @@ function proyeksiSnap(id, c, rc) {
 // opsi.bidang: titik pada muka benda (hasil membawa normal `n`); opsi.bidangZ: ketinggian bidang bantu saat tidak ada snap;
 // opsi.halus: langkah grid halus. Hasil tepi membawa `arah` (vektor satuan rusuk) untuk kunci "sejajar tepi" di Pindah.
 const RADIUS_SNAP = {ujung: 12, tengah: 10, tepi: 10};
+/** @returns {any} */
 function titikSnap(e, kecuali, opsi = {}) {
   const rc = canvas.getBoundingClientRect(), mx = e.clientX - rc.left, my = e.clientY - rc.top;
   const pakaiAtas = opsi.atas !== false, pakaiTengah = opsi.tengah !== false, pakaiTepi = opsi.tepi !== false;
@@ -3368,7 +3411,7 @@ function titikSnap(e, kecuali, opsi = {}) {
       if (best && c.kz >= best.kz) continue;
       // paling banyak 8 uji keterlihatan per gerak kursor agar tetap ringan di tumpukan titik yang semuanya tertutup
       if (!S.tembus && ++uji > 8) break;
-      if (S.tembus || terlihatSnap(c.x, c.y, c.z, c.px, c.py, kecuali, rc, c.id)) best = c;
+      if (S.tembus || adalahBantu(c.id) || terlihatSnap(c.x, c.y, c.z, c.px, c.py, kecuali, rc, c.id)) best = c;
     }
     return best;
   };
@@ -3389,8 +3432,17 @@ function titikSnap(e, kecuali, opsi = {}) {
       (jenis === 'ujung' ? calonUjung : calonTengah).push({dd, kz: pr[i * 3 + 2], px, py, x, y, z, jenis, id});
     }
   }
+  // perpotongan antar garis bantu (titik hijau di bidang bantu / lantai)
+  const zBantu = opsi.bidangZ || 0;
+  for (const q of potonganBantu()) {
+    if (lewati(q.id)) continue;
+    _titikKotak.set(q.x, q.y, 0).project(camera);
+    if (_titikKotak.z > 1 || _titikKotak.z < -1) continue;
+    const px = (_titikKotak.x + 1) / 2 * rc.width, py = (1 - _titikKotak.y) / 2 * rc.height, dd = Math.hypot(px - mx, py - my);
+    if (dd < R) calonUjung.push({dd, kz: _titikKotak.z, px, py, x: q.x, y: q.y, z: 0, jenis: 'ujung', id: q.id});
+  }
   let best = pilihTerlihat(calonUjung) || pilihTerlihat(calonTengah);
-  if (best) return {x: r2(best.x), y: r2(best.y), z: r2(best.z), jenis: best.jenis, id: best.id};
+  if (best) return {x: r2(best.x), y: r2(best.y), z: r2(adalahBantu(best.id) ? zBantu : best.z), jenis: best.jenis, id: best.id, ...(adalahBantu(best.id) ? {bantu: true} : {})};
   // 3. pada tepi (seperti "On Edge" SketchUp): titik terdekat pada rusuk, dalam 10 px
   if (pakaiTepi) {
     arahkan(e);
@@ -3421,7 +3473,7 @@ function titikSnap(e, kecuali, opsi = {}) {
       }
     }
     best = pilihTerlihat(calonTepi);
-    if (best) return {x: r2(best.x), y: r2(best.y), z: r2(best.z), jenis: 'tepi', id: best.id, arah: best.arah};
+    if (best) return {x: r2(best.x), y: r2(best.y), z: r2(adalahBantu(best.id) ? zBantu : best.z), jenis: 'tepi', id: best.id, arah: best.arah, ...(adalahBantu(best.id) ? {bantu: true} : {})};
   }
   // 4. pada muka benda (membawa normal muka untuk kunci "pada bidang")
   if (opsi.bidang) {
@@ -4484,6 +4536,7 @@ const alatDorong = {
   },
   hitung(e) {
     const a = this.aktif, N = a.garis;
+    a.level = null;
     // sentuh ujung/titik tengah/tepi benda lain → jarak tarik = jarak muka yang ditarik ke titik itu
     const sn = titikSnap(e, new Set([a.id, ...a.ikut]), {atas: true, tengah: true, tepi: true});
     if (sn && sn.jenis !== 'grid') {
@@ -4494,8 +4547,17 @@ const alatDorong = {
     arahkan(e);
     // jarak sepanjang garis normal muka yang paling dekat dengan sinar kursor
     const o = ray.ray.origin, r = ray.ray.direction, w0 = V().subVectors(a.p, o), b = N.dot(r), den = 1 - b * b;
-    if (den < 1e-4) return snapG(-(e.clientY - a.y0) * nav.r * 0.0025);
-    return snapG((b * r.dot(w0) - N.dot(w0)) / den);
+    if (den < 1e-4) return this.keLevel(snapG(-(e.clientY - a.y0) * nav.r * 0.0025));
+    return this.keLevel(snapG((b * r.dot(w0) - N.dot(w0)) / den));
+  },
+  // muka tegak (normal vertikal): bila puncak hasilnya dekat sebuah level, tarik tepat ke elevasi level itu
+  keLevel(j) {
+    const a = this.aktif, N = a.garis;
+    if (Math.abs(N.z) < 0.99) return j;
+    const z = a.p.z + j * N.z, lv = levelTerdekat(z);
+    if (!lv || Math.abs(z - a.p.z) < 1e-6) return j;
+    a.level = lv;
+    return r2((lv.z - a.p.z) / N.z);
   },
   // daftar perubahan untuk jarak tertentu: [{id, baru}] atau null bila ada yang tidak sah
   susun(jarak) {
@@ -4515,7 +4577,9 @@ const alatDorong = {
     for (const id of a.sentuh) if (!hasil.some(h => h.id === id)) pasang(id);
     for (const {id, baru} of hasil) { pasang(id, baru); a.sentuh.add(id); }
     a.d = jarak; a.hasil = hasil;
-    const ket = a.acuan ? {ujung: ' · sampai ujung', tengah: ' · sampai titik tengah', tepi: ' · sampai tepi'}[a.acuan.jenis] || '' : '';
+    const ket = a.level ? ' · ke Level ' + a.level.nama : a.acuan ? {ujung: ' · sampai ujung', tengah: ' · sampai titik tengah', tepi: ' · sampai tepi'}[a.acuan.jenis] || '' : '';
+    bersihPratinjau();
+    if (a.level) gambarLevel(a.p.x, a.p.y, a.level);
     const ikut = hasil.length > 1 ? ' · ikut: ' + hasil.filter(h => h.id !== a.id).map(h => h.id.replace('_', '')).join(', ') : '';
     S.label = [{x: a.p.x, y: a.p.y, z: a.p.z, t: (jarak >= 0 ? '+' : '') + fmt(jarak) + ' m' + ket + ikut}];
     setVcb(fmtV(jarak));
@@ -4638,6 +4702,11 @@ const alatPindah = {
     S.snap = inf.snap;
     this.sumbuAkhir = inf.kunci;
     const A = this.titikA();
+    // snap ke elevasi level bila ada gerak tegak dan titiknya bukan titik benda
+    if (!(inf.snap && ['ujung', 'tengah', 'tepi'].includes(inf.snap.jenis)) && Math.abs(inf.p[2] - A[2]) > 1e-6) {
+      const lv = levelTerdekat(inf.p[2]);
+      if (lv) { inf.p = [inf.p[0], inf.p[1], lv.z]; inf.level = lv; }
+    }
     this.terap(inf.p[0] - A[0], inf.p[1] - A[1], inf.kunci, inf.p[2] - A[2], inf);
   },
   titikA() { return [this.dasar.x, this.dasar.y, this.dasar.z ?? 0]; },
@@ -4676,6 +4745,7 @@ const alatPindah = {
   inferensi(e) {
     const A = this.titikA(), adaZ = this.dasar.z != null;
     const s = titikSnap(e, new Set(this.asli.keys()), {atas: true, tengah: true, tepi: true, bidang: true});
+    if (s && s.bantu) s.z = A[2]; // garis bantu berlaku di semua ketinggian: benda tidak ikut turun ke lantai
     arahkan(e);
     const SUMBU = {x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1]};
     const proyeksi = (d, q) => (q[0] - A[0]) * d[0] + (q[1] - A[1]) * d[1] + (q[2] - A[2]) * d[2];
@@ -4770,6 +4840,7 @@ const alatPindah = {
     const A = this.titikA(), B = [A[0] + dx, A[1] + dy, A[2] + dz];
     const warna = kunci === 'x' ? T.axX : kunci === 'y' ? T.axY : kunci === 'z' ? T.axZ : kunci === 'bidang' || kunci === 'tepi' ? '#9A5BD0' : T.accent;
     garisPutus([A, B], warna);
+    if (inf && inf.level) gambarLevel(B[0], B[1], inf.level);
     // kunci sejajar tepi: garis bantu ungu memanjang sepanjang arah tepi; kunci pada bidang: bingkai kecil di titik tujuan
     if (kunci === 'tepi' && this.kunciBebas) { const u = this.kunciBebas.u; garisPutus([[A[0] - u[0] * 50, A[1] - u[1] * 50, A[2] - u[2] * 50], [A[0] + u[0] * 50, A[1] + u[1] * 50, A[2] + u[2] * 50]], '#9A5BD0'); }
     if (kunci === 'bidang' && this.kunciBebas) {
@@ -4793,7 +4864,7 @@ const alatPindah = {
     }
     const namaSumbu = {x: 'sumbu merah', y: 'sumbu hijau', z: 'sumbu biru', bidang: 'pada bidang muka', tepi: 'sejajar tepi'}[kunci];
     const jenisSnap = inf && inf.snap && inf.snap.jenis;
-    const ket = {ujung: 'ke ujung', tengah: 'ke titik tengah', tepi: 'pada tepi', bidang: 'pada bidang', lacak: 'sejajar titik lacak'}[jenisSnap] || (inf && inf.acuan ? 'sampai ' + ({ujung: 'ujung', tengah: 'titik tengah'}[inf.acuan.jenis] || 'titik') : '');
+    const ket = inf && inf.level ? 'ke Level ' + inf.level.nama : {ujung: 'ke ujung', tengah: 'ke titik tengah', tepi: 'pada tepi', bidang: 'pada bidang', lacak: 'sejajar titik lacak'}[jenisSnap] || (inf && inf.acuan ? 'sampai ' + ({ujung: 'ujung', tengah: 'titik tengah'}[inf.acuan.jenis] || 'titik') : '');
     S.label = [{x: (A[0] + B[0]) / 2, y: (A[1] + B[1]) / 2, z: (A[2] + B[2]) / 2, t: (this.salin ? 'Salin ' : '') + fmt(L, L < 1 && Math.abs(L * 100 - Math.round(L * 100)) > 1e-6 ? 3 : 2) + ' m' + [namaSumbu, ket].filter(Boolean).map(x => ' · ' + x).join('')}];
     setVcb(fmtV(L)); minta();
   },
@@ -4998,6 +5069,155 @@ const alatPutar = {
     if (!Number.isFinite(deg)) return toast('Tulis sudut dalam derajat, misalnya 90 atau -45.');
     // sudut diketik: tanpa arah awal dihitung dari sumbu merah; positif = berlawanan jarum jam
     this.selesai(r2(deg));
+  }
+};
+
+/* ===== GARIS BANTU DAN LEVEL ===== */
+// Garis bantu (Q): garis tak terbatas di denah, acuan snap. Level (M): elevasi bernama, acuan snap tinggi.
+// Keduanya non-fisik (tidak masuk RAB). Snap titik dan tepi garis bantu ada di bagian SNAP.
+/**
+ * Level terdekat dengan elevasi z dalam toleransi (bawaan ±8 px di layar), atau null.
+ * @param {number} z
+ * @param {number} [tol]
+ * @returns {{id: string, nama: string, z: number, j: number} | null}
+ */
+function levelTerdekat(z, tol = meterPerPiksel() * 8) {
+  let best = null;
+  for (const [id, d] of S.elems) {
+    if (d.jenis !== 'level' || !sah(d)) continue;
+    const lz = /** @type {any} */ (d).z, j = Math.abs(lz - z);
+    if (j <= tol && (!best || j < best.j)) best = {id, nama: d.nama, z: lz, j};
+  }
+  return best;
+}
+const daftarLevel = () => [...S.elems].filter(([, d]) => d.jenis === 'level' && sah(d)).map(([id, d]) => { const l = /** @type {any} */ (d); return {id, nama: l.nama, z: l.z}; }).sort((a, b) => a.z - b.z);
+const fmtElevasi = z => (Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z));
+/** Bingkai putus-putus setinggi level di sekitar (x, y): umpan balik saat sebuah gerakan menempel ke level. */
+function gambarLevel(x, y, lv) {
+  const h = 2.5, z = lv.z;
+  garisPutus([[x - h, y - h, z], [x + h, y - h, z], [x + h, y + h, z], [x - h, y + h, z], [x - h, y - h, z]], WARNA_BANTU);
+}
+/** Tambah level baru di bawah level tertinggi (elevasi +tinggi dinding bawaan; pertama kali ±0,00). */
+function tambahLevel() {
+  const ada = daftarLevel(), z = ada.length ? r2(ada[ada.length - 1].z + (S.setel.tinggiDinding || 3)) : 0;
+  const id = idBaru('M');
+  terapkan([{id, sesudah: {jenis: 'level', nama: ada.length ? 'Level ' + (ada.length + 1) : 'Lantai 1', z, catatan: ''}}]);
+  toast(`Level ${id} dibuat di ${fmtElevasi(z)} m. Ubah nama dan elevasinya di panel Proyek.`);
+}
+// Alat Garis bantu: klik titik yang dilalui garis, lalu arah (sudut) atau, bila titik pertama di tepi, jarak sejajar.
+const alatBantu = {
+  A: null, ref: null, mode: 'sudut', deg: null, jarak: null,
+  get vcb() { return this.mode === 'sejajar' ? 'Jarak' : 'Sudut'; },
+  get petunjuk() {
+    const j = '<b>Garis bantu:</b> ';
+    if (!this.A) return j + 'klik titik yang dilalui garis bantu (kotak hijau = ujung atau perpotongan garis bantu, belah ketupat merah = pada tepi). Klik pada tepi benda atau garis bantu lain untuk membuat garis bantu sejajar dengan jarak tertentu.';
+    if (this.mode === 'sejajar') return j + 'gerakkan ke sisi yang diinginkan lalu klik, atau ketik jarak lalu Enter (minus = sisi seberang). Tab: garis melalui titik itu dengan sudut tertentu.';
+    return j + 'gerakkan untuk menentukan arah lalu klik; sudut menempel tiap 15°, Shift = sudut bebas, panah → / ← = sejajar sumbu X / Y. Atau ketik sudut lalu Enter (0° = sejajar sumbu merah).' + (this.ref ? ' Tab: sejajar dengan jarak tertentu.' : '');
+  },
+  sibuk() { return !!this.A; },
+  batal() { this.A = this.ref = this.deg = this.jarak = null; this.mode = 'sudut'; reset(); setVcb(''); S.label = []; lepasKunci(); },
+  ganti() {
+    if (!this.A || !this.ref) return;
+    this.mode = this.mode === 'sejajar' ? 'sudut' : 'sejajar';
+    this.deg = this.jarak = null; bersihPratinjau(); S.label = [];
+    $('#vcb-label').textContent = labelVcb(); tulisPetunjuk();
+    if (S.eTerakhir) this.move(S.eTerakhir);
+  },
+  // titik di bidang lantai (z = 0): ujung/perpotongan didahulukan, selain itu titik pada lantai
+  tunjuk(e) {
+    const s = /** @type {any} */ (titikSnap(e, null, {atas: true, tengah: true}));
+    if (s && (s.jenis === 'ujung' || s.jenis === 'tengah')) return {x: s.x, y: s.y, snap: s};
+    arahkan(e);
+    const g = V();
+    if (!ray.ray.intersectPlane(new THREE.Plane(V(0, 0, 1), 0), g)) return null;
+    return {x: g.x, y: g.y, snap: null};
+  },
+  move(e) {
+    if (!this.A) { S.snap = titikSnap(e, null, {atas: true, tengah: true, tepi: true}); minta(); return; }
+    const q = this.tunjuk(e);
+    if (!q) return;
+    S.snap = q.snap;
+    const A = this.A;
+    if (this.mode === 'sejajar' && this.ref) {
+      // jarak tegak lurus dari garis acuan (melalui A) ke kursor; bertanda menurut sisi kursor
+      const [ux, uy] = this.ref, d = (q.x - A.x) * -uy + (q.y - A.y) * ux;
+      this.jarak = q.snap ? r2(d) : bulatHalus(d, langkahHalus());
+      this.gambar();
+      return;
+    }
+    const r = Math.hypot(q.x - A.x, q.y - A.y);
+    if (r < 0.02) { this.deg = null; bersihPratinjau(); S.label = []; minta(); return; }
+    let deg = Math.atan2(q.y - A.y, q.x - A.x) * 180 / Math.PI;
+    if (S.kunciPaksa === 'x') deg = 0;
+    else if (S.kunciPaksa === 'y') deg = 90;
+    else if (q.snap) deg = Math.round(deg * 100) / 100;
+    else deg = e.shiftKey ? Math.round(deg * 10) / 10 : Math.round(deg / 15) * 15;
+    this.deg = normSudut180(deg);
+    this.gambar();
+  },
+  // dua titik definisi garis yang akan dibuat: dari A (mode sudut) atau dari A digeser tegak lurus sejauh `jarak` (mode sejajar)
+  titikGaris() {
+    const A = this.A;
+    if (this.mode === 'sejajar' && this.ref && this.jarak != null) {
+      const [ux, uy] = this.ref, P = {x: r2(A.x - uy * this.jarak), y: r2(A.y + ux * this.jarak)};
+      return [P, {x: r2(P.x + ux), y: r2(P.y + uy)}];
+    }
+    if (this.deg == null) return null;
+    const t = this.deg * Math.PI / 180, ux = Math.cos(t), uy = Math.sin(t);
+    return [{x: r2(A.x), y: r2(A.y)}, {x: r2(A.x + ux), y: r2(A.y + uy)}];
+  },
+  gambar() {
+    const g = this.titikGaris();
+    bersihPratinjau();
+    if (!g) { S.label = []; minta(); return; }
+    const [P, Q] = g, L = Math.hypot(Q.x - P.x, Q.y - P.y), ux = (Q.x - P.x) / L, uy = (Q.y - P.y) / L, A = this.A;
+    garisPutus([[P.x - ux * 80, P.y - uy * 80, 0.03], [P.x + ux * 80, P.y + uy * 80, 0.03]], WARNA_BANTU);
+    if (this.mode === 'sejajar') {
+      garisPutus([[A.x, A.y, 0.03], [P.x, P.y, 0.03]], '#888888');
+      S.label = [{x: (A.x + P.x) / 2, y: (A.y + P.y) / 2, z: 0.1, t: `Sejajar · jarak ${fmt(Math.abs(this.jarak))} m`}];
+      setVcb(fmtV(Math.abs(this.jarak)));
+    } else {
+      S.label = [{x: P.x + ux * 0.8, y: P.y + uy * 0.8, z: 0.1, t: `Garis bantu · ${fmtSudut(this.deg)}`}];
+      setVcb(fmt(this.deg, Number.isInteger(this.deg) ? 0 : 1));
+    }
+    minta();
+  },
+  down(e) {
+    if (this.A) { this.move(e); return this.buat(); }
+    const s0 = /** @type {any} */ (titikSnap(e, null, {atas: true, tengah: true, tepi: true}));
+    /** @type {any} */
+    let p = s0 && s0.jenis !== 'grid' && s0.jenis !== 'bidang' ? s0 : null;
+    if (!p) {
+      const q = this.tunjuk(e);
+      if (!q) return;
+      p = {x: q.x, y: q.y};
+    }
+    this.A = {x: p.x, y: p.y, z: 0};
+    this.ref = p.jenis === 'tepi' && p.arah && Math.hypot(p.arah[0], p.arah[1]) > 0.01 ? (() => { const l = Math.hypot(p.arah[0], p.arah[1]); return [p.arah[0] / l, p.arah[1] / l]; })() : null;
+    this.mode = this.ref ? 'sejajar' : 'sudut';
+    this.deg = this.jarak = null;
+    $('#vcb-label').textContent = labelVcb(); tulisPetunjuk(); minta();
+  },
+  buat() {
+    const g = this.titikGaris();
+    if (!g) return toast(this.mode === 'sejajar' ? 'Gerakkan kursor ke sisi yang diinginkan dulu, atau ketik jaraknya.' : 'Titik kedua terlalu dekat dengan titik pertama. Klik titik yang lebih jauh.');
+    if (this.mode === 'sejajar' && Math.abs(this.jarak) < 0.005) return toast('Jarak sejajar terlalu kecil; garis bantu akan berimpit dengan acuannya.');
+    const id = idBaru('Q'), keterangan = this.mode === 'sejajar' ? `sejajar, jarak ${fmt(Math.abs(this.jarak))} m` : fmtSudut(this.deg);
+    this.batal();
+    terapkan([{id, sesudah: {jenis: 'bantu', nama: 'Bantu ' + id.slice(1), awal: g[0], akhir: g[1], catatan: ''}}]);
+    $('#vcb-label').textContent = labelVcb(); tulisPetunjuk();
+    toast(`${id} dibuat (${keterangan}). Klik lagi untuk garis bantu berikutnya, Esc selesai.`);
+  },
+  ketik(v) {
+    if (!this.A) return toast('Klik titik yang dilalui garis bantu dulu, lalu ketik sudut atau jaraknya.');
+    const n = angka(v);
+    if (!Number.isFinite(n)) return toast(this.mode === 'sejajar' ? `Tulis jarak dalam ${namaSatuan()}, misalnya ${cth(2.5)}.` : 'Tulis sudut dalam derajat, misalnya 0, 90, atau 45.');
+    if (this.mode === 'sejajar') {
+      // tanda mengikuti sisi kursor sekarang; minus membalik sisi; sebelum kursor bergerak, positif = kiri arah acuan
+      const sisi = this.jarak != null && this.jarak < 0 ? -1 : 1;
+      this.jarak = r2(Math.abs(n) * sisi * (n < 0 ? -1 : 1));
+    } else this.deg = normSudut180(n);
+    this.buat();
   }
 };
 
@@ -5756,7 +5976,7 @@ const alatOrbit = {
 
 /* ============ Garis potong dan anotasi ============ */
 // Keduanya bukan benda fisik: tidak masuk perhitungan volume, luas, maupun rekap RAB.
-const NONFISIK = new Set(['potong', 'anotasi']);
+const NONFISIK = new Set(['potong', 'bantu', 'level', 'anotasi']);
 // benda gambar 2D hanya ada di Ruang Lembar
 const HANYA2D = new Set(['gambar2d', 'detail']);
 const TIPE_ANOT = {teks: 'Teks', label: 'Label', ukuran: 'Ukuran', peil: 'Peil'};
@@ -5779,9 +5999,12 @@ function hurufPotongBaru() {
   for (let i = 0; i < 26; i++) { const h = String.fromCharCode(65 + i); if (!dipakai.has(h)) return h; }
   return 'P' + (dipakai.size + 1);
 }
+const WARNA_BANTU = '#1FA39A';
+const BATAS_BANTU = 150;
 const matTangkap = new THREE.MeshBasicMaterial({visible: false});
 function bangunPenanda(g, id, d, f) {
-  let warna = d.jenis === 'potong' ? tok('--danger') : T.edge;
+  if (d.jenis === 'level') return; // level hanya data dan acuan snap
+  let warna = d.jenis === 'potong' ? tok('--danger') : d.jenis === 'bantu' ? WARNA_BANTU : T.edge;
   if (f.kilat) warna = T.claude; else if (f.dipilih) warna = T.select;
   if (f.redup) warna = campur(warna, T.sceneBg, 0.6);
   const pos = [], ruas = (a, b) => pos.push(...a, ...b);
@@ -5805,6 +6028,12 @@ function bangunPenanda(g, id, d, f) {
       ruas(tip, [tip[0] - vx * 0.25 - ux * 0.15, tip[1] - vy * 0.25 - uy * 0.15, z]);
     }
     tangkap(A, B, 0.25);
+  } else if (d.jenis === 'bantu') {
+    // garis tak terbatas: putus-putus sepanjang ±BATAS_BANTU m dari titik awal, tanda silang di dua titik definisi
+    const {ux, uy} = infoDinding(d), z = 0.03;
+    for (let t = -BATAS_BANTU; t < BATAS_BANTU; t += 0.8) ruas([d.awal.x + ux * t, d.awal.y + uy * t, z], [d.awal.x + ux * (t + 0.5), d.awal.y + uy * (t + 0.5), z]);
+    for (const P of [d.awal, d.akhir]) { ruas([P.x - 0.12, P.y, z], [P.x + 0.12, P.y, z]); ruas([P.x, P.y - 0.12, z], [P.x, P.y + 0.12, z]); }
+    tangkap([d.awal.x - ux * BATAS_BANTU, d.awal.y - uy * BATAS_BANTU, z], [d.awal.x + ux * BATAS_BANTU, d.awal.y + uy * BATAS_BANTU, z], 0.12);
   } else {
     const a = [d.titik.x, d.titik.y, zDari(d.titik)];
     const b = d.ujung ? [d.ujung.x, d.ujung.y, zDari(d.ujung)] : null;
@@ -5838,6 +6067,8 @@ function labelPenanda() {
   for (const [id, d] of S.elems) {
     if (!NONFISIK.has(d.jenis) || S.sembunyi.has(id) || !sah(d)) continue;
     const kls = S.kilat.has(id) ? ' kilat' : dipilihEl(id) ? ' pilih' : '';
+    if (d.jenis === 'level') continue;
+    if (d.jenis === 'bantu') { r.push({x: d.awal.x, y: d.awal.y, z: 0.03, t: d.nama || id, k: 'anot' + kls}); continue; }
     if (d.jenis === 'potong') {
       const {ux, uy, vx, vy} = arahPandang(d);
       for (const [P, sg] of [[d.awal, -1], [d.akhir, 1]]) r.push({x: P.x + ux * 0.6 * sg + vx * 1.15, y: P.y + uy * 0.6 * sg + vy * 1.15, z: 0.03, t: d.nama, k: 'potong' + kls});
@@ -5966,6 +6197,38 @@ function htmlPotong(id, d) {
   </div><p class="meta">Panah di ujung garis menunjukkan arah pandang. Pindah (M) menggeser garis potong. Iris model 3D memotong tampilan 3D; klik panah oranye untuk menggeser bidangnya.</p></section>
   ${metaUbah(d)}
   <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="lihat-potongan">Lihat potongan</button><button class="tombol" type="button" data-aksi="iris-3d">${IRIS.id === id ? 'Matikan irisan 3D' : 'Iris model 3D'}</button>${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
+}
+function sudutBantu(d) { return normSudut180(Math.atan2(d.akhir.y - d.awal.y, d.akhir.x - d.awal.x) * 180 / Math.PI); }
+function htmlBantu(id, d) {
+  return `
+  <section><h2>Garis bantu terpilih</h2><p class="judul">${esc(d.nama)}</p><span class="lencana">${esc(id)} · sudut ${fmtSudut(sudutBantu(d))}</span></section>
+  <section><h2>Properti</h2><div class="medan">
+    ${medanTeks('bn-nama', 'Nama', d.nama)}
+    ${medanAngka('bn-x', 'Dilalui titik X (m)', d.awal.x)}
+    ${medanAngka('bn-y', 'Dilalui titik Y (m)', d.awal.y)}
+    ${medanAngka('bn-sudut', 'Sudut (°, 0 = sejajar sumbu X)', r2(sudutBantu(d)))}
+    ${medanCatatan('bn-catatan', d.catatan)}
+  </div><p class="meta">Garis bantu tak terbatas dan hanya acuan: tidak masuk RAB maupun gambar. Alat lain menempel ke titik definisi, perpotongan dua garis bantu, dan sepanjang garis. Pindah (M) menggeser, Putar (U) memutar, Cermin (I) mencerminkannya.</p></section>
+  ${metaUbah(d)}
+  <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
+}
+function ubahBantu(id, d, f, t) {
+  const b = salin(d);
+  if (f === 'nama') b.nama = t.value.trim() || d.nama;
+  else if (f === 'catatan') b.catatan = t.value;
+  else {
+    const v = angka(t.value);
+    if (!Number.isFinite(v)) return tolakAngka('Isi angka yang sesuai.');
+    if (f === 'x' || f === 'y') {
+      const dx = f === 'x' ? r2(v) - d.awal.x : 0, dy = f === 'y' ? r2(v) - d.awal.y : 0;
+      b.awal = {x: r2(d.awal.x + dx), y: r2(d.awal.y + dy)};
+      b.akhir = {x: r2(d.akhir.x + dx), y: r2(d.akhir.y + dy)};
+    } else if (f === 'sudut') {
+      const rad = v * Math.PI / 180;
+      b.akhir = {x: r2(d.awal.x + Math.cos(rad)), y: r2(d.awal.y + Math.sin(rad))};
+    }
+  }
+  terapkan([{id, sesudah: b}]);
 }
 function htmlAnotasi(id, d) {
   const opsi = (nilai, obj) => Object.entries(obj).map(([v, t]) => `<option value="${v}" ${v === nilai ? 'selected' : ''}>${esc(t)}</option>`).join('');
@@ -6994,20 +7257,21 @@ function htmlPlafon(id, d) {
   <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
 
-const ALAT = {pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, cermin: alatCermin, hapus: alatHapus, orbit: alatOrbit, iris: alatIris};
-const UBAH = new Set(['bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'cermin', 'hapus']);
+const ALAT = {pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, cermin: alatCermin, bantu: alatBantu, hapus: alatHapus, orbit: alatOrbit, iris: alatIris};
+const UBAH = new Set(['bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'cermin', 'bantu', 'hapus']);
 const alat = () => ALAT[S.tool];
 function batalAlat() { const a = alat(); if (a.batal) a.batal(); else reset(); lepasKunci(); }
 const NAMA_SUMBU = {x: 'sumbu X (merah)', y: 'sumbu Y (hijau)', z: 'sumbu Z (biru)'};
 function tulisPetunjuk() {
   const panah = S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' ? ` Panah → kunci X, ← kunci Y${S.tool === 'pindah' ? ', ↑ kunci Z' : ''}, ↓ lepas.` : '';
-  const panahCermin = S.tool === 'cermin' ? ' Panah → garis sejajar sumbu X, ← sejajar sumbu Y, ↓ lepas.' : '';
+  const panahCermin = S.tool === 'bantu' && alatBantu.mode === 'sudut' ? ' Panah → sejajar sumbu X, ← sejajar sumbu Y, ↓ lepas.' : S.tool === 'cermin' ? ' Panah → garis sejajar sumbu X, ← sejajar sumbu Y, ↓ lepas.' : '';
   const kb = S.tool === 'pindah' && alatPindah.kunciBebas;
   const kunci = S.kunciPaksa ? ` <b>Terkunci ke ${NAMA_SUMBU[S.kunciPaksa]}.</b>` : kb ? ` <b>Terkunci ${kb.jenis === 'bidang' ? 'pada bidang muka' : 'sejajar tepi'} (lepas Shift untuk bebas).</b>` : '';
   $('#petunjuk').innerHTML = alat().petunjuk + panah + panahCermin + kunci + ' <span>Tombol tengah: putar · Shift+tengah: geser · Scroll: zoom.</span>';
 }
 function lepasKunci() { if (S.kunciPaksa) { S.kunciPaksa = null; tulisPetunjuk(); } }
 function aturKunci(k) {
+  if (k === 'z' && S.tool === 'bantu') return toast('Garis bantu selalu di bidang lantai. Kunci sumbu Z tidak dipakai di sini.');
   if (k === 'z' && S.tool === 'cermin') return toast('Garis cermin selalu di bidang lantai. Kunci sumbu Z tidak dipakai di sini.');
   if (k === 'z' && S.tool !== 'pindah') return toast('Dinding selalu digambar di bidang lantai. Sumbu Z dipakai saat Pindah.');
   S.kunciPaksa = k && S.kunciPaksa !== k ? k : null;
@@ -7210,13 +7474,13 @@ window.addEventListener('keydown', e => {
     else return;
     tulisPetunjuk(); if (S.eTerakhir && alat().move) alat().move(S.eTerakhir); return;
   }
-  if (e.key === 'Tab' && (S.tool === 'atap' || S.tool === 'plafon' || S.tool === 'kolom' || S.tool === 'pondasi' || S.tool === 'anotasi' || S.tool === 'slof' || S.tool === 'ringbalk' || S.tool === 'persegi' || S.tool === 'lingkaran' || S.tool === 'busur' || S.tool === 'dorong' || S.tool === 'offset' || S.tool === 'sapuan')) { e.preventDefault(); alat().ganti(); return; }
+  if (e.key === 'Tab' && (S.tool === 'atap' || S.tool === 'plafon' || S.tool === 'kolom' || S.tool === 'pondasi' || S.tool === 'anotasi' || S.tool === 'slof' || S.tool === 'ringbalk' || S.tool === 'persegi' || S.tool === 'lingkaran' || S.tool === 'busur' || S.tool === 'dorong' || S.tool === 'offset' || S.tool === 'sapuan' || (S.tool === 'bantu' && alatBantu.sibuk()))) { e.preventDefault(); alat().ganti(); return; }
   if (e.key === 'Enter' && S.tool === 'sapuan' && alatSapuan.sibuk()) { e.preventDefault(); alatSapuan.selesai(false); return; }
   if (e.key === 'Enter' && S.tool === 'bidang3d' && alatBidang3D.sibuk()) { e.preventDefault(); alatBidang3D.selesai(); return; }
   if (e.key === 'Enter' && alat().dariPilihan && !(alat().sibuk && alat().sibuk())) { e.preventDefault(); alat().dariPilihan(); return; }
   if (e.key.startsWith('Arrow') && S.tool === 'pilih' && S.sel.size && !ctrl) { e.preventDefault(); geserPilihan(e.key, e.shiftKey); return; }
   const PANAH = {ArrowRight: 'x', ArrowLeft: 'y', ArrowUp: 'z', ArrowDown: null};
-  if (e.key in PANAH && (S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' || S.tool === 'busur' || S.tool === 'cermin')) { e.preventDefault(); if (!e.repeat) aturKunci(PANAH[e.key]); return; }
+  if (e.key in PANAH && (S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' || S.tool === 'busur' || S.tool === 'cermin' || (S.tool === 'bantu' && alatBantu.mode === 'sudut'))) { e.preventDefault(); if (!e.repeat) aturKunci(PANAH[e.key]); return; }
   if (ctrl && k === 's') { e.preventDefault(); simpanProyek(); return; }
   if (ctrl && k === 'o') { e.preventDefault(); if (S.bisaUbah) bukaProyek(); return; }
   if (ctrl && k === 'z' && !e.shiftKey) { e.preventDefault(); urungkan(); return; }
@@ -7226,7 +7490,7 @@ window.addEventListener('keydown', e => {
     S.sel = new Set();
     if (S.edit) { for (const id of S.elems.keys()) if (id[0] === '_') S.sel.add(id); }
     else {
-      for (const id of S.elems.keys()) { const t2 = targetKlik(id); if (t2) S.sel.add(t2); }
+      for (const id of S.elems.keys()) { if (S.elems.get(id).jenis === 'level') continue; const t2 = targetKlik(id); if (t2) S.sel.add(t2); }
     }
     segarPilihan(); return;
   }
@@ -7241,7 +7505,7 @@ window.addEventListener('keydown', e => {
   if (e.shiftKey && k === 'z') { zoomSemua(); return; }
   if (k === 'g' && !e.shiftKey) { if (S.bisaUbah) jadikanKomponen(); return; }
   if (k === 'h' && !e.shiftKey) { aturTembus(); return; }
-  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', k: 'kolom', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', e: 'hapus', o: 'orbit'};
+  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', k: 'kolom', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', v: 'bantu', e: 'hapus', o: 'orbit'};
   if (peta[k] && !e.shiftKey) { e.preventDefault(); setAlat(peta[k]); }
 });
 document.querySelectorAll('[data-alat]').forEach(b => b.addEventListener('click', () => setAlat(b.dataset.alat)));
@@ -7712,6 +7976,14 @@ function htmlBanyak() {
   ${htmlRekapBagian([...S.sel])}
   <div class="aksi-panel"><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB pilihan (.xlsx)</button>${S.edit ? '' : tombol('buat-grup', 'Buat grup (Ctrl+G)', 'utama') + tombol('jadikan-komponen', 'Jadikan komponen (G)')}${tombol('hapus-sel', 'Hapus semua', 'bahaya')}</div>`;
 }
+function htmlLevel() {
+  const lv = daftarLevel(), nBantu = [...S.elems.values()].filter(d => d.jenis === 'bantu').length;
+  const baris = lv.map(l => `<div class="baris-level"><input id="lv-nama-${l.id}" type="text" value="${esc(l.nama)}" ${dis()} aria-label="Nama level ${esc(l.id)}"><input id="lv-z-${l.id}" type="text" inputmode="decimal" value="${fmt(l.z)}" ${dis()} aria-label="Elevasi level ${esc(l.id)} (m)">${S.bisaUbah ? `<button class="tombol" type="button" data-aksi="hapus-level" data-id="${l.id}" title="Hapus level ${esc(l.id)}">Hapus</button>` : ''}</div>`).join('');
+  return `<section><h2>Garis bantu dan level</h2>
+  ${lv.length ? `<p class="meta">Nama dan elevasi (m) tiap level. Pindah dan Push/Pull menempel ke elevasi level.</p>${baris}` : '<p class="meta">Belum ada level. Level = elevasi bernama (Lantai 1, Lantai 2, puncak dinding…) sebagai acuan tinggi.</p>'}
+  <div class="aksi-panel">${tombol('tambah-level', 'Tambah level')}${nBantu && S.bisaUbah ? tombol('hapus-bantu-semua', `Hapus ${nBantu} garis bantu`, 'bahaya') : ''}</div>
+  <p class="meta">${nBantu} garis bantu. Gambar dengan alat Garis bantu (V).</p></section>`;
+}
 function htmlRingkasan() {
   const komp = [...S.komp].map(([kid, k]) => {
     const n = [...S.elems.values()].filter(x => x.jenis === 'instance' && x.definisi === kid).length;
@@ -7727,6 +7999,7 @@ function htmlRingkasan() {
     ${medanAngka('s-faktorbesi', 'Sisa potong dan lewatan besi (%)', S.setel.faktorBesi ?? 5)}
   </div></section>
   <section><h2>Ringkasan model</h2>${htmlTotal()}<p class="meta">${S.grup.size} grup · ${S.komp.size} komponen</p></section>
+  ${htmlLevel()}
   ${htmlRekapBagian([...S.elems.keys()])}
   <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button><button class="tombol" type="button" data-aksi="ekspor-dae" title="Dibuka di SketchUp lewat File &gt; Import">Unduh model 3D untuk SketchUp (.dae)</button></div>
   <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka.</p></section>
@@ -7835,7 +8108,7 @@ function isiUkur() {
 }
 /** HTML panel untuk satu objek (grup, komponen, atau elemen). */
 function htmlSatu(id, d) {
-  return kodeOf(id) === 'G' ? htmlGrup(id, d) : d.jenis === 'instance' ? htmlInstance(id, d) : d.jenis === 'bukaan' ? htmlBukaan(id, d) : d.jenis === 'atap' ? htmlAtap(id, d) : d.jenis === 'plafon' ? htmlPlafon(id, d) : d.jenis === 'bidang' ? htmlBidang(id, d) : d.jenis === 'batang' ? htmlBatang(id, d) : d.jenis === 'sapuan' ? htmlSapuan(id, d) : d.jenis === 'potong' ? htmlPotong(id, d) : d.jenis === 'anotasi' ? htmlAnotasi(id, d) : STRUKTUR.has(d.jenis) ? htmlStruktur(id, d) : htmlElemen(id, d);
+  return kodeOf(id) === 'G' ? htmlGrup(id, d) : d.jenis === 'instance' ? htmlInstance(id, d) : d.jenis === 'bukaan' ? htmlBukaan(id, d) : d.jenis === 'atap' ? htmlAtap(id, d) : d.jenis === 'plafon' ? htmlPlafon(id, d) : d.jenis === 'bidang' ? htmlBidang(id, d) : d.jenis === 'batang' ? htmlBatang(id, d) : d.jenis === 'sapuan' ? htmlSapuan(id, d) : d.jenis === 'potong' ? htmlPotong(id, d) : d.jenis === 'bantu' ? htmlBantu(id, d) : d.jenis === 'anotasi' ? htmlAnotasi(id, d) : STRUKTUR.has(d.jenis) ? htmlStruktur(id, d) : htmlElemen(id, d);
 }
 const BAGIAN_SERENTAK = /^<section><h2>(Properti|Kuda-kuda kayu|Rangka atap|Profil|Posisi profil|Lantai)/;
 /** Panel edit serentak untuk pilihan sejenis: medan objek acuan, ditandai "beragam" bila berbeda antar objek; null bila pilihan tidak sejenis. */
@@ -7884,6 +8157,9 @@ panel.addEventListener('click', e => {
   if (!aksi) return;
   const id = [...S.sel][0];
   if (aksi === 'hapus-sel') hapusPilihan();
+  else if (aksi === 'tambah-level') tambahLevel();
+  else if (aksi === 'hapus-level') { const lid = e.target.dataset.id; if (lid && S.elems.has(lid)) terapkan([{id: lid, sesudah: null}]); }
+  else if (aksi === 'hapus-bantu-semua') { const ids = [...S.elems].filter(([, d]) => d.jenis === 'bantu').map(([i]) => i); if (ids.length) terapkan(ids.map(i => ({id: i, sesudah: null}))); }
   else if (aksi === 'buat-grup') buatGrup();
   else if (aksi === 'jadikan-komponen') jadikanKomponen();
   else if (aksi === 'masuk-grup' && id) masukGrup(id);
@@ -7961,9 +8237,23 @@ function ubahMedan(e) {
     tampilNamaProyek(); simpanSetelan(); S.panelKunci = ''; renderPanel(true);
     return;
   }
+  if (awal === 'lv') {
+    const lid = t.id.split('-')[2], l = S.elems.get(lid);
+    if (!l || l.jenis !== 'level') return;
+    const b = salin(l);
+    if (f === 'nama') b.nama = t.value.trim() || l.nama;
+    else {
+      const v = angka(t.value);
+      if (!Number.isFinite(v)) return tolakAngka('Isi angka elevasi, misalnya 3,2.');
+      b.z = r2(v);
+    }
+    terapkan([{id: lid, sesudah: b}]); S.panelKunci = ''; renderPanel(true);
+    return;
+  }
   if (!S.sel.size) return;
   const id = [...S.sel][0], d = ambil(id);
   if (!d) return;
+  if (awal === 'bn' && d.jenis === 'bantu') return ubahBantu(id, d, f, t);
   if ((awal === 'x' && d.jenis === 'potong') || (awal === 'n' && d.jenis === 'anotasi')) return ubahPenanda(id, d, awal, f, t);
   if ((awal === 'h' && d.jenis === 'bidang') || (awal === 'j' && d.jenis === 'batang')) return ubahBidangBatang(id, d, awal, f, t);
   if (awal === 'u' && d.jenis === 'sapuan') return ubahSapuan(id, d, f, t);
@@ -12053,7 +12343,7 @@ function ringkasProyek() {
   const maks = a => (nomorMaks(a) || 0);
   return [`Proyek: ${S.setel.nama || '(tanpa nama)'}`,
     `Jumlah elemen per jenis: ${Object.entries(hitung).map(([k, v]) => `${k} ${v}`).join(', ') || 'kosong'}; grup ${S.grup.size}, komponen ${S.komp.size}, tipe kusen ${S.kusen.size}.`,
-    `Nomor id terbesar: ${'DBVCSRFAPXNGTLE'.split('').map(a => `${a}${maks(a)}`).join(' ')}. Id baru = awalan + nomor berikutnya.`,
+    `Nomor id terbesar: ${'DBVCSRFAPXNGTLEQM'.split('').map(a => `${a}${maks(a)}`).join(' ')}. Id baru = awalan + nomor berikutnya.`,
     S.konteks ? `Pengguna sedang membuka grup ${S.konteks}; elemen baru sebaiknya diberi "grup": "${S.konteks}".` : 'Pengguna tidak sedang membuka grup.',
     pilih.length ? `Elemen yang sedang dipilih pengguna: ${pilih.join(', ')}.` : 'Tidak ada elemen yang dipilih.'].join('\n');
 }
