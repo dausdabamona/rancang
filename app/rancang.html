@@ -83,6 +83,8 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .snap{position:absolute;left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border:2px solid var(--muted);border-radius:50%}
 .snap.ujung{border-color:var(--ax-y);border-radius:2px;width:14px;height:14px;margin:-7px 0 0 -7px}
 .snap.tengah{border-color:#16A3B8;border-radius:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;background:rgba(22,163,184,.18)}
+.snap.tepi{border-color:var(--ax-x);border-radius:1px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;rotate:45deg}
+.snap.lacak{border-color:#9A5BD0;border-style:dotted;width:10px;height:10px;margin:-5px 0 0 -5px}
 .snap.bidang{border-color:var(--ax-z);border-radius:2px;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;transform-origin:center}
 .snap.sumbu-x{border-color:var(--ax-x)}.snap.sumbu-y{border-color:var(--ax-y)}.snap.sumbu-z{border-color:var(--ax-z)}
 .lbl.inferensi{background:var(--fg);color:var(--panel);border:0;font-size:11px}
@@ -2431,6 +2433,38 @@ function titikSnap(e, kecuali, opsi = {}) {
     }
   }
   if (best) return best;
+  // pada tepi (seperti "On Edge" SketchUp): titik terdekat di rusuk alas, rusuk atas, dan rusuk tegak, dalam 8 px
+  if (opsi.tepi) {
+    arahkan(e);
+    let bt = 8, hasil = null;
+    const o = ray.ray.origin, rd = ray.ray.direction;
+    const cek = (P, Q) => {
+      // titik pada ruas PQ yang paling dekat dengan sinar kursor
+      const u = [Q[0] - P[0], Q[1] - P[1], Q[2] - P[2]], w = [P[0] - o.x, P[1] - o.y, P[2] - o.z];
+      const a = u[0] * u[0] + u[1] * u[1] + u[2] * u[2], b = u[0] * rd.x + u[1] * rd.y + u[2] * rd.z, c = rd.x * rd.x + rd.y * rd.y + rd.z * rd.z;
+      const d = u[0] * w[0] + u[1] * w[1] + u[2] * w[2], f = rd.x * w[0] + rd.y * w[1] + rd.z * w[2], den = a * c - b * b;
+      if (a < 1e-8 || Math.abs(den) < 1e-12) return;
+      const t = Math.max(0, Math.min(1, (b * f - c * d) / den)), q = [P[0] + u[0] * t, P[1] + u[1] * t, P[2] + u[2] * t];
+      if (IRIS.arr.length && terbuangIris(q[0], q[1], q[2])) return;
+      v.set(q[0], q[1], q[2]).project(camera);
+      if (v.z > 1 || v.z < -1) return;
+      const dd = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my);
+      if (dd < bt) { bt = dd; hasil = {x: r2(q[0]), y: r2(q[1]), z: r2(q[2]), jenis: 'tepi'}; }
+    };
+    for (const [id, d] of S.elems) {
+      if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
+      for (const g of geometriElemen(id, d)) {
+        const t = titikKunci(g);
+        if (!t.length) continue;
+        const dasar = g.z0 || 0, tinggiG = g.jenis === 'atap' || (g.jenis === 'pondasi' && g.tipe === 'batukali') ? 0 : (g.tinggi ?? g.h ?? 0);
+        const zs = tinggiG > 0 ? [dasar, dasar + tinggiG] : [dasar];
+        const tutup = t.length > 2 ? t.length : t.length - 1;
+        for (const z of zs) for (let i = 0; i < tutup; i++) { const a = t[i], b = t[(i + 1) % t.length]; cek([a[0], a[1], z], [b[0], b[1], z]); }
+        if (tinggiG > 0) for (const a of t) cek([a[0], a[1], dasar], [a[0], a[1], dasar + tinggiG]);
+      }
+    }
+    if (hasil) return hasil;
+  }
   if (opsi.bidang) {
     const h = pilihObjek(e, kecuali);
     if (h && h.object.userData.face !== 'penanda') return {x: h.point.x, y: h.point.y, z: h.point.z, jenis: 'bidang'};
@@ -2439,8 +2473,13 @@ function titikSnap(e, kecuali, opsi = {}) {
   arahkan(e);
   const g = V();
   if (!ray.ray.intersectPlane(new THREE.Plane(V(0, 0, 1), -z), g)) return null;
+  if (opsi.halus) { const l = langkahHalus(); return {x: bulatHalus(g.x, l), y: bulatHalus(g.y, l), z, jenis: 'grid'}; }
   return {x: r2(snapG(g.x)), y: r2(snapG(g.y)), z, jenis: 'grid'};
 }
+// Langkah gerak mengikuti zoom: kelipatan rapi (5 cm, 1 cm, 5 mm, 1 mm) yang di layar tak lebih dari ±1,5 px,
+// jadi gerakan terasa mulus seperti SketchUp tetapi angkanya tetap bulat
+function langkahHalus() { const m = meterPerPiksel() * 1.5; return [0.05, 0.01, 0.005, 0.001].find(l => l <= m) || 0.001; }
+const bulatHalus = (v, l) => r2(Math.round(v / l) * l);
 // Titik tengah ruas: as dinding/slof/ring balk/pondasi, tepi alas bidang, tepi as atap
 function titikTengah(g) {
   if (g.bentuk || g.jenis === 'anotasi' || g.jenis === 'kolom') return [];
@@ -3325,7 +3364,7 @@ function soroti(mesh) {
 }
 
 const alatPindah = {
-  petunjukDasar: '<b>Pindah:</b> klik titik acuan (kotak hijau = ujung, bulat biru muda = titik tengah), lalu arahkan. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Ketik jarak lalu Enter. Ctrl untuk menyalin.',
+  petunjukDasar: '<b>Pindah:</b> klik titik acuan (kotak hijau = ujung, bulat biru muda = titik tengah, belah ketupat merah = pada tepi), lalu arahkan; gerakan mulus mengikuti zoom. Sentuh sebentar titik benda lain lalu geser menjauh: garis ungu putus-putus muncul saat sejajar titik itu. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Ketik jarak lalu Enter. Ctrl untuk menyalin.',
   get petunjuk() { return this.salin ? '<b>Pindah + Salin:</b> klik tujuan salinan. Tekan Ctrl lagi untuk kembali ke memindah.' : this.petunjukDasar; },
   vcb: 'Jarak',
   dasar: null, items: null, asli: null, delta: null, salin: false,
@@ -3338,7 +3377,7 @@ const alatPindah = {
   },
   ubahSalin() { this.salin = !this.salin; tulisPetunjuk(); },
   move(e) {
-    if (!this.dasar) { S.snap = titikSnap(e, null, {atas: true, tengah: true}); minta(); return; }
+    if (!this.dasar) { S.snap = titikSnap(e, null, {atas: true, tengah: true, tepi: true, halus: true}); minta(); return; }
     if (this.bukaanTunggal()) { this.geserBukaan(e); return; }
     const inf = this.inferensi(e);
     if (!inf) return;
@@ -3365,7 +3404,7 @@ const alatPindah = {
     const {L, ux, uy} = infoDinding(w);
     if (d.lebar > L) { minta(); return; }
     const u = (h.point.x - w.awal.x) * ux + (h.point.y - w.awal.y) * uy;
-    this.terapBukaan({...d, dinding: wid, jarak: r2(batas(snapG(u - d.lebar / 2), 0, L - d.lebar))});
+    this.terapBukaan({...d, dinding: wid, jarak: r2(batas(bulatHalus(u - d.lebar / 2, langkahHalus()), 0, L - d.lebar))});
   },
   terapBukaan(b) {
     const [id] = this.bukaanTunggal(), lama = this.bukaan && this.bukaan.b.dinding;
@@ -3382,7 +3421,7 @@ const alatPindah = {
   // didahulukan, lalu sumbu merah/hijau/biru bila kursor sejajar sumbu di layar, terakhir bidang atau lantai.
   inferensi(e) {
     const A = this.titikA(), adaZ = this.dasar.z != null;
-    const s = titikSnap(e, new Set(this.asli.keys()), {atas: true, tengah: true, bidang: true});
+    const s = titikSnap(e, new Set(this.asli.keys()), {atas: true, tengah: true, tepi: true, bidang: true});
     arahkan(e);
     const SUMBU = {x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1]};
     const proyeksi = (d, q) => (q[0] - A[0]) * d[0] + (q[1] - A[1]) * d[1] + (q[2] - A[2]) * d[2];
@@ -3394,17 +3433,43 @@ const alatPindah = {
     };
     const padaSumbu = (k, t) => { const d = SUMBU[k]; return [A[0] + d[0] * t, A[1] + d[1] * t, A[2] + d[2] * t]; };
     const titikBenda = s && (s.jenis === 'ujung' || s.jenis === 'tengah');
-    const kunci = S.kunciPaksa;
-    if (kunci) {
-      let t, acuan = null;
-      if (titikBenda || (s && s.jenis === 'bidang')) { t = proyeksi(SUMBU[kunci], [s.x, s.y, s.z || 0]); acuan = s; }
-      else { t = tSinar(SUMBU[kunci]); if (t === null) return null; t = snapG(t); }
-      return {p: padaSumbu(kunci, t), kunci, acuan, snap: acuan ? {...acuan} : {...{x: padaSumbu(kunci, t)[0], y: padaSumbu(kunci, t)[1], z: padaSumbu(kunci, t)[2]}, jenis: 'sumbu-' + kunci}};
+    // titik benda yang pernah disentuh menjadi titik lacak (paling banyak 3, seperti object snap tracking AutoCAD)
+    if (titikBenda) {
+      const L = this.lacak || (this.lacak = []);
+      if (!L.some(q => Math.hypot(q[0] - s.x, q[1] - s.y, q[2] - (s.z || 0)) < 1e-4)) { L.push([s.x, s.y, s.z || 0]); if (L.length > 3) L.shift(); }
     }
-    if (titikBenda) return {p: [s.x, s.y, adaZ ? (s.z || 0) : A[2]], kunci: null, snap: s};
-    // sejajar sumbu di layar (jarak kursor ke garis sumbu < 10 px)
     const rc = canvas.getBoundingClientRect(), mx = e.clientX - rc.left, my = e.clientY - rc.top;
     const layar = q => { const v = V(q[0], q[1], q[2]).project(camera); return [(v.x + 1) / 2 * rc.width, (1 - v.y) / 2 * rc.height, v.z]; };
+    const l = langkahHalus(), bulat = (q, ks) => { const r = q.slice(); for (const k of ks) { const i = 'xyz'.indexOf(k); r[i] = A[i] + bulatHalus(q[i] - A[i], l); } return r; };
+    // sejajarkan komponen ks dengan titik lacak bila selisihnya di layar < 8 px; garis bantu ungu putus-putus dari titik lacak
+    const selaras = (q, ks) => {
+      const panduan = [];
+      for (const k of ks) {
+        const i = 'xyz'.indexOf(k), pq = layar(q);
+        let terbaik = null, dmin = 8;
+        for (const T of this.lacak || []) {
+          if (Math.abs(T[i] - q[i]) < 1e-6) { terbaik = T; break; }
+          const r = q.slice(); r[i] = T[i];
+          const pr = layar(r), d = Math.hypot(pr[0] - pq[0], pr[1] - pq[1]);
+          if (d < dmin) { dmin = d; terbaik = T; }
+        }
+        if (terbaik) { q = q.slice(); q[i] = terbaik[i]; panduan.push({dari: terbaik, k}); }
+      }
+      return {q, panduan};
+    };
+    const hasil = (q, kunciK, snap, ks) => {
+      const {q: r, panduan} = selaras(q, ks);
+      const sn = panduan.length ? {x: r[0], y: r[1], z: r[2], jenis: 'lacak'} : snap || {x: r[0], y: r[1], z: r[2], jenis: kunciK ? 'sumbu-' + kunciK : 'grid'};
+      return {p: r, kunci: kunciK, snap: sn, panduan};
+    };
+    const kunci = S.kunciPaksa;
+    if (kunci) {
+      if (titikBenda || (s && (s.jenis === 'bidang' || s.jenis === 'tepi'))) { const t = proyeksi(SUMBU[kunci], [s.x, s.y, s.z || 0]); return {p: padaSumbu(kunci, t), kunci, acuan: s, snap: {...s}}; }
+      const t = tSinar(SUMBU[kunci]); if (t === null) return null;
+      return hasil(bulat(padaSumbu(kunci, t), [kunci]), kunci, null, [kunci]);
+    }
+    if (titikBenda || (s && s.jenis === 'tepi')) return {p: [s.x, s.y, adaZ ? (s.z || 0) : A[2]], kunci: null, snap: s};
+    // sejajar sumbu di layar (jarak kursor ke garis sumbu < 10 px)
     const pA = layar(A);
     let pilih = null, dmin = 10;
     for (const k of ['x', 'y', 'z']) {
@@ -3415,14 +3480,13 @@ const alatPindah = {
     }
     if (pilih) {
       const t = tSinar(SUMBU[pilih]);
-      if (t !== null) { const q = padaSumbu(pilih, snapG(t)); return {p: q, kunci: pilih, snap: {x: q[0], y: q[1], z: q[2], jenis: 'sumbu-' + pilih}}; }
+      if (t !== null) return hasil(bulat(padaSumbu(pilih, t), [pilih]), pilih, null, [pilih]);
     }
-    if (s && s.jenis === 'bidang') return {p: [s.x, s.y, adaZ ? s.z : A[2]], kunci: null, snap: s};
-    // lantai/bidang sejajar lantai pada ketinggian titik acuan
+    if (s && s.jenis === 'bidang') return hasil([s.x, s.y, adaZ ? s.z : A[2]], null, s, ['x', 'y']);
+    // lantai/bidang sejajar lantai pada ketinggian titik acuan; tanpa grid kasar, langkahnya mengikuti zoom
     const g = V();
     if (!ray.ray.intersectPlane(new THREE.Plane(V(0, 0, 1), -A[2]), g)) return null;
-    const q = [snapG(g.x), snapG(g.y), A[2]];
-    return {p: q, kunci: null, snap: {x: q[0], y: q[1], z: q[2], jenis: 'grid'}};
+    return hasil(bulat([g.x, g.y, A[2]], ['x', 'y']), null, null, ['x', 'y']);
   },
   terap(dx, dy, kunci, dz = 0, inf = null) {
     this.delta = {dx: r2(dx), dy: r2(dy), dz: r2(dz)};
@@ -3440,9 +3504,16 @@ const alatPindah = {
     }
     // garis bantu dari titik acuan yang disentuh ke posisi pada sumbu terkunci
     if (inf && inf.acuan) garisPutus([[inf.acuan.x, inf.acuan.y, inf.acuan.z || 0], B], '#888888');
+    // garis lacak: dari titik lacak sepanjang sumbu sampai sejajar tujuan, lalu tegak ke tujuan bila beda tinggi
+    for (const {dari: T} of (inf && inf.panduan) || []) {
+      const siku = [B[0], B[1], T[2]];
+      if (Math.hypot(siku[0] - T[0], siku[1] - T[1]) > 1e-4) garisPutus([T, siku], '#9A5BD0');
+      if (Math.abs(T[2] - B[2]) > 1e-4) garisPutus([Math.hypot(siku[0] - T[0], siku[1] - T[1]) > 1e-4 ? siku : T, B], '#9A5BD0');
+    }
     const namaSumbu = {x: 'sumbu merah', y: 'sumbu hijau', z: 'sumbu biru'}[kunci];
-    const ket = inf && inf.snap && inf.snap.jenis === 'ujung' ? 'ke ujung' : inf && inf.snap && inf.snap.jenis === 'tengah' ? 'ke titik tengah' : inf && inf.snap && inf.snap.jenis === 'bidang' ? 'pada bidang' : '';
-    S.label = [{x: (A[0] + B[0]) / 2, y: (A[1] + B[1]) / 2, z: (A[2] + B[2]) / 2, t: (this.salin ? 'Salin ' : '') + fmt(L) + ' m' + (namaSumbu ? ' · ' + namaSumbu : ket ? ' · ' + ket : '')}];
+    const jenisSnap = inf && inf.snap && inf.snap.jenis;
+    const ket = {ujung: 'ke ujung', tengah: 'ke titik tengah', tepi: 'pada tepi', bidang: 'pada bidang', lacak: 'sejajar titik lacak'}[jenisSnap] || '';
+    S.label = [{x: (A[0] + B[0]) / 2, y: (A[1] + B[1]) / 2, z: (A[2] + B[2]) / 2, t: (this.salin ? 'Salin ' : '') + fmt(L, L < 1 && Math.abs(L * 100 - Math.round(L * 100)) > 1e-6 ? 3 : 2) + ' m' + [namaSumbu, ket].filter(Boolean).map(x => ' · ' + x).join('')}];
     setVcb(fmt(L)); minta();
   },
   down(e) {
@@ -3454,9 +3525,10 @@ const alatPindah = {
       if (!S.sel.has(t)) { S.sel.clear(); S.sel.add(t); segarPilihan(); }
     }
     if (!S.sel.size) return toast('Klik objek yang mau dipindah.');
-    const s = titikSnap(e, null, {atas: true, tengah: true}) || (h ? {x: snapG(h.point.x), y: snapG(h.point.y)} : null);
+    const s = titikSnap(e, null, {atas: true, tengah: true, tepi: true, halus: true}) || (h ? {x: h.point.x, y: h.point.y} : null);
     if (!s) return;
-    this.dasar = {x: s.x, y: s.y, z: s.jenis === 'ujung' || s.jenis === 'tengah' ? (s.z || 0) : null};
+    this.lacak = [];
+    this.dasar = {x: s.x, y: s.y, z: s.jenis === 'ujung' || s.jenis === 'tengah' || s.jenis === 'tepi' ? (s.z || 0) : null};
     this.items = [...S.sel];
     const {el} = ekspansi(this.items);
     // bukaan yang dindingnya ikut dipindah tidak perlu digeser sendiri
