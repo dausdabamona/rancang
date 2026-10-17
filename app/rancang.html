@@ -1495,6 +1495,13 @@ function ubahDorong(asli, face, edge, jarak) {
     d.tebal = r2(tb);
     return d;
   }
+  if (face === 'bawah') {
+    // dasar turun (jarak positif) atau naik; puncak tetap
+    const t = (asli.tinggi || 0) + jarak;
+    if (t <= (asli.jenis === 'dinding' ? 0.05 : 0.001)) return null;
+    d.z0 = r2((asli.z0 || 0) - jarak); d.tinggi = r2(t);
+    return d;
+  }
   if (face === 'ujung-batang') {
     // panjangkan/pendekkan batang dari ujung yang ditarik, sepanjang sumbunya
     const a = asli.awal, b = asli.akhir, L = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
@@ -3657,92 +3664,208 @@ function buatDinding(a, b) {
   terapkan([{id, sesudah: denganKonteks({jenis: 'dinding', nama: 'Dinding ' + id.replace('_', ''), awal: {x: r2(a.x), y: r2(a.y)}, akhir: {x: r2(b.x), y: r2(b.y)}, tebal: S.setel.tebalDinding, tinggi: S.setel.tinggiDinding, z0: 0, catatan: ''})}]);
 }
 
+// ===== Push/Pull untuk benda pejal (v0.30) =====
+// Muka yang diklik maju/mundur sejajar normalnya, muka seberangnya diam. Elemen lain yang punya muka/tepi sebidang
+// dengan muka itu dan berada dalam bentangnya (±0,5 m) ikut tertarik sejauh yang sama, sehingga benda yang tersusun
+// dari beberapa elemen (mis. ujung atap ventilasi: penutup + dinding angin-angin + atap) bergerak seperti satu benda.
+const TOL_SEBIDANG = 0.05, LONGGAR_BENTANG = 0.5;
+// titik sudut 3D sebuah elemen (dasar untuk mencari muka sebidang)
+function titik3DElemen(d) {
+  if (!d || !sah(d)) return [];
+  if ((d.jenis === 'dinding' || d.jenis === 'volume' || d.jenis === 'plafon') && !d.bentuk) {
+    const p = poligon(d), z0 = d.jenis === 'plafon' ? (d.z0 || 0) - 0.012 : (d.z0 || 0), z1 = d.jenis === 'plafon' ? (d.z0 || 0) : z0 + Math.max(0, d.tinggi || 0);
+    return p.flatMap(([x, y]) => [[x, y, z0], [x, y, z1]]);
+  }
+  if (d.jenis === 'bidang') { const g = geoBidang(d); return g.muka ? [...g.depan, ...g.belakang] : g.t; }
+  if (d.jenis === 'batang') { const g = geoBatang(d); return g ? [...g.A, ...g.B] : []; }
+  if (d.jenis === 'sapuan') return geoSapuan(d).benda.flatMap(b => b.muka.flat());
+  if (d.jenis === 'atap') return atapGeom(d).permukaan.flatMap(f => f.titik);
+  return [];
+}
+const jarakBidang = (N, p0, q) => N[0] * (q[0] - p0[0]) + N[1] * (q[1] - p0[1]) + N[2] * (q[2] - p0[2]);
+// sisi atap (mata angin) yang menghadap arah mendatar N
+function sisiAtapDari(N) {
+  if (Math.abs(N[2]) > 0.3) return null;
+  return Math.abs(N[0]) >= Math.abs(N[1]) ? (N[0] > 0 ? 'timur' : 'barat') : (N[1] > 0 ? 'utara' : 'selatan');
+}
+// Tarik satu elemen ke arah N sejauh jarak, untuk bagian yang sebidang dengan bidang (N, p0). null = tidak berlaku / tidak sah.
+function dorongIkut(d, N, p0, jarak) {
+  const b = salin(d), di = q => jarakBidang(N, p0, q), padaBidang = q => Math.abs(di(q)) < TOL_SEBIDANG;
+  const geser3 = q => ({x: r2(q.x + N[0] * jarak), y: r2(q.y + N[1] * jarak), z: r2(q.z + N[2] * jarak)});
+  if (d.jenis === 'atap') {
+    const sisi = sisiAtapDari(N);
+    if (!sisi) return null;
+    const [x0, y0, x1, y1] = kotakOverstek(d), tepi = {barat: [x0, 0], timur: [x1, 0], selatan: [0, y0], utara: [0, y1]}[sisi];
+    const koord = sisi === 'barat' || sisi === 'timur' ? tepi[0] : tepi[1], sumbu = sisi === 'barat' || sisi === 'timur' ? 0 : 1;
+    if (Math.abs(koord - p0[sumbu]) > TOL_SEBIDANG * 1.5) return null;
+    if (d.bentuk === 'limas') { const ov = (d.overstek ?? 0.6) + jarak; if (ov < 0) return null; b.overstek = r2(ov); return b; }
+    const ov = ovSisi(d)[sisi] + jarak;
+    if (ov < -0.1) return null;   // sedikit lewat dinding (tebal penutup) dibulatkan ke 0
+    b.overstekSisi = {...(d.overstekSisi || {}), [sisi]: r2(Math.max(0, ov))};
+    return b;
+  }
+  if (d.jenis === 'bidang') { if (!d.titik.some(q => padaBidang(ke3(q)))) return null; b.titik = d.titik.map(q => (padaBidang(ke3(q)) ? geser3(q) : q)); return sah(b) ? b : null; }
+  if (d.jenis === 'sapuan') { if (!d.lintasan.some(q => padaBidang(ke3(q)))) return null; b.lintasan = d.lintasan.map(q => (padaBidang(ke3(q)) ? geser3(q) : q)); return sah(b) ? b : null; }
+  if (d.jenis === 'batang') {
+    // ujung batang dianggap menempel bila sisi ujungnya (titik ujung ± setengah penampang) sebidang
+    let kena = false;
+    for (const k of ['awal', 'akhir']) if (Math.abs(di(ke3(d[k]))) < TOL_SEBIDANG + Math.max(d.b || 0, d.h || 0) / 2) { b[k] = geser3(d[k]); kena = true; }
+    return kena && sah(b) ? b : null;
+  }
+  if (d.jenis === 'dinding' || d.jenis === 'volume' || d.jenis === 'plafon') {
+    if (d.bentuk) return null;
+    const z0 = d.z0 || 0, z1 = z0 + Math.max(0, d.tinggi || 0);
+    if (Math.abs(N[2]) > 0.9) {
+      if (d.jenis === 'plafon') return null;
+      if (N[2] > 0 && Math.abs(z1 - p0[2]) < TOL_SEBIDANG) { b.tinggi = r2((d.tinggi || 0) + jarak); return b.tinggi > (d.jenis === 'dinding' ? 0.05 : 0) ? b : null; }
+      if (N[2] < 0 && Math.abs(z0 - p0[2]) < TOL_SEBIDANG) { b.z0 = r2(z0 - jarak); b.tinggi = r2((d.tinggi || 0) + jarak); return b.tinggi > (d.jenis === 'dinding' ? 0.05 : 0) ? b : null; }
+      return null;
+    }
+    if (Math.abs(N[2]) > 0.1) return null;
+    const N2 = [N[0], N[1], 0], di2 = (x, y) => N2[0] * (x - p0[0]) + N2[1] * (y - p0[1]);
+    if (d.jenis === 'dinding') {
+      const {L, ux, uy} = infoDinding(d), k = N[0] * ux + N[1] * uy;
+      if (Math.abs(k) > 0.9) {
+        // ujung dinding sebidang: ujung itu maju/mundur sepanjang as
+        let kena = false;
+        for (const e of ['awal', 'akhir']) if (Math.abs(di2(d[e].x, d[e].y)) < TOL_SEBIDANG) { b[e] = {x: r2(d[e].x + N[0] * jarak), y: r2(d[e].y + N[1] * jarak)}; kena = true; }
+        return kena && infoDinding(b).L > 0.05 ? b : null;
+      }
+      if (Math.abs(k) < 0.1) {
+        // muka panjang sebidang: tebal bertambah, as bergeser setengah langkah
+        const t = d.tebal / 2, nL = [-uy, ux], sk = Math.sign(N[0] * nL[0] + N[1] * nL[1]);
+        if (Math.abs(di2(d.awal.x + nL[0] * sk * t, d.awal.y + nL[1] * sk * t)) > TOL_SEBIDANG) return null;
+        const tb = d.tebal + jarak;
+        if (tb < 0.02) return null;
+        const g = sk * jarak / 2;
+        b.tebal = r2(tb); b.awal = {x: r2(d.awal.x + nL[0] * g), y: r2(d.awal.y + nL[1] * g)}; b.akhir = {x: r2(d.akhir.x + nL[0] * g), y: r2(d.akhir.y + nL[1] * g)};
+        return b;
+      }
+      return L > 0 ? null : null;
+    }
+    // volume / plafon: titik alas yang sebidang digeser
+    if (!d.alas.some(q => Math.abs(di2(q.x, q.y)) < TOL_SEBIDANG)) return null;
+    b.alas = d.alas.map(q => (Math.abs(di2(q.x, q.y)) < TOL_SEBIDANG ? {x: r2(q.x + N[0] * jarak), y: r2(q.y + N[1] * jarak)} : q));
+    return sah(b) && luasBertanda(poligon(b).map(q => q)) !== 0 ? b : null;
+  }
+  return null;
+}
+// Pintu/jendela tetap di tempatnya saat dinding berubah: jarak diukur dari ujung awal, ambang dari dasar dinding
+function ikutBukaan(id, asli, baru) {
+  if (asli.jenis !== 'dinding') return [];
+  const {ux, uy} = infoDinding(asli), du = (baru.awal.x - asli.awal.x) * ux + (baru.awal.y - asli.awal.y) * uy, dz = (asli.z0 || 0) - (baru.z0 || 0);
+  if (Math.abs(du) < 1e-6 && Math.abs(dz) < 1e-6) return [];
+  const r = [];
+  for (const [bid, b] of S.elems) if (b.jenis === 'bukaan' && b.dinding === id) r.push({id: bid, sesudah: {...salin(b), jarak: r2((b.jarak || 0) - du), ambang: r2((b.ambang || 0) + dz)}});
+  return r;
+}
+// Tebal dinding dari muka panjangnya: as bergeser, ujung dinding tetangga yang tersambung dipindah ke perpotongan as baru
+function tebalDindingTarik(id, d, N, jarak) {
+  const p0 = [d.awal.x, d.awal.y, 0], {ux, uy} = infoDinding(d), nL = [-uy, ux], sk = Math.sign(N[0] * nL[0] + N[1] * nL[1]) || 1;
+  const muka = [d.awal.x + nL[0] * sk * d.tebal / 2, d.awal.y + nL[1] * sk * d.tebal / 2, 0];
+  const b = dorongIkut(d, [nL[0] * sk, nL[1] * sk, 0], muka, jarak);
+  if (!b) return null;
+  const hasil = [{id, baru: b}];
+  for (const e of ['awal', 'akhir']) {
+    for (const [nid, w] of S.elems) {
+      if (nid === id || w.jenis !== 'dinding' || !sah(w)) continue;
+      const ujung = ['awal', 'akhir'].find(k => Math.hypot(w[k].x - d[e].x, w[k].y - d[e].y) < 0.005);
+      if (!ujung) continue;
+      const v = infoDinding(w), den = ux * v.uy - uy * v.ux;
+      if (Math.abs(den) < 1e-6) continue;   // segaris: dibiarkan
+      // perpotongan as baru (b.awal + t·u) dengan as tetangga (w.awal + s·v)
+      const dx = w.awal.x - b.awal.x, dy = w.awal.y - b.awal.y, t = (dx * v.uy - dy * v.ux) / den;
+      const X = {x: r2(b.awal.x + ux * t), y: r2(b.awal.y + uy * t)};
+      b[e] = X;
+      const wb = hasil.find(h => h.id === nid)?.baru || salin(w);
+      wb[ujung] = X;
+      if (!hasil.some(h => h.id === nid)) hasil.push({id: nid, baru: wb});
+    }
+  }
+  return hasil.every(h => sah(h.baru)) ? hasil : null;
+}
+
 // muka yang bisa ditarik dengan Push/Pull
-const MUKA_DORONG = new Set(['atas', 'sisi', 'atap', 'bidang', 'batang']);
+const MUKA_DORONG = new Set(['atas', 'bawah', 'sisi', 'atap', 'bidang', 'batang']);
 const alatDorong = {
   ganti() { setAlat('offset'); toast('Offset'); },
-  petunjuk: '<b>Push/Pull:</b> klik bidang, gerakkan mouse, lalu klik lagi. Ketik jarak lalu Enter. Nilai minus menurunkan. Pada dinding: tarik bidang ujungnya untuk mengubah panjang. Bidang lepas ditebalkan/ditipiskan dari muka yang diklik (muka seberangnya diam); batang ditarik dari ujung terdekat. Klik 2× grup untuk membukanya, atau nyalakan Tembus. Pada atap: klik dekat tepi atap untuk menarik tepinya ke ujung dinding.',
+  petunjuk: '<b>Push/Pull:</b> klik muka benda, gerakkan mouse, lalu klik lagi; ketik jarak lalu Enter (minus = mendorong masuk). Muka seberangnya diam: volume (atas, samping, bawah), dinding (atas = tinggi, ujung = panjang, sisi = tebal), bidang (tebal), batang (ujung), atap (teritis/sopi-sopi = overstek). Elemen lain yang mukanya sebidang ikut tertarik; Alt+klik = hanya elemen itu. Sentuh titik benda lain untuk menyamakan jarak. Klik 2× grup untuk membukanya, atau nyalakan Tembus.',
   vcb: 'Jarak',
   aktif: null,
   sibuk() { return !!this.aktif; },
   batal() {
-    if (this.aktif) pasang(this.aktif.id);
+    if (this.aktif) for (const id of this.aktif.sentuh) pasang(id);
     this.aktif = null; soroti(null); reset(); setVcb('');
   },
   dbl(e) { if (!this.aktif) bukaGrupDiKlik(e); },
   move(e) {
     if (!this.aktif) {
       const h = pilihObjek(e);
-      const u = h && h.object.userData;
-      const bisa = u && MUKA_DORONG.has(u.face) && bisaDieditTembus(u.elemId, true) && !(u.face === 'sisi' && S.elems.get(u.elemId)?.jenis === 'dinding' && !ujungDinding(S.elems.get(u.elemId), u.n));
+      const u = h && h.object.userData, d = u && S.elems.get(u.elemId);
+      const bisa = u && d && MUKA_DORONG.has(u.face) && bisaDieditTembus(u.elemId, true) && !STRUKTUR.has(d.jenis);
       soroti(bisa ? h.object : null);
       return;
     }
-    if (this.aktif.mode === 'atap') { this.tarikAtap(e); return; }
     this.terap(this.hitung(e));
   },
-  // Tepi atap ditarik ke titik snap (ujung dinding di puncak atau grid)
-  tarikAtap(e, nilai) {
-    const a = this.aktif, d = a.asli, sb = a.sisi, sumbu = sb[0];
-    let v = nilai;
-    if (v === undefined) {
-      const s = titikSnap(e, new Set([a.id]), {atas: true, bidangZ: d.z0 || 0});
-      if (!s) return;
-      S.snap = s; v = sumbu === 'x' ? s.x : s.y;
-    }
-    const lawan = sb === 'x0' ? 'x1' : sb === 'x1' ? 'x0' : sb === 'y0' ? 'y1' : 'y0';
-    if (Math.abs(v - d[lawan]) < 0.5) return;
-    const baru = {...salin(d), [sb]: r2(v)};
-    const {x0, x1, y0, y1} = batasAtap(baru);
-    Object.assign(baru, {x0, x1, y0, y1});
-    a.baru = baru; a.d = 1;
-    pasang(a.id, baru); bersihPratinjau();
-    const z = (d.z0 || 0) + 0.02;
-    garisPratinjau(sumbu === 'x' ? [[r2(v), y0, z], [r2(v), y1, z]] : [[x0, r2(v), z], [x1, r2(v), z]], T.accent);
-    S.label = [{x: sumbu === 'x' ? v : (x0 + x1) / 2, y: sumbu === 'y' ? v : (y0 + y1) / 2, z, t: `as ${fmt(x1 - x0)} × ${fmt(y1 - y0)} m`}];
-    setVcb(fmtV(sumbu === 'x' ? x1 - x0 : y1 - y0));
-    minta();
-  },
   hitung(e) {
-    const a = this.aktif, v = V();
-    // seperti SketchUp: sentuh ujung/titik tengah/tepi benda lain → jarak tarik = jarak bidang yang ditarik ke titik itu
-    const sn = titikSnap(e, new Set([a.id]), {atas: true, tengah: true, tepi: true});
+    const a = this.aktif, N = a.garis;
+    // sentuh ujung/titik tengah/tepi benda lain → jarak tarik = jarak muka yang ditarik ke titik itu
+    const sn = titikSnap(e, new Set([a.id, ...a.ikut]), {atas: true, tengah: true, tepi: true});
     if (sn && sn.jenis !== 'grid') {
-      const dq = [sn.x - a.p.x, sn.y - a.p.y, (sn.z || 0) - a.p.z];
-      const jr = a.garis ? dq[0] * a.garis.x + dq[1] * a.garis.y + dq[2] * a.garis.z
-        : a.face === 'atas' ? dq[2] : dq[0] * a.n[0] + dq[1] * a.n[1];
       S.snap = sn; a.acuan = sn;
-      return r2(jr);
+      return r2((sn.x - a.p.x) * N.x + (sn.y - a.p.y) * N.y + ((sn.z || 0) - a.p.z) * N.z);
     }
     S.snap = null; a.acuan = null;
     arahkan(e);
-    if (a.garis) {
-      // bidang dan batang: jarak diukur sepanjang garis 3D (normal bidang / sumbu batang) yang paling dekat dengan sinar kursor
-      const N = a.garis, o = ray.ray.origin, r = ray.ray.direction, w0 = V().subVectors(a.p, o);
-      const b = N.dot(r), den = 1 - b * b;
-      if (den < 1e-4) return snapG(-(e.clientY - a.y0) * nav.r * 0.0025);
-      return snapG((b * r.dot(w0) - N.dot(w0)) / den);
-    }
-    if (a.face === 'atas') {
-      const c = camera.position, nh = V(c.x - a.p.x, c.y - a.p.y, 0);
-      if (nh.lengthSq() < 1e-6 || nav.phi < 0.12) return snapG(-(e.clientY - a.y0) * nav.r * 0.0025);
-      nh.normalize();
-      const pl = new THREE.Plane().setFromNormalAndCoplanarPoint(nh, a.p);
-      return ray.ray.intersectPlane(pl, v) ? snapG(v.z - a.p.z) : a.d;
-    }
-    const pl = new THREE.Plane(V(0, 0, 1), -a.p.z);
-    return ray.ray.intersectPlane(pl, v) ? snapG((v.x - a.p.x) * a.n[0] + (v.y - a.p.y) * a.n[1]) : a.d;
+    // jarak sepanjang garis normal muka yang paling dekat dengan sinar kursor
+    const o = ray.ray.origin, r = ray.ray.direction, w0 = V().subVectors(a.p, o), b = N.dot(r), den = 1 - b * b;
+    if (den < 1e-4) return snapG(-(e.clientY - a.y0) * nav.r * 0.0025);
+    return snapG((b * r.dot(w0) - N.dot(w0)) / den);
+  },
+  // daftar perubahan untuk jarak tertentu: [{id, baru}] atau null bila ada yang tidak sah
+  susun(jarak) {
+    const a = this.aktif, N = [a.garis.x, a.garis.y, a.garis.z], ambilAsli = id => a.asliSemua.get(id);
+    let hasil;
+    if (a.ikut.length) {
+      hasil = [];
+      for (const id of [a.id, ...a.ikut]) { const b = dorongIkut(ambilAsli(id), N, a.p0, jarak); if (!b) return null; hasil.push({id, baru: b}); }
+    } else if (a.face === 'tebal') hasil = tebalDindingTarik(a.id, a.asli, N, jarak);
+    else if (a.face === 'atap-ov') { const b = dorongIkut(a.asli, N, a.p0, jarak); hasil = b && [{id: a.id, baru: b}]; }
+    else { const b = ubahDorong(a.asli, a.face, a.edge, jarak); hasil = b && [{id: a.id, baru: b}]; }
+    return hasil && hasil.length ? hasil : null;
   },
   terap(jarak) {
-    const a = this.aktif;
-    const baru = ubahDorong(a.asli, a.face, a.edge, jarak);
-    if (!baru) return;
-    a.d = jarak; a.baru = baru;
-    pasang(a.id, baru);
+    const a = this.aktif, hasil = this.susun(jarak);
+    if (!hasil) return;
+    for (const id of a.sentuh) if (!hasil.some(h => h.id === id)) pasang(id);
+    for (const {id, baru} of hasil) { pasang(id, baru); a.sentuh.add(id); }
+    a.d = jarak; a.hasil = hasil;
     const ket = a.acuan ? {ujung: ' · sampai ujung', tengah: ' · sampai titik tengah', tepi: ' · sampai tepi'}[a.acuan.jenis] || '' : '';
-    S.label = [{x: a.p.x, y: a.p.y, z: a.p.z, t: (jarak >= 0 ? '+' : '') + fmt(jarak) + ' m' + ket}];
+    const ikut = hasil.length > 1 ? ' · ikut: ' + hasil.filter(h => h.id !== a.id).map(h => h.id.replace('_', '')).join(', ') : '';
+    S.label = [{x: a.p.x, y: a.p.y, z: a.p.z, t: (jarak >= 0 ? '+' : '') + fmt(jarak) + ' m' + ket + ikut}];
     setVcb(fmtV(jarak));
     minta();
+  },
+  // elemen lain yang punya muka/tepi sebidang dengan muka yang ditarik dan berada dalam bentangnya
+  cariIkut(id, d, N, p0) {
+    const mukaUtama = titik3DElemen(d).filter(q => Math.abs(jarakBidang(N, p0, q)) < TOL_SEBIDANG);
+    if (!mukaUtama.length) return [];
+    const mn = [0, 1, 2].map(k => Math.min(...mukaUtama.map(q => q[k])) - LONGGAR_BENTANG), mx = [0, 1, 2].map(k => Math.max(...mukaUtama.map(q => q[k])) + LONGGAR_BENTANG);
+    const di = q => q.every((v, k) => v >= mn[k] && v <= mx[k]), r = [];
+    for (const [cid, c] of S.elems) {
+      // batang (gording, nok, kuda-kuda) milik rangka atapnya sendiri: hanya ikut bila diklik langsung
+      if (cid === id || S.sembunyi.has(cid) || c.jenis === 'bukaan' || c.jenis === 'batang' || STRUKTUR.has(c.jenis) || !bisaDieditTembus(cid, true)) continue;
+      const t = titik3DElemen(c);
+      if (!t.length) continue;
+      const on = t.filter(q => Math.abs(jarakBidang(N, p0, q)) < TOL_SEBIDANG);
+      if (!on.length || !on.every(di)) continue;
+      // benda harus berada di belakang muka (mukanya menghadap arah yang sama); pelat yang seluruhnya sebidang juga ikut
+      const rata = t.reduce((s, q) => s + jarakBidang(N, p0, q), 0) / t.length;
+      if (rata > -0.005 && on.length !== t.length) continue;
+      if (dorongIkut(c, N, p0, 0.01) && dorongIkut(c, N, p0, -0.01)) r.push(cid);
+    }
+    return r;
   },
   down(e) {
     if (this.aktif) { this.selesai(); return; }
@@ -3750,71 +3873,59 @@ const alatDorong = {
     if (!h) return;
     const u = h.object.userData, d = S.elems.get(u.elemId);
     if (!d || !bisaDieditTembus(u.elemId)) return;
-    if (d.jenis === 'atap') {
-      // tepi terdekat dari titik klik yang ditarik
-      const {x0, x1, y0, y1} = batasAtap(d), px = h.point.x, py = h.point.y;
-      const jarak = [['x0', Math.abs(px - x0)], ['x1', Math.abs(px - x1)], ['y0', Math.abs(py - y0)], ['y1', Math.abs(py - y1)]].sort((a, b) => a[1] - b[1]);
-      soroti(null);
-      this.aktif = {id: u.elemId, mode: 'atap', sisi: jarak[0][0], asli: salin(d), d: 0, baru: null};
-      toast(`Menarik tepi ${{x0: 'barat', x1: 'timur', y0: 'selatan', y1: 'utara'}[jarak[0][0]]} atap. Klik ujung dinding sebagai patokan, atau ketik panjang as.`);
-      return;
-    }
-    if (STRUKTUR.has(d.jenis)) return toast('Ubah ukuran dan pembesian lewat panel Properti.');
+    if (STRUKTUR.has(d.jenis)) return toast('Ubah ukuran dan pembesian kolom, slof, ring balk, dan pondasi lewat panel Properti.');
     if (u.face === 'bukaan') return toast('Ubah ukuran pintu atau jendela lewat panel Properti.');
     if (u.face === 'bagian') return toast('Tarik bidang paling atas dinding untuk mengubah tingginya.');
-    if (u.face === 'bawah') return toast('Bidang bawah tidak bisa ditarik. Pilih bidang atas atau samping.');
     if (u.face === 'sapuan') return toast('Ukuran profil sapuan diubah di panel Properti; panjangnya lewat titik lintasan.');
-    if (!MUKA_DORONG.has(u.face)) return toast('Bagian ini mengikuti atapnya. Ubah lewat panel Properti atap, atau Pecah atap dulu agar jadi bidang dan batang lepas.');
-    if (d.jenis === 'bidang') {
-      // normal bidang (Newell, sama dengan geoBidang); muka yang diklik = muka yang menghadap kamera
-      const n = V(...normalNewell(d.titik.map(ke3)));
-      if (n.lengthSq() < 1e-10) return;
-      n.normalize();
-      const sk = n.dot(V().subVectors(camera.position, h.point)) < 0 ? -1 : 1, N = n.clone().multiplyScalar(sk);
-      soroti(null);
-      this.aktif = {id: u.elemId, face: 'bidang', edge: {n: [n.x, n.y, n.z], s: sk}, garis: N, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
-      return toast(`Menarik muka bidang (tebal sekarang ${fmtV(d.tebal || 0)}). Gerakkan mouse atau ketik jarak; minus menipiskan.`);
-    }
-    if (d.jenis === 'batang') {
-      // ujung terdekat dari titik klik yang ditarik sepanjang sumbu batang
-      const A = V(d.awal.x, d.awal.y, d.awal.z), B = V(d.akhir.x, d.akhir.y, d.akhir.z), U = V().subVectors(B, A), L = U.length();
+    if (!MUKA_DORONG.has(u.face)) return toast('Bagian ini mengikuti atapnya. Tarik penutup atapnya, atau ubah lewat panel Properti atap.');
+    // normal muka yang diklik (3D, keluar dari benda) dan jenis tarikannya
+    let N = null, face = u.face, edge = u.edge, p0 = [h.point.x, h.point.y, h.point.z];
+    if (u.face === 'atas') N = [0, 0, 1];
+    else if (u.face === 'bawah') N = [0, 0, -1];
+    else if (u.face === 'sisi') {
+      N = [u.n[0], u.n[1], 0];
+      if (d.jenis === 'dinding') { const uj = ujungDinding(d, u.n); if (uj) { face = 'ujung'; edge = uj; } else face = 'tebal'; }
+    } else if (u.face === 'bidang') {
+      const n = normalNewell(d.titik.map(ke3)), sk = n[0] * (camera.position.x - h.point.x) + n[1] * (camera.position.y - h.point.y) + n[2] * (camera.position.z - h.point.z) < 0 ? -1 : 1;
+      N = n.map(v => v * sk); edge = {n, s: sk};
+    } else if (u.face === 'batang') {
+      const A = ke3(d.awal), B = ke3(d.akhir), U = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], L = Math.hypot(...U);
       if (L < 1e-6) return;
-      U.divideScalar(L);
-      const ke = V().subVectors(h.point, A).dot(U) / L < 0.5 ? 'awal' : 'akhir', N = ke === 'akhir' ? U : U.clone().negate();
-      soroti(null);
-      this.aktif = {id: u.elemId, face: 'ujung-batang', edge: ke, garis: N, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
-      return toast(`Menarik ujung ${ke} batang. Gerakkan mouse atau ketik jarak (minus memendekkan).`);
+      const ke = ((h.point.x - A[0]) * U[0] + (h.point.y - A[1]) * U[1] + (h.point.z - A[2]) * U[2]) / L / L < 0.5 ? 'awal' : 'akhir';
+      N = U.map(v => (ke === 'akhir' ? v : -v) / L); face = 'ujung-batang'; edge = ke; p0 = ke3(d[ke]);
+    } else if (u.face === 'atap') {
+      // tepi luar (teritis/sopi-sopi) terdekat dari titik klik; tarikan mengubah overstek sisi itu
+      const [x0, y0, x1, y1] = kotakOverstek(d), px = h.point.x, py = h.point.y;
+      const sisi = [['barat', Math.abs(px - x0)], ['timur', Math.abs(px - x1)], ['selatan', Math.abs(py - y0)], ['utara', Math.abs(py - y1)]].sort((p, q) => p[1] - q[1])[0][0];
+      N = {barat: [-1, 0, 0], timur: [1, 0, 0], selatan: [0, -1, 0], utara: [0, 1, 0]}[sisi];
+      p0 = {barat: [x0, py, h.point.z], timur: [x1, py, h.point.z], selatan: [px, y0, h.point.z], utara: [px, y1, h.point.z]}[sisi];
+      face = 'atap-ov'; edge = sisi;
+      toast(`Menarik teritis ${sisi} atap (overstek sekarang ${fmtV(d.bentuk === 'limas' ? (d.overstek ?? 0.6) : ovSisi(d)[sisi])}).`);
     }
-    const ujung = d.jenis === 'dinding' && u.face === 'sisi' ? ujungDinding(d, u.n) : null;
-    if (d.jenis === 'dinding' && u.face === 'sisi' && !ujung) return toast('Ubah tebal dinding lewat panel Properti. Untuk panjang dinding, tarik bidang ujungnya.');
+    if (!N) return;
+    // atap: hanya oversteknya sendiri yang berubah (benda lain yang sejajar teritis tidak ikut)
+    const ikut = e.altKey || d.jenis === 'atap' ? [] : this.cariIkut(u.elemId, d, N, p0);
     soroti(null);
-    this.aktif = {id: u.elemId, face: ujung ? 'ujung' : u.face, edge: ujung || u.edge, n: u.n, p: h.point.clone(), y0: e.clientY, asli: salin(d), d: 0, baru: null};
+    const asliSemua = new Map([u.elemId, ...ikut].map(id => [id, salin(S.elems.get(id))]));
+    this.aktif = {id: u.elemId, face, edge, garis: V(...N), p: h.point.clone(), p0, y0: e.clientY, asli: salin(d), asliSemua, ikut, sentuh: new Set([u.elemId]), d: 0, hasil: null};
+    if (ikut.length) toast(`Ikut tertarik bersama muka ini: ${ikut.map(x => x.replace('_', '')).join(', ')}. Alt+klik untuk menarik elemen ini saja.`);
   },
   selesai() {
     const a = this.aktif;
     this.aktif = null; reset(); setVcb('');
-    if (!a.baru || Math.abs(a.d) < 1e-6) { pasang(a.id); return; }
-    if (a.mode === 'atap') a.baru.z0 = a.asli.z0;
-    const ubah = [{id: a.id, sesudah: a.baru}];
-    // ujung awal bergeser: jarak pintu/jendela diukur dari ujung awal, jadi ikut digeser agar tetap di tempatnya
-    if (a.face === 'ujung' && a.edge === 'awal') for (const [id, b] of S.elems) if (b.jenis === 'bukaan' && b.dinding === a.id) ubah.push({id, sesudah: {...salin(b), jarak: r2((b.jarak || 0) + a.d)}});
+    for (const id of a.sentuh) pasang(id);
+    if (!a.hasil || Math.abs(a.d) < 1e-6) return;
+    const ubah = [];
+    for (const {id, baru} of a.hasil) { ubah.push({id, sesudah: baru}); ubah.push(...ikutBukaan(id, a.asliSemua.get(id) || S.elems.get(id), baru)); }
     terapkan(ubah);
   },
   ketik(v) {
-    if (!this.aktif) return toast('Klik bidang yang mau ditarik dulu, lalu ketik jaraknya.');
-    if (this.aktif.mode === 'atap') {
-      const L = angka(v), a = this.aktif, sb = a.sisi;
-      if (!(L >= 0.5)) return toast(`Tulis panjang as atap dalam ${namaSatuan()}, minimal ${cth(0.5)}.`);
-      const lawan = {x0: 'x1', x1: 'x0', y0: 'y1', y1: 'y0'}[sb], arah = sb.endsWith('1') ? 1 : -1;
-      this.tarikAtap(null, a.asli[lawan] + arah * L);
-      this.selesai();
-      return;
-    }
+    if (!this.aktif) return toast('Klik muka yang mau ditarik dulu, lalu ketik jaraknya.');
     const j = angka(v);
     if (!Number.isFinite(j)) return toast(`Tulis jarak dalam ${namaSatuan()}, misalnya ${cth(3.5)} atau ${cth(-0.5)}.`);
-    const baru = ubahDorong(this.aktif.asli, this.aktif.face, this.aktif.edge, j);
-    if (!baru) return toast('Jarak itu membuat bidang hilang. Pakai nilai yang lebih kecil.');
-    this.aktif.d = j; this.aktif.baru = baru;
+    const hasil = this.susun(j);
+    if (!hasil) return toast('Jarak itu membuat benda hilang atau tidak sah. Pakai nilai yang lebih kecil.');
+    this.terap(j);
     this.selesai();
   }
 };
