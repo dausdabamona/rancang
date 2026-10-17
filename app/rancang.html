@@ -319,6 +319,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
       <label for="m-kertas">Kertas
         <select id="m-kertas"><option value="A4">A4 lanskap</option><option value="A3">A3 lanskap</option></select></label>
       <label class="cek" for="m-dimensi"><input type="checkbox" id="m-dimensi" checked> Garis ukuran</label>
+      <label class="cek" for="m-dimdinding"><input type="checkbox" id="m-dimdinding"> Ukuran tiap dinding</label>
       <label class="cek" for="m-terhalang"><input type="checkbox" id="m-terhalang" checked> Sembunyikan anotasi terhalang</label>
     </div>
     <div class="anot-bar" id="m-anot">
@@ -5781,6 +5782,110 @@ function buatSVG(o) {
   // titik di poligon (bidang kertas atau meter)
   const dalamPoli = (x, y, q) => { let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++) { const [xi, yi] = q[i], [xj, yj] = q[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
   let peta = null;
+  // ruang kertas (mm) untuk ukuran berantai dan gelembung as di tiap sisi
+  const TEPI_UKUR = {l: 34, r: 48, t: 48, b: 34};
+  // lebar/tinggi bangunan + tepi ukur; lebarL/tinggiL = bentang garis potong (cukup tepi kecil)
+  const skalaTepi = (lebar, tinggi, tp, fy = 1, lebarL = 0, tinggiL = 0) => {
+    if (skala) return skala;
+    for (const sk of SKALA) {
+      const w = Math.max(lebar * 1000 / sk + tp.l + tp.r, lebarL * 1000 / sk + 8), h = Math.max(tinggi * 1000 / sk * fy + tp.t + tp.b, tinggiL * 1000 / sk * fy + 8);
+      if (w <= area.w && h <= area.h) return sk;
+    }
+    return SKALA[SKALA.length - 1];
+  };
+  // Garis as dengan gelembung dan ukuran berantai di keempat sisi, semuanya diukur dari as dinding (v0.26.1)
+  const ukuranBerantai = ({dinding: dw, kolom: kl, lantai: lt, luar, X, Y, rantaiRinci = true}) => {
+    const out = [], tol = 0.03;
+    const ws = dw.filter(w => w.awal && w.akhir);
+    if (!ws.length) return out;
+    const uniq = arr => { const a = [...arr].sort((p, q) => p - q), r = []; for (const v of a) if (!r.length || v - r[r.length - 1] > 0.02) r.push(v); return r; };
+    let ax0 = Infinity, ax1 = -Infinity, ay0 = Infinity, ay1 = -Infinity;
+    for (const w of ws) for (const q of [w.awal, w.akhir]) { ax0 = Math.min(ax0, q.x); ax1 = Math.max(ax1, q.x); ay0 = Math.min(ay0, q.y); ay1 = Math.max(ay1, q.y); }
+    // garis as dari kolom struktur; bila tidak ada, dari as dinding luar
+    // as X = kolom struktur pada muka atas, as Y = kolom struktur pada muka kanan (letak gelembung)
+    const ks = kl.filter(k => k.tipe === 'struktur' && k.x > ax0 - tol && k.x < ax1 + tol && k.y > ay0 - tol && k.y < ay1 + tol);
+    let gx = uniq(ks.filter(k => Math.abs(k.y - ay1) < tol).map(k => k.x)), gy = uniq(ks.filter(k => Math.abs(k.x - ax1) < tol).map(k => k.y));
+    if (gx.length < 2) gx = [ax0, ax1];
+    if (gy.length < 2) gy = [ay0, ay1];
+    const bbox = p => { let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity; for (const [x, y] of p) { a = Math.min(a, x); b = Math.max(b, x); c = Math.min(c, y); d = Math.max(d, y); } return {x0: a, x1: b, y0: c, y1: d}; };
+    const lb = lt.map(bbox);
+    // titik rinci satu sisi: as dinding tegak lurus yang menyentuh garis muka, dinding pada garis muka, kolom pada garis muka, tepi lantai di luar as
+    const titik = sisi => {
+      const datar = sisi === 'atas' || sisi === 'bawah';
+      const L = {atas: ay1, bawah: ay0, kiri: ax0, kanan: ax1}[sisi];
+      const sepanjang = q => (datar ? q.x : q.y), tegak = q => (datar ? q.y : q.x);
+      const a0 = datar ? ax0 : ay0, a1 = datar ? ax1 : ay1, r = [a0, a1];
+      for (const w of ws) {
+        const sejajar = Math.abs(tegak(w.awal) - tegak(w.akhir)) < tol;
+        if (!sejajar && (Math.abs(tegak(w.awal) - L) < tol || Math.abs(tegak(w.akhir) - L) < tol)) r.push(sepanjang(w.awal));
+        if (sejajar && Math.abs(tegak(w.awal) - L) < tol) r.push(sepanjang(w.awal), sepanjang(w.akhir));
+      }
+      for (const k of kl) if (Math.abs((datar ? k.y : k.x) - L) < tol) r.push(datar ? k.x : k.y);
+      for (const b of lb) {
+        const dekat = sisi === 'atas' ? b.y1 >= L - 0.2 : sisi === 'bawah' ? b.y0 <= L + 0.2 : sisi === 'kiri' ? b.x0 <= L + 0.2 : b.x1 >= L - 0.2;
+        if (!dekat) continue;
+        const lo = datar ? b.x0 : b.y0, hi = datar ? b.x1 : b.y1;
+        if (lo < a0 - 0.2) r.push(lo);
+        if (hi > a1 + 0.2) r.push(hi);
+      }
+      return uniq(r);
+    };
+    const sama = (p, q) => p.length === q.length && p.every((v, i) => Math.abs(v - q[i]) < 0.02);
+    const tanda = (x1, y1, x2, y2, label, sisi) => ukuranGaris(x1, y1, x2, y2, label, sisi);
+    // satu sisi: lapis rinci, antar as, total
+    const sisiUkur = (sisi, gAs) => {
+      const datar = sisi === 'atas' || sisi === 'bawah';
+      const rinci = titik(sisi), a0 = datar ? ax0 : ay0, a1 = datar ? ax1 : ay1;
+      const asDalam = uniq([a0, a1, ...gAs.filter(v => v > a0 - tol && v < a1 + tol)]);
+      const lapis = [];
+      if (rantaiRinci && rinci.length > 2) lapis.push(rinci);
+      // lapis antar as hanya di sisi bergelembung (atas dan kanan), seperti gambar kerja biasa
+      const asTercakup = lapis.length && asDalam.every(v => lapis[0].some(q => Math.abs(q - v) < 0.02));
+      if ((sisi === 'atas' || sisi === 'kanan') && asDalam.length > 2 && !asTercakup) lapis.push(asDalam);
+      lapis.push([a0, a1]);
+      const tepiKertas = {atas: Y(luar.y1), bawah: Y(luar.y0), kiri: X(luar.x0), kanan: X(luar.x1)}[sisi];
+      const arah = sisi === 'atas' || sisi === 'kiri' ? -1 : 1;
+      const posLapis = lapis.map((_, i) => tepiKertas + arah * (8 + i * 7));
+      // garis bantu dari luar bangunan ke lapis terluar tempat titik itu muncul
+      const semua = uniq(lapis.flat());
+      for (const v of semua) {
+        let iTerluar = -1;
+        lapis.forEach((l, i) => { if (l.some(q => Math.abs(q - v) < 0.02)) iTerluar = i; });
+        const ujung = posLapis[iTerluar] + arah * 1.5, awal = tepiKertas + arah * 2;
+        out.push(datar ? garis(X(v), awal, X(v), ujung, 0.13) : garis(awal, Y(v), ujung, Y(v), 0.13));
+      }
+      lapis.forEach((l, i) => {
+        const pos = posLapis[i];
+        for (let k = 0; k + 1 < l.length; k++) {
+          const a = l[k], b = l[k + 1];
+          if (b - a < 0.005) continue;
+          out.push(datar ? tanda(X(a), pos, X(b), pos, fmt(b - a), -1) : tanda(pos, Y(a), pos, Y(b), fmt(b - a), sisi === 'kiri' ? -1 : 1));
+        }
+      });
+      return posLapis[posLapis.length - 1];
+    };
+    const atasTerluar = sisiUkur('atas', gx), kananTerluar = sisiUkur('kanan', gy);
+    sisiUkur('bawah', gx); sisiUkur('kiri', gy);
+    // gelembung as: angka di atas (kiri ke kanan), huruf di kanan (atas ke bawah)
+    const r = 4;
+    gx.forEach((v, i) => {
+      const cyB = atasTerluar - 4 - r;
+      out.push(garis(X(v), cyB + r, X(v), Y(ay1) - 1, 0.13),
+        `<circle cx="${n2(X(v))}" cy="${n2(cyB)}" r="${r}" fill="#fff" stroke="#000" stroke-width="0.3"/>`,
+        teks(X(v), cyB + 1.3, String(i + 1), 3.6, 'text-anchor="middle" font-weight="700"'));
+    });
+    [...gy].sort((p, q) => q - p).forEach((v, i) => {
+      const cxB = kananTerluar + 4 + r;
+      out.push(garis(X(ax1) + 1, Y(v), cxB - r, Y(v), 0.13),
+        `<circle cx="${n2(cxB)}" cy="${n2(Y(v))}" r="${r}" fill="#fff" stroke="#000" stroke-width="0.3"/>`,
+        teks(cxB, Y(v) + 1.3, String.fromCharCode(65 + (i % 26)), 3.6, 'text-anchor="middle" font-weight="700"'));
+    });
+    return out;
+  };
+  // arsir: dinding bata miring 45°, rabat beton untuk teras/selasar
+  const DEF_ARSIR = '<pattern id="arsir-bata" patternUnits="userSpaceOnUse" width="1.1" height="1.1" patternTransform="rotate(45)"><rect width="1.1" height="1.1" fill="#fff"/><line x1="0" y1="0" x2="0" y2="1.1" stroke="#000" stroke-width="0.14"/></pattern>'
+    + '<pattern id="arsir-rabat" patternUnits="userSpaceOnUse" width="16" height="16"><path d="M2.5 3.2l1.8 0.5-1.2 1.3z M10.2 8.6l1.5-0.9 0.3 1.8z M5.4 12.4l1.7 0.7-1.5 1z M13.2 2.4l1.2 1.3-1.7 0.2z" fill="none" stroke="#666" stroke-width="0.13"/><circle cx="8.2" cy="4.6" r="0.22" fill="#777"/><circle cx="3.6" cy="8.8" r="0.2" fill="#777"/><circle cx="12.6" cy="13.4" r="0.24" fill="#777"/><circle cx="14.8" cy="7.2" r="0.18" fill="#777"/></pattern>';
+  const lantaiTeras = g => g.lantai === 'teras' || (!g.lantai && /teras|selasar/i.test(g.nama || ''));
 
   if (o.jenis === 'denah') {
     const daftar = geos.filter(g => g.jenis !== 'atap' && g.jenis !== 'slof' && g.jenis !== 'ringbalk' && g.jenis !== 'pondasi' && g.jenis !== 'plafon').map(g => ({g, p: poligon(g)}));
@@ -5793,9 +5898,10 @@ function buatSVG(o) {
       // garis potong ikut memperluas bidang gambar, tetapi tidak mengubah ukuran keseluruhan bangunan
       let lx0 = x0, ly0 = y0, lx1 = x1, ly1 = y1;
       for (const d of garisPotong) for (const q of [d.awal, d.akhir]) { lx0 = Math.min(lx0, q.x - 1); ly0 = Math.min(ly0, q.y - 1); lx1 = Math.max(lx1, q.x + 1); ly1 = Math.max(ly1, q.y + 1); }
-      const tepi = o.dimensi ? 1.6 : 0.4;
-      const bx0 = Math.min(x0 - tepi, lx0), by0 = Math.min(y0 - tepi, ly0), bx1 = Math.max(x1 + 0.6, lx1), by1 = Math.max(y1 + 0.6, ly1);
-      skala = pilihSkala(bx1 - bx0, by1 - by0);
+      const tp = o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
+      skala = skalaTepi(x1 - x0, y1 - y0, tp, 1, lx1 - lx0, ly1 - ly0);
+      const kM = skala / 1000;
+      const bx0 = Math.min(x0 - tp.l * kM, lx0 - 4 * kM), by0 = Math.min(y0 - tp.b * kM, ly0 - 4 * kM), bx1 = Math.max(x1 + tp.r * kM, lx1 + 4 * kM), by1 = Math.max(y1 + tp.t * kM, ly1 + 4 * kM);
       const s = 1000 / skala;
       const ox = area.x + (area.w - (bx1 - bx0) * s) / 2, oy = area.y + (area.h - (by1 - by0) * s) / 2;
       const X = x => ox + (x - bx0) * s, Y = y => oy + (by1 - y) * s;
@@ -5805,11 +5911,13 @@ function buatSVG(o) {
       // lantai berjenis: pola kotak keramik sesuai ukuran ubin, berpangkal di titik 0,0
       const ubinDipakai = new Set();
       for (const {g} of daftar) { const pu = g.lantai && PENUTUP_LANTAI[g.penutupLantai || BAWAAN_LANTAI[g.lantai].penutup]; if (pu && pu.ubin) ubinDipakai.add(pu.ubin); }
+      isi.push(`<defs>${DEF_ARSIR}</defs>`);
       if (ubinDipakai.size) isi.push(`<defs>${[...ubinDipakai].map(u => { const w = u * s; return `<pattern id="ubin-${Math.round(u * 100)}" patternUnits="userSpaceOnUse" x="${n2(X(0))}" y="${n2(Y(0))}" width="${n2(w)}" height="${n2(w)}"><path d="M0 0H${n2(w)}M0 0V${n2(w)}" stroke="#A8A8A8" stroke-width="0.08" fill="none"/></pattern>`; }).join('')}</defs>`);
       for (const {g, p} of daftar) {
         if (g.jenis === 'dinding' || g.jenis === 'kolom') continue;
         const pu = g.lantai && PENUTUP_LANTAI[g.penutupLantai || BAWAAN_LANTAI[g.lantai].penutup];
-        isi.push(`<polygon points="${pts(p)}" fill="${pu && pu.ubin ? `url(#ubin-${Math.round(pu.ubin * 100)})` : 'none'}" stroke="#000" stroke-width="${(g.tinggi || 0) > 0.5 ? 0.35 : 0.18}"/>`);
+        const isiPola = g.jenis === 'volume' && lantaiTeras(g) ? 'url(#arsir-rabat)' : pu && pu.ubin ? `url(#ubin-${Math.round(pu.ubin * 100)})` : 'none';
+        isi.push(`<polygon points="${pts(p)}" fill="${isiPola}" stroke="#000" stroke-width="${(g.tinggi || 0) > 0.5 ? 0.35 : 0.18}"/>`);
       }
       // tepi atap (overstek) di atas bidang potong: garis putus-putus
       for (const p of atapNya) isi.push(`<polygon points="${pts(p)}" fill="none" stroke="#000" stroke-width="0.18" stroke-dasharray="2 1"/>`);
@@ -5817,7 +5925,7 @@ function buatSVG(o) {
       const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
       const dinding = daftar.filter(({g}) => g.jenis === 'dinding').map(x => ({...x, ...potongDenah(x.g)}));
       for (const {bagian} of dinding) for (const q of bagian) isi.push(`<polygon points="${pts(q)}" fill="none" stroke="#000" stroke-width="1" stroke-linejoin="miter"/>`);
-      for (const {bagian} of dinding) for (const q of bagian) isi.push(`<polygon points="${pts(q)}" fill="#BDBDBD" stroke="none"/>`);
+      for (const {bagian} of dinding) for (const q of bagian) isi.push(`<polygon points="${pts(q)}" fill="url(#arsir-bata)" stroke="none"/>`);
       // simbol pintu dan jendela
       for (const {g, cut, P, t} of dinding) {
         if (!cut.length) continue;
@@ -5849,8 +5957,18 @@ function buatSVG(o) {
       for (const {g, p} of daftar) if (g.jenis === 'kolom') isi.push(`<polygon points="${pts(p)}" fill="#000" stroke="#000" stroke-width="0.2"/>`);
       // tanda garis potong dan anotasi denah
       for (const d of garisPotong) {
-        const {ux, uy, vx, vy} = arahPandang(d), ext = 0.8;
-        const A = [d.awal.x - ux * ext, d.awal.y - uy * ext], B = [d.akhir.x + ux * ext, d.akhir.y + uy * ext];
+        const {ux, uy, vx, vy} = arahPandang(d);
+        // dengan garis ukur: tanda potong digeser ke luar pita ukuran dan gelembung as
+        const pita = o.dimensi ? {x0: x0 - 24 / s, x1: x1 + 37 / s, y0: y0 - 24 / s, y1: y1 + 37 / s} : null;
+        const keluar = (q, dx, dy) => {
+          let t = 0.8;
+          if (!pita) return t;
+          if (Math.abs(dx) > 0.5) t = Math.max(t, dx < 0 ? q.x - pita.x0 : pita.x1 - q.x);
+          if (Math.abs(dy) > 0.5) t = Math.max(t, dy < 0 ? q.y - pita.y0 : pita.y1 - q.y);
+          return t;
+        };
+        const tA = keluar(d.awal, -ux, -uy), tB = keluar(d.akhir, ux, uy);
+        const A = [d.awal.x - ux * tA, d.awal.y - uy * tA], B = [d.akhir.x + ux * tB, d.akhir.y + uy * tB];
         isi.push(`<line x1="${n2(X(A[0]))}" y1="${n2(Y(A[1]))}" x2="${n2(X(B[0]))}" y2="${n2(Y(B[1]))}" stroke="#000" stroke-width="0.2" stroke-dasharray="5 1 0.6 1"/>`);
         for (const [P, sg] of [[A, 1], [B, -1]]) {
           const px = X(P[0]), py = Y(P[1]), ex = ux * sg, ey = -uy * sg, wx = vx, wy = -vy;
@@ -5863,7 +5981,7 @@ function buatSVG(o) {
       }
       isi.push(...anotasiSvg(p => [X(p.x), Y(p.y)], 'denah'));
       peta = {pada: 'denah', keDunia: (px, py) => ({x: r2(bx0 + (px - ox) / s), y: r2(by1 - (py - oy) / s), z: 0}), geser: (dx, dy) => ({x: dx / s, y: -dy / s, z: 0})};
-      if (o.dimensi) {
+      if (o.dimensi && o.dimDinding) {
         for (const {g} of dinding) {
           const L = ukur(g).panjang;
           if (L < 0.3) continue;
@@ -5876,11 +5994,10 @@ function buatSVG(o) {
           if (sudut > 90) sudut -= 180; if (sudut <= -90) sudut += 180;
           isi.push(`<text x="${n2(tx)}" y="${n2(ty)}" font-size="2.2" text-anchor="middle" dominant-baseline="middle" transform="rotate(${n2(sudut)} ${n2(tx)} ${n2(ty)})">${esc(fmt(L))}</text>`);
         }
-        const yd = Y(y0) + 0.9 * s, xd = X(x0) - 0.9 * s;
-        isi.push(garis(X(x0), Y(y0) + 1, X(x0), yd + 1.5, 0.13), garis(X(x1), Y(y0) + 1, X(x1), yd + 1.5, 0.13));
-        isi.push(ukuranGaris(X(x0), yd, X(x1), yd, fmt(x1 - x0), -1));
-        isi.push(garis(X(x0) - 1, Y(y0), xd - 1.5, Y(y0), 0.13), garis(X(x0) - 1, Y(y1), xd - 1.5, Y(y1), 0.13));
-        isi.push(ukuranGaris(xd, Y(y0), xd, Y(y1), fmt(y1 - y0), 1));
+      }
+      if (o.dimensi) {
+        isi.push(...ukuranBerantai({dinding: dinding.map(x => x.g), kolom: daftar.filter(x => x.g.jenis === 'kolom').map(x => x.g),
+          lantai: daftar.filter(x => x.g.jenis === 'volume' && (x.g.tinggi || 0) <= 0.3).map(x => x.p), luar: {x0, y0, x1, y1}, X, Y}));
       }
       // panah utara
       const ax = area.x + area.w - 8, ay = area.y + 9;
@@ -5949,8 +6066,9 @@ function buatSVG(o) {
       const dindingP = geos.filter(g => g.jenis === 'dinding').map(g => poligon(g));
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const p of [...bawahList.map(g => poligon(g)), ...dindingP]) for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-      const tepi = o.dimensi ? 1.6 : 0.4, bx0 = x0 - tepi, by0 = y0 - tepi, bx1 = x1 + 0.6, by1 = y1 + 0.6;
-      skala = pilihSkala(bx1 - bx0, (by1 - by0) * 1.25);
+      const tp = o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
+      skala = skalaTepi(x1 - x0, y1 - y0, tp, 1.25);
+      const kM = skala / 1000, bx0 = x0 - tp.l * kM, by0 = y0 - tp.b * kM, bx1 = x1 + tp.r * kM, by1 = y1 + tp.t * kM;
       const s = 1000 / skala;
       const ox = area.x + (area.w - (bx1 - bx0) * s) / 2, oy = area.y + area.h * 0.2 + (area.h * 0.8 - (by1 - by0) * s) / 2;
       const X = x => ox + (x - bx0) * s, Y = y => oy + (by1 - y) * s;
@@ -5994,11 +6112,9 @@ function buatSVG(o) {
       isi.push(teks(area.x + 2, ky, 'KETERANGAN', 2.4, 'font-weight="700"'));
       for (const [k, n] of ket) { ky += 3.6; isi.push(teks(area.x + 2, ky, `${k}  (${n})`, 2.1)); }
       if (o.dimensi) {
-        const yd = Y(y0) + 0.9 * s, xd = X(x0) - 0.9 * s;
-        isi.push(garis(X(x0), Y(y0) + 1, X(x0), yd + 1.5, 0.13), garis(X(x1), Y(y0) + 1, X(x1), yd + 1.5, 0.13));
-        isi.push(ukuranGaris(X(x0), yd, X(x1), yd, fmt(x1 - x0), -1));
-        isi.push(garis(X(x0) - 1, Y(y0), xd - 1.5, Y(y0), 0.13), garis(X(x0) - 1, Y(y1), xd - 1.5, Y(y1), 0.13));
-        isi.push(ukuranGaris(xd, Y(y0), xd, Y(y1), fmt(y1 - y0), 1));
+        // denah pondasi: garis as dan ukuran antar as (tanpa rantai rinci dan tepi lantai)
+        isi.push(...ukuranBerantai({dinding: geos.filter(g => g.jenis === 'dinding'), kolom: bawahList.filter(g => g.jenis === 'kolom'), lantai: [],
+          luar: {x0, y0, x1, y1}, X, Y, rantaiRinci: false}));
       }
       const ax = area.x + area.w - 8, ay = area.y + 9;
       isi.push(`<circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
@@ -6380,7 +6496,7 @@ function buatSVG(o) {
   return {svg, info, skala, W, H, peta, anotStat};
 }
 let hasil2D = null;
-function opsi2D() { return {jenis: $('#m-jenis').value, skala: +$('#m-skala').value, kertas: $('#m-kertas').value, dimensi: $('#m-dimensi').checked, terhalang: $('#m-terhalang').checked}; }
+function opsi2D() { return {jenis: $('#m-jenis').value, skala: +$('#m-skala').value, kertas: $('#m-kertas').value, dimensi: $('#m-dimensi').checked, dimDinding: $('#m-dimdinding').checked, terhalang: $('#m-terhalang').checked}; }
 function segar2D() {
   hasil2D = buatSVG(opsi2D());
   $('#m-svg').innerHTML = hasil2D.svg;
@@ -7122,7 +7238,7 @@ $('#m-anot-tampil').addEventListener('click', () => {
 $('#btn-2d').addEventListener('click', () => buka2D());
 $('#m-tutup').addEventListener('click', tutup2D);
 $('#modal2d').addEventListener('click', e => { if (e.target.id === 'modal2d') tutup2D(); });
-['#m-jenis', '#m-skala', '#m-kertas', '#m-dimensi', '#m-terhalang'].forEach(s => $(s).addEventListener('change', segar2D));
+['#m-jenis', '#m-skala', '#m-kertas', '#m-dimensi', '#m-dimdinding', '#m-terhalang'].forEach(s => $(s).addEventListener('change', segar2D));
 $('#m-svgbtn').addEventListener('click', () => simpanBerkas(namaBerkas('svg'), hasil2D.svg));
 $('#m-png').addEventListener('click', async () => {
   const blob = await svgKePng(hasil2D.svg, hasil2D.W, hasil2D.H).catch(() => null);
