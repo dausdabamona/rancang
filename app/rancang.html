@@ -2730,7 +2730,7 @@ function titikSnap(e, kecuali, opsi = {}) {
         if (v.z > 1 || v.z < -1) continue;
         // ujung didahulukan dari titik tengah
         const dd = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my) + (jenis === 'tengah' ? 4 : 0);
-        if (dd < bd) { bd = dd; best = {x: r2(x), y: r2(y), z: r2(z), jenis}; }
+        if (dd < bd) { bd = dd; best = {x: r2(x), y: r2(y), z: r2(z), jenis, id}; }
       }
     }
   }
@@ -2738,7 +2738,7 @@ function titikSnap(e, kecuali, opsi = {}) {
   // pada tepi (seperti "On Edge" SketchUp): titik terdekat di rusuk alas, rusuk atas, dan rusuk tegak, dalam 8 px
   if (opsi.tepi) {
     arahkan(e);
-    let bt = 8, hasil = null;
+    let bt = 8, hasil = null, idKini = null;
     const o = ray.ray.origin, rd = ray.ray.direction;
     const cek = (P, Q) => {
       // titik pada ruas PQ yang paling dekat dengan sinar kursor
@@ -2751,10 +2751,11 @@ function titikSnap(e, kecuali, opsi = {}) {
       v.set(q[0], q[1], q[2]).project(camera);
       if (v.z > 1 || v.z < -1) return;
       const dd = Math.hypot((v.x + 1) / 2 * r.width - mx, (1 - v.y) / 2 * r.height - my);
-      if (dd < bt) { bt = dd; hasil = {x: r2(q[0]), y: r2(q[1]), z: r2(q[2]), jenis: 'tepi'}; }
+      if (dd < bt) { bt = dd; hasil = {x: r2(q[0]), y: r2(q[1]), z: r2(q[2]), jenis: 'tepi', id: idKini}; }
     };
     for (const [id, d] of S.elems) {
       if ((kecuali && kecuali.has(id)) || S.sembunyi.has(id)) continue;
+      idKini = id;
       for (const g of geometriElemen(id, d)) {
         const r3 = rangka3D(g);
         if (r3) { for (const [a, b] of r3.rusuk) cek(a, b); continue; }
@@ -2771,7 +2772,7 @@ function titikSnap(e, kecuali, opsi = {}) {
   }
   if (opsi.bidang) {
     const h = pilihObjek(e, kecuali);
-    if (h && h.object.userData.face !== 'penanda') return {x: h.point.x, y: h.point.y, z: h.point.z, jenis: 'bidang'};
+    if (h && h.object.userData.face !== 'penanda') return {x: h.point.x, y: h.point.y, z: h.point.z, jenis: 'bidang', id: h.object.userData.elemId};
   }
   const z = opsi.bidangZ || 0;
   arahkan(e);
@@ -3891,17 +3892,21 @@ const alatPindah = {
   },
   down(e) {
     if (this.dasar) { this.selesai(); return; }
-    const h = pilihObjek(e);
+    // titik acuan: ujung/tengah/tepi benda bila ada; bila tidak, titik pada muka benda yang diklik (lengkap dengan tingginya),
+    // bukan titik lantai di belakangnya. Klik tepat di pojok (di luar muka) tetap memilih benda pemilik pojok itu.
+    const s0 = titikSnap(e, null, {atas: true, tengah: true, tepi: true, halus: true});
+    let h = pilihObjek(e);
+    if (!h && s0 && s0.id && s0.jenis !== 'grid') h = {object: {userData: {elemId: s0.id}}, point: V(s0.x, s0.y, s0.z || 0)};
     if (h) {
       const t = targetDariKlik(h);
       if (t === null) return toast('Saat mengedit komponen, hanya isi komponen yang bisa dipindah.');
       if (!S.sel.has(t)) { S.sel.clear(); S.sel.add(t); segarPilihan(); }
     }
     if (!S.sel.size) return toast('Klik objek yang mau dipindah.');
-    const s = titikSnap(e, null, {atas: true, tengah: true, tepi: true, halus: true}) || (h ? {x: h.point.x, y: h.point.y} : null);
+    const s = s0 && s0.jenis !== 'grid' ? s0 : h ? {x: r2(h.point.x), y: r2(h.point.y), z: r2(h.point.z), jenis: 'bidang'} : s0;
     if (!s) return;
     this.lacak = [];
-    this.dasar = {x: s.x, y: s.y, z: s.jenis === 'ujung' || s.jenis === 'tengah' || s.jenis === 'tepi' ? (s.z || 0) : null};
+    this.dasar = {x: s.x, y: s.y, z: s.jenis === 'grid' ? null : (s.z || 0)};
     this.items = [...S.sel];
     const {el} = ekspansi(this.items);
     // bukaan yang dindingnya ikut dipindah tidak perlu digeser sendiri
