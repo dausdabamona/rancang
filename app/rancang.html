@@ -7971,7 +7971,7 @@ const alatPlafon = {
   // sisi dalam papan, supaya plafon miring hasil pecah atap juga berhenti di lisplang, bukan di ujung seng.
   mundurKeLisplang(t, diri) {
     const N = t.length, dd = new Array(N).fill(0);
-    const papan = [...S.elems.values()].filter(x => x !== diri && x.jenis === 'bidang' && x.peran === 'lisplang' && Array.isArray(x.titik) && x.titik.length >= 2);
+    const papan = /** @type {any[]} */ ([...S.elems.values()].filter(x => x !== diri && x.jenis === 'bidang' && x.peran === 'lisplang' && Array.isArray(x.titik) && x.titik.length >= 2));
     if (!papan.length) return t;
     const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], len = v => Math.hypot(v[0], v[1], v[2]);
     for (let i = 0; i < N; i++) {
