@@ -330,6 +330,13 @@ async function ujiAsap() {
     const pmh = await halaman(`window.rancangUji.plafonMiring(${JSON.stringify(idH[0])})`);
     const ysh = pmh.flat().map(q => q.y), yMinH = Math.min(...ysh), yMaxH = Math.max(...ysh);
     catat('plafon miring dari atap terpecah berhenti di lisplang', pmh.length >= 1 && (yMinH > -0.6 + 0.15 || yMaxH < 4.6 - 0.15), {yMinH, yMaxH, bidangAtap: idH.length});
+    // isian "Jarak tepi plafon dari ujung seng": 0,225 → 0,40 menggeser tepi luar ±0,175 × cos 30° ≈ 0,15 m ke dalam
+    const idsPM = await halaman(`window.rancangUji.buatPlafonMiring('A1')`);
+    const sebelum = await halaman(`window.rancangAPI.model()`);
+    const pSeb = sebelum.elemen[idsPM[0]], yMinSeb = Math.min(...pSeb.titik.map(q => q.y));
+    const uSeng = await halaman(`window.rancangUji.isiMedan('h-mundurSeng', '0,4')`);
+    const yMinSes = Math.min(...uSeng.data.titik.map(q => q.y));
+    catat('isian jarak tepi plafon dari ujung seng', pSeb.mundurSeng === 0.225 && uSeng.data.mundurSeng === 0.4 && yMinSes - yMinSeb > 0.12 && yMinSes - yMinSeb < 0.18, {yMinSeb, yMinSes, mundurSeng: pSeb.mundurSeng});
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {

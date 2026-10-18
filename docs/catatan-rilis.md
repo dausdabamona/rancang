@@ -3,6 +3,7 @@
 - **Plafon miring berhenti di lisplang.** Alat Plafon mode *Miring* kini memotong plafon di sisi dalam papan lisplang, bukan di ujung seng. Seng tetap menjorok sejauh *Mundur dari ujung seng* (bawaan 20 cm pada rangka kayu; 0 pada baja ringan), yang bisa diatur per sisi di panel atap → Lisplang. Atap tanpa lisplang tetap memakai tepi penutup.
 - **Bawaan *Mundur dari ujung seng* kini 20 cm untuk semua rangka** (sebelumnya hanya kayu; baja ringan 0 sehingga lisplang menempel di ujung seng dan plafon tampak tidak berubah). Atap baja ringan yang sudah ada ikut bergeser 20 cm ke dalam; atur per sisi bila perlu.
 - **Atap yang sudah dipecah** (bidang H) juga berhenti di lisplang: tepi bidang penutup yang berpapan lisplang (bidang H peran lisplang yang sejajar dan menempel) dimundurkan sampai sisi dalam papan saat dijadikan plafon miring.
+- **Isian baru di Properti plafon miring: *Jarak tepi plafon dari ujung seng (m)*.** Terisi otomatis saat dibuat (jorokan seng + tebal papan, mis. 0,225) dan bisa diketik ulang; tepi luar plafon yang berhadapan dengan lisplang bergeser mengikuti angka itu, tepi lain tetap.
 - **Papan lisplang bisa jadi batas Perpanjang/Pangkas** (Shift+H): klik plafon yang sudah ada, lalu klik papan lisplang; sisi plafon dipangkas/diperpanjang sampai sisi dalam papan. Berguna untuk merapikan plafon miring yang dibuat sebelum 0.34.1.
 
 ## Yang baru di 0.34.0
