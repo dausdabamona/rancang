@@ -4679,9 +4679,9 @@ const alatPilih = {
     const hits = hitObjek(e, null, true), h = hits[0], eid = h && h.object.userData.elemId;
     const t = h ? sasaranKlik(eid) : null;
     if (!t) { sorotiKursor(null); tulisInfoKursor(infoPilihan()); return; }
-    if (S.sorotKursor.kunci !== t) sorotiKursor(ekspansi([t]).el, t);
+    sorotiKursor(h.object, h.object.uuid);
     const jalur = jalurBenda(t);
-    const isi = t === eid ? '' : ` <small>← ${namaBenda(eid)}</small>`;
+    const isi = t === eid ? '' : ` <small>← ${namaBenda(eid)} (klik memilih seluruh grup)</small>`;
     const lain = hits.length > 1 ? ` <small>· ${hits.length - 1} lagi di belakang (Alt+klik)</small>` : '';
     tulisInfoKursor(`<b>${namaBenda(t)}</b>${isi}${jalur.length ? ` <small>di ${jalur.join(' · ')}</small>` : ''}${lain}`);
   },
@@ -5112,28 +5112,27 @@ function soroti(mesh) {
 }
 
 /* ===== Sorotan kursor dan info kursor di alat Pilih (v0.33) ===== */
-// Seluruh benda yang AKAN terpilih bila diklik (grup = semua isinya) disorot saat kursor lewat, seperti sorotan biru
-// SketchUp, dan bilah bawah menyebut nama serta jalurnya. Pengguna tahu sasaran klik sebelum menekan.
+// Saat kursor lewat, HANYA muka di bawah kursor yang disorot (satu mesh), dan info kursor menyebut benda yang akan
+// terpilih bila diklik beserta jalurnya. Menyorot seluruh grup pernah dicoba: pada grup besar ratusan mesh bertukar
+// material tiap gerak kursor, berat dan terasa goyang, sehingga benda kecil sulit dipilih.
 function matSorotKursor(asli) {
   const tembus = !!(asli && asli.transparent), k = (tembus ? 'kursor-tembus:' : 'kursor:') + T.accent;
   if (!matSorotCache[k]) matSorotCache[k] = new THREE.MeshLambertMaterial({color: new THREE.Color(campur(T.faceVol, T.accent, 0.4)), side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, ...(tembus ? {transparent: true, opacity: 0.55, depthWrite: false} : {})});
   return matSorotCache[k];
 }
-// ids: elemen yang disorot (sudah diurai lewat ekspansi); kunci: sasaran klik, agar tidak dihitung ulang saat kursor masih di benda yang sama
-function sorotiKursor(ids, kunci = null) {
+// mesh: muka di bawah kursor; kunci: penanda mesh itu, agar tidak ditukar ulang saat kursor masih di muka yang sama
+function sorotiKursor(mesh, kunci = null) {
   const SK = S.sorotKursor;
   if (SK.kunci === kunci && (kunci !== null || !SK.tukar.length)) return;
-  for (const {mesh, mat} of SK.tukar) mesh.material = mat;
-  SK.tukar = []; SK.kunci = kunci; SK.ids = ids || null;
-  if (ids && ids.size) {
-    const grupMesh = new Set();
-    for (const id of ids) { const d = S.elems.get(id), g = objek.get(d && d.jenis === 'bukaan' ? d.dinding : id); if (g) grupMesh.add(g); }
-    for (const g of grupMesh) g.traverse(o => {
-      if (!o.isMesh || !o.material || o.userData.face === 'penanda' || !ids.has(o.userData.elemId)) return;
-      SK.tukar.push({mesh: o, mat: o.material});
-      o.material = matSorotKursor(o.material);
-    });
+  for (const {mesh: m, mat} of SK.tukar) m.material = mat;
+  SK.tukar = []; SK.kunci = kunci; SK.ids = null;
+  if (mesh && mesh.isMesh && mesh.material && mesh.userData.face !== 'penanda') {
+    SK.tukar.push({mesh, mat: mesh.material});
+    mesh.material = matSorotKursor(mesh.material);
+    // id pemilik grup mesh (bukaan digambar di dalam grup dindingnya): dipakai lepas() untuk melepas kunci saat dibangun ulang
+    const d = S.elems.get(mesh.userData.elemId);
+    SK.ids = new Set([d && d.jenis === 'bukaan' ? d.dinding : mesh.userData.elemId]);
   }
   minta();
 }
@@ -13765,7 +13764,8 @@ window.rancangUji = Object.freeze({
     const rc = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(camera), tinggi0 = view.clientHeight;
     alatPilih.lewat({clientX: rc.left + (v.x + 1) / 2 * rc.width, clientY: rc.top + (1 - v.y) / 2 * rc.height, buttons: 0});
     // ukuran kanvas wajib tetap saat info kursor muncul; kalau berubah, gambar bergeser di bawah kursor (goyang)
-    const r = {kunci: S.sorotKursor.kunci, jumlahMesh: S.sorotKursor.tukar.length, info: $('#kursor-info').textContent, kanvasTetap: view.clientHeight === tinggi0 && view.clientWidth === rc.width};
+    const m = S.sorotKursor.tukar[0], eid = m ? m.mesh.userData.elemId : null;
+    const r = {kunci: eid ? sasaranKlik(eid) : null, jumlahMesh: S.sorotKursor.tukar.length, info: $('#kursor-info').textContent, kanvasTetap: view.clientHeight === tinggi0 && view.clientWidth === rc.width};
     alatPilih.batal();
     r.bersih = S.sorotKursor.tukar.length === 0 && S.sorotKursor.kunci === null;
     return r;
