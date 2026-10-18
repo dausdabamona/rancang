@@ -18,8 +18,9 @@ TEBAL = 0.15
 TB_BLOK = (28.0, 37.0, YD, 10.83)                                       # blok tangga/ruang tamu (x0, x1, y0, y1)
 
 # kamar: (x0, x1, sisi KM 'barat'/'timur'); 9 kamar sesuai label denah asli — bay 20,5–23,5 (300) kamar kecil dengan KM 1,50 (dimensi 150|150)
-KAMAR = [(0, 3.5, 'timur'), (3.5, 7.0, 'barat'), (7.0, 11.5, 'timur'), (11.5, 16.0, 'timur'), (16.0, 20.5, 'timur'),
-         (20.5, 23.5, 'timur'), (23.5, 28.0, 'timur'), (28.0, 32.5, 'timur'), (32.5, 37.0, 'timur')]
+# Sisi KM dari rangkaian ukuran denah asli: 150|200 · 200|150 · 200|250 ×3 · 150|150 · 250|200 ×3 (KM = bagian 200/150 berubin)
+KAMAR = [(0, 3.5, 'timur'), (3.5, 7.0, 'barat'), (7.0, 11.5, 'barat'), (11.5, 16.0, 'barat'), (16.0, 20.5, 'barat'),
+         (20.5, 23.5, 'barat'), (23.5, 28.0, 'timur'), (28.0, 32.5, 'timur'), (32.5, 37.0, 'timur')]
 def batas_km(x0, x1, sisi):
     w = 1.5 if x1 - x0 <= 3.0 else 2.0
     return (x1 - w, x1) if sisi == 'timur' else (x0, x0 + w)
