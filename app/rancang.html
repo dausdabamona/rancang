@@ -7739,7 +7739,7 @@ function pecahLantai(id) {
     const jenis = label.length ? tebakJenisLantai(nm) : asal;
     const penutup = jenis === asal && d.penutupLantai ? d.penutupLantai : BAWAAN_LANTAI[jenis].penutup;
     const turun = jenis === asal ? 0 : Math.max(0, BAWAAN_LANTAI[jenis].turun - BAWAAN_LANTAI[asal].turun);
-    const top = r2(atas - turun), vid = nid('V');
+    const atas = (d.z0 || 0) + (d.tinggi || 0), top = r2(atas - turun), vid = nid('V');
     const v = {jenis: 'volume', nama: 'Lantai ' + nm, alas: x.p.map(([px, py]) => ({x: r2(px), y: r2(py)})), z0: r2(top - (d.tinggi || 0)), tinggi: d.tinggi || 0,
       lantai: jenis, penutupLantai: penutup, catatan: d.catatan || ''};
     // kolom yang berdiri bebas di dalam ruang menjadi lubang lantai
