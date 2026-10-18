@@ -55,7 +55,7 @@ electron/penyimpanan.js   berkas .rancang: simpan otomatis, cadangan, pantau per
 electron/jembatan.js      HTTP lokal 127.0.0.1 + token untuk server MCP
 electron/preload.js       API kecil ke halaman (sandbox)
 electron/renderer/claude-shim.js   pengganti window.claude (db, user, downloads) di desktop
-mcp/server.mjs            server MCP (dibundel esbuild), mcp/manifest.json, mcp/panduan-data.md
+mcp/server.mjs            server MCP (dibundel esbuild), mcp/manifest.json; panduan data diambil dari blok `panduan-data` di app/rancang.html
 scripts/build-renderer.mjs  halaman luring: CDN dan Google Fonts diganti salinan lokal
 scripts/build-mcp.mjs     paket build/mcp → RANCANG.mcpb
 test/                     uji unit penyimpanan dan uji MCP (mode berkas dan mode aplikasi)
