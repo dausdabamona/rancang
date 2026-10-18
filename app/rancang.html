@@ -12694,7 +12694,7 @@ function langganan() {
   };
   langgananKoleksi('elemen', S.elems, ({ubah, dariClaude, dihapus, pertama}) => {
     for (const id of dihapus) S.sel.delete(id);
-    if (ubah) { bangunSemua(); renderPanel(); }
+    if (ubah) { bangunSemua(); renderPanel(); segarPotongan(); }
     kabarClaude(dariClaude);
     if (!pertama && dihapus.length) toast(`${dihapus.join(', ')} dihapus dari luar aplikasi.`);
     if (pertama) selesaiAwal();
