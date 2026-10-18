@@ -184,6 +184,7 @@ const metode = {
       jenisGambar: await halaman('window.rancangAPI.jenisGambar2D()')};
   },
   model: async () => ({proyek: proyek.jalur, ...proyek.awal()}),
+  pilihan: () => halaman('window.rancangAPI.pilihan()'),
   terapkan: async ({perubahan, oleh}) => {
     const r = await halaman(`window.rancangAPI.terapkanLuar(${arg(perubahan)}, ${arg(oleh || 'claude')})`);
     if (r && r.ok) proyek.simpanSekarang();
@@ -284,6 +285,29 @@ async function ujiAsap() {
       tinggi = (await halaman('window.rancangAPI.model()')).elemen.D2.tinggi;
     }
     catat('muat ulang perubahan berkas dari luar', tinggi === 2.5);
+    // v0.33: pilihan pengguna terbaca lewat rancangAPI dan tampil di bilah bawah
+    const pil = await halaman(`(() => ({info: window.rancangUji.pilih(['D1']), pilihan: window.rancangAPI.pilihan()}))()`);
+    catat('pilihan pengguna', pil.pilihan.terpilih.length === 1 && pil.pilihan.terpilih[0].id === 'D1' && /Dinding D1/.test(pil.info), {info: pil.info});
+    // v0.33: kursor lewat di atas sudut dinding D1/D2 pada alat Pilih: dinding terdepan disorot, disebut di bilah bawah, lalu bersih lagi
+    await halaman(`window.rancangUji.pilih([])`);
+    const sorot = await halaman(`window.rancangUji.lewat(4, 1.5, 1.5)`);
+    catat('sorotan kursor alat Pilih', /^D[12]$/.test(sorot.kunci) && sorot.jumlahMesh > 0 && new RegExp('Dinding ' + sorot.kunci).test(sorot.info) && sorot.bersih && sorot.kanvasTetap, sorot);
+    // v0.33: panel Properti plafon: lebar X diketik → alas diskalakan dari sisi barat; perluas 0,2 → semua sisi keluar 0,2
+    const rp = await metode.terapkan({perubahan: [{id: 'P1', data: {jenis: 'plafon', nama: 'Plafon uji', alas: [{x: 0, y: 0}, {x: 4, y: 0}, {x: 4, y: 3}, {x: 0, y: 3}], z0: 3, bahan: 'grc', rangka: 'hollow'}}]});
+    catat('buat plafon uji', rp && rp.ok, {r: rp});
+    await halaman(`window.rancangUji.pilih(['P1'])`);
+    const u1 = await halaman(`window.rancangUji.isiMedan('l-lebarx', '6')`);
+    const xs1 = u1.data && u1.data.alas.map(q => q.x);
+    catat('ukuran alas: lebar X diketik', !!xs1 && Math.min(...xs1) === 0 && Math.max(...xs1) === 6, {alas: u1.data && u1.data.alas});
+    const u2 = await halaman(`window.rancangUji.isiMedan('l-perluas', '0,2')`);
+    const xs2 = u2.data && u2.data.alas.map(q => q.x), ys2 = u2.data && u2.data.alas.map(q => q.y);
+    catat('ukuran alas: perluas semua sisi', !!xs2 && Math.min(...xs2) === -0.2 && Math.max(...xs2) === 6.2 && Math.min(...ys2) === -0.2 && Math.max(...ys2) === 3.2, {alas: u2.data && u2.data.alas});
+    // v0.33: plafon miring bawaan atap memakai bahan/rangka pilihan dan masuk baris RAB yang sama dengan plafon datar (PL-007 PVC, PL-012 hollow), tanpa PL-004
+    const ra = await metode.terapkan({perubahan: [{id: 'A1', data: {jenis: 'atap', bentuk: 'pelana', x0: 0, y0: 0, x1: 4, y1: 3, z0: 3, kemiringan: 30, overstek: 0.6, arah: 'x', rangka: 'bajaringan', plafonMiring: 'penuh', plafonBahan: 'pvc', plafonRangka: 'hollow'}}]});
+    catat('buat atap berplafon miring PVC', ra && ra.ok, {r: ra});
+    const rab2 = await metode.rab({});
+    const baris = rab2.flatMap(dv => dv.baris), pvc = baris.find(b => b.kode === 'PL-007'), hollow = baris.find(b => b.kode === 'PL-012'), lama = baris.find(b => b.kode === 'PL-004');
+    catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;

@@ -40,8 +40,13 @@ test('mode berkas: membaca, menerapkan, dan menolak perubahan tanpa aplikasi', a
     const {tools} = await c.listTools();
     assert.ok(tools.some(t => t.name === 'terapkan_perubahan'));
     assert.ok(tools.some(t => t.name === 'gambar_2d'));
+    assert.ok(tools.some(t => t.name === 'pilihan_pengguna'));
     const info = json(await c.callTool({name: 'info_proyek', arguments: {}}));
     assert.equal(info.aplikasiBerjalan, false);
+    // aplikasi tertutup: tidak ada pilihan pengguna, dan Claude diberi tahu jelas
+    const pil = json(await c.callTool({name: 'pilihan_pengguna', arguments: {}}));
+    assert.equal(pil.aplikasiBerjalan, false);
+    assert.match(pil.catatan, /tidak sedang berjalan/);
     const r = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'D1', data: dinding()}]}}));
     assert.equal(r.ok, true);
     const isi = JSON.parse(fs.readFileSync(proyek, 'utf8'));
@@ -89,6 +94,14 @@ test('mode aplikasi: MCP mengendalikan RANCANG desktop yang berjalan', {skip: pr
     assert.equal(t3.content[0].type, 'image');
     const rab = json(await c.callTool({name: 'volume_rab', arguments: {}}));
     assert.ok(Array.isArray(rab) && rab.length > 0);
+    // pilihan pengguna: awalnya kosong, lalu info_proyek dan pilihan_pengguna sama-sama melihat pilihan yang dibuat di halaman
+    const kosong = json(await c.callTool({name: 'pilihan_pengguna', arguments: {}}));
+    assert.equal(kosong.aplikasiBerjalan, true);
+    assert.deepEqual(kosong.terpilih, []);
+    assert.equal(kosong.grupDibuka, null);
+    assert.match(kosong.catatan, /belum memilih/);
+    const info2 = json(await c.callTool({name: 'info_proyek', arguments: {}}));
+    assert.equal(info2.pilihan.jumlah, 0);
     const isi = JSON.parse(fs.readFileSync(proyek, 'utf8'));
     assert.equal(isi.elemen.B1.dinding, 'D1');
     fs.writeFileSync(path.join(os.tmpdir(), 'rancang-uji-denah.png'), Buffer.from(g.content[0].data, 'base64'));

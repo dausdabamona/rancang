@@ -24,6 +24,7 @@
   "tools": [
     {"name": "panduan_data", "description": "Panduan isian data setiap jenis elemen"},
     {"name": "info_proyek", "description": "Info proyek yang terbuka"},
+    {"name": "pilihan_pengguna", "description": "Benda yang sedang dipilih pengguna di aplikasi (acuan kata ini/itu)"},
     {"name": "daftar_elemen", "description": "Daftar ringkas elemen"},
     {"name": "ambil_elemen", "description": "Data lengkap elemen berdasarkan id"},
     {"name": "terapkan_perubahan", "description": "Tambah, ubah, atau hapus elemen"},

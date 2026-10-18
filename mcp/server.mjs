@@ -136,13 +136,19 @@ async function modelSekarang() {
   return {sumber: 'berkas (aplikasi tertutup)', proyek: jalur, setel: d.setel || {}, elemen: d.elemen, grup: d.grup, komponen: d.komponen, kusen: d.kusen};
 }
 
+// Ringkasan pilihan untuk info_proyek: cukup id dan jenis supaya Claude melihatnya tanpa panggilan tambahan
+const ringkasPilihan = p => ({jumlah: p.terpilih.length, terpilih: p.terpilih.slice(0, 20).map(x => x.nama ? `${x.id} (${x.jenis}: ${x.nama})` : `${x.id} (${x.jenis})`),
+  lebih: p.terpilih.length > 20 ? p.terpilih.length - 20 : undefined, muka: p.muka || undefined, grupDibuka: p.grupDibuka || undefined});
+
 /* ============ Daftar alat ============ */
 const objek = (props, wajib = []) => ({type: 'object', properties: props, required: wajib, additionalProperties: false});
 const daftarId = {type: 'array', items: {type: 'string'}, description: 'Id elemen atau grup (kosong = seluruh model)'};
 export const ALAT = [
   {name: 'panduan_data', description: 'Panduan isian data setiap jenis elemen RANCANG (dinding, pintu, lantai, kolom, atap, dll.) beserta contoh JSON. Baca sebelum membuat atau mengubah elemen.',
     inputSchema: objek({})},
-  {name: 'info_proyek', description: 'Info proyek yang terbuka: nama berkas, jumlah elemen/grup/komponen/kusen, pengaturan, jenis gambar 2D yang tersedia, dan apakah aplikasi sedang berjalan.',
+  {name: 'info_proyek', description: 'Info proyek yang terbuka: nama berkas, jumlah elemen/grup/komponen/kusen, pengaturan, jenis gambar 2D yang tersedia, apakah aplikasi sedang berjalan, dan ringkasan pilihan pengguna saat ini.',
+    inputSchema: objek({})},
+  {name: 'pilihan_pengguna', description: 'Apa yang sedang DIPILIH pengguna di aplikasi: daftar id yang terpilih (elemen atau grup), muka yang terpilih, grup yang sedang dibuka, dan alat aktif. PANGGIL INI DULU setiap kali pengguna memakai kata acuan seperti "ini", "itu", "yang dipilih", "yang saya tunjuk", "yang disorot", atau memberi perintah pendek tanpa menyebut id (mis. "geser 20 cm ke utara", "tinggikan jadi 2,4"). Bila pilihan kosong, tanyakan kepada pengguna; jangan menebak. Hanya tersedia saat aplikasi berjalan.',
     inputSchema: objek({})},
   {name: 'daftar_elemen', description: 'Daftar ringkas elemen (id, jenis, nama, grup, tipe). Bisa disaring.',
     inputSchema: objek({jenis: {type: 'string', description: 'Saring per jenis, mis. dinding, bukaan, volume, atap'}, grup: {type: 'string', description: 'Saring per id grup'},
@@ -175,10 +181,19 @@ export async function jalankanAlat(nama, a = {}) {
     case 'panduan_data': return teks(PANDUAN);
     case 'info_proyek': {
       const info = await aplikasi();
-      if (info) return teks({aplikasiBerjalan: true, ...(await rpc(info, 'info'))});
+      if (info) {
+        const [dasar, pilihan] = await Promise.all([rpc(info, 'info'), rpc(info, 'pilihan').catch(() => null)]);
+        return teks({aplikasiBerjalan: true, ...dasar, pilihan: pilihan ? ringkasPilihan(pilihan) : undefined});
+      }
       const {jalur, d} = bacaProyekBerkas();
       return teks({aplikasiBerjalan: false, catatan: 'Aplikasi tertutup: baca dan terapkan_perubahan bekerja pada berkas; gambar/RAB/tangkap layar akan menjalankan aplikasi.',
         proyek: jalur, setel: d.setel || {}, jumlah: Object.fromEntries(['elemen', 'grup', 'komponen', 'kusen'].map(k => [k, Object.keys(d[k]).length]))});
+    }
+    case 'pilihan_pengguna': {
+      const info = await aplikasi();
+      if (!info) return teks({aplikasiBerjalan: false, catatan: 'Aplikasi RANCANG tidak sedang berjalan, jadi tidak ada pilihan pengguna. Minta pengguna membuka aplikasi dan memilih benda yang dimaksud, atau minta id elemennya.'});
+      const p = await rpc(info, 'pilihan');
+      return teks({aplikasiBerjalan: true, ...p, catatan: p.terpilih.length ? `Kata "ini/itu/yang dipilih" dari pengguna mengacu ke ${p.terpilih.length} benda di atas.` : 'Pengguna belum memilih apa pun. Tanyakan benda mana yang dimaksud sebelum mengubah model.'});
     }
     case 'daftar_elemen': {
       const m = await modelSekarang();
@@ -226,7 +241,8 @@ export async function jalankanAlat(nama, a = {}) {
 /* ============ Mulai ============ */
 export async function mulai() {
   const server = new Server({name: 'rancang', version: VERSI}, {capabilities: {tools: {}},
-    instructions: 'RANCANG adalah aplikasi gambar bangunan (Bahasa Indonesia). Baca panduan_data sebelum membuat elemen. Satuan meter. Periksa hasil dengan gambar_2d atau tangkap_layar_3d.'});
+    instructions: 'RANCANG adalah aplikasi gambar bangunan (Bahasa Indonesia). Baca panduan_data sebelum membuat elemen. Satuan meter. Periksa hasil dengan gambar_2d atau tangkap_layar_3d. '
+      + 'Pola kerja pengguna: TUNJUK DULU di aplikasi, lalu perintah pendek. Kata "ini", "itu", "yang dipilih", "yang saya tunjuk", atau perintah tanpa id (mis. "geser 20 cm ke utara") selalu mengacu ke pilihan pengguna: panggil pilihan_pengguna lebih dulu, lalu ambil_elemen untuk data lengkapnya. Bila pilihan kosong atau tidak cocok dengan perintah, tanyakan; jangan menebak elemen lain.'});
   server.setRequestHandler(ListToolsRequestSchema, async () => ({tools: ALAT}));
   server.setRequestHandler(CallToolRequestSchema, async req => {
     try {
