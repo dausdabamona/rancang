@@ -1,3 +1,13 @@
+## Yang baru di 0.35.0
+
+Alat untuk bangunan bertingkat (disiapkan untuk menggambar Asrama Putri dua lantai, 18 Oktober 2026).
+
+- **Alat Tangga** (kelompok Struktur, palet: *tangga*, *ST*, *TG*): klik pangkal bawah, klik ke arah naik; jumlah anak tangga dihitung dari tinggi ke level berikutnya (optrede ≤ 18 cm), antrede dari panjang klik kedua atau bawaan 28 cm. Panel Properti: lebar, tinggi naik, jumlah anak, antrede, tebal plat miring, arah, elevasi pangkal, railing (tanpa/kiri/kanan/dua). Di denah: garis anak tangga (putus-putus di atas bidang potong), panah NAIK/TURUN dengan keterangan `23 × 17/28`. RAB: beton plat miring + anak tangga, besi plat dua lapis Ø10-150 dan Ø8 anak, bekisting, panjang railing.
+- **Plat lantai beton** (jenis `plat`, awalan W): dari lantai biasa dengan tombol *Jadikan plat lantai beton* di panel Properti (tebal = tinggi volume, bawaan 12 cm), bisa berlubang (void tangga). Panel: elevasi permukaan atas, tebal, tulangan Ø dan jarak, Ukuran alas. RAB: beton, besi dua lapis dua arah, bekisting bawah + tepi; butir ST-030/ST-031 menampilkan luas plat dan jumlah tangga.
+- **Denah per level**: pemilih *Level* di bar Gambar 2D (tampil bila ada level di atas ±0,00): denah lantai 2 hanya menggambar benda yang terpotong bidang denah level itu, lantai/plat miliknya, dan tangga yang tiba di sana. MCP `gambar_2d` menerima `level` (elevasi dalam meter).
+- Panduan data bertambah baris Y (tangga) dan W (plat); id elemen `Y…`, `W…`.
+- **Proyek contoh Asrama Putri 2 lantai** (375 elemen: struktur lengkap, 16 kamar + KM, plat lantai berlubang, tangga, atap limas kayu, kusen bertipe) — buka lewat palet Ctrl+K *Buka contoh* atau panel Proyek → *Contoh*. Berkas `contoh/asrama-putri.json` ikut dipaketkan di desktop dan artifact; perintah *Buka proyek (.json)* juga tersedia di palet.
+
 ## Yang baru di 0.34.0
 
 Tahap A desain ulang (mock-up *Desain Ulang RANCANG v0.34*, keputusan 18 Oktober 2026): lebih sedikit yang harus diingat, lebih banyak yang terlihat, ruang kerja lebih luas.
