@@ -655,6 +655,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
           <option value="daftar">Daftar gambar</option>
           <option value="denah" selected>Denah</option>
           <option value="atap">Denah atap</option>
+          <option value="plafon">Rencana plafon dan rangka</option>
           <option value="pondasi">Denah pondasi</option>
           <option value="detail">Detail penulangan</option>
           <option value="kusen">Daftar kusen</option>
@@ -7156,7 +7157,58 @@ const BAHAN_PLAFON = {grc: 'GRC 4 mm', gypsum: 'Gypsum 9 mm', tripleks4: 'Triple
 const LEMBAR_PLAFON = {grc: [1.2, 2.4], gypsum: [1.2, 2.4], tripleks4: [1.22, 2.44], tripleks6: [1.22, 2.44]};
 const WARNA_PLAFON = {grc: '#F4F2EC', gypsum: '#F4F2EC', tripleks4: '#D9BC8C', tripleks6: '#D2B07E'};
 const lembarPlafonDari = d => LEMBAR_PLAFON[d.bahan] || LEMBAR_PLAFON.grc;
-const RANGKA_PLAFON = {hollow: 'Hollow galvalum 40×40', kayu: 'Kayu 4/6'};
+const RANGKA_PLAFON = {hollow: 'Hollow galvalum 40×40 / 20×40', kayu: 'Kayu balok induk 5/7 + usuk 4/6', bajaringan: 'Baja ringan C75 + hollow 20×40'};
+// Spesifikasi rangka plafon: rangka utama (induk) tiap 1,20 m, rangka anak tegak lurus tiap 0,60 m, penggantung tiap 1,20 m pada rangka utama.
+// b = lebar, h = tinggi penampang (m). Rangka anak menempel di atas penutup, rangka utama di atas rangka anak.
+const SPEK_RANGKA_PLAFON = {
+  kayu: {nama: 'Kayu', warna: '#C9A06A', jarakU: 1.2, jarakA: 0.6,
+    utama: {b: 0.05, h: 0.07, label: 'Balok induk kayu 5/7'}, anak: {b: 0.04, h: 0.06, label: 'Usuk kayu 4/6'}, gantung: {b: 0.04, h: 0.04, label: 'Penggantung kayu 4/6'}},
+  hollow: {nama: 'Hollow galvalum', warna: '#9FA8B0', jarakU: 1.2, jarakA: 0.6,
+    utama: {b: 0.04, h: 0.04, label: 'Hollow galvalum 40×40'}, anak: {b: 0.02, h: 0.04, label: 'Hollow galvalum 20×40'}, gantung: {b: 0.01, h: 0.01, label: 'Penggantung besi ulir Ø8'}},
+  bajaringan: {nama: 'Baja ringan', warna: '#B7C0C8', jarakU: 1.2, jarakA: 0.6,
+    utama: {b: 0.035, h: 0.075, label: 'Baja ringan C75 (rangka utama)'}, anak: {b: 0.02, h: 0.04, label: 'Hollow 20×40 (rangka anak)'}, gantung: {b: 0.01, h: 0.01, label: 'Penggantung besi ulir Ø8'}}
+};
+const PANJANG_GANTUNG = 0.3;
+const spekRangkaPlafon = d => SPEK_RANGKA_PLAFON[d.rangka] || SPEK_RANGKA_PLAFON.hollow;
+/** Segmen dalam poligon (even-odd, lubang ikut) di garis tetap: arah 'x' = garis y=c, 'y' = garis x=c. */
+function irisanGarisPlafon(cincin, arah, c) {
+  const k = [];
+  for (const r of cincin) for (let i = 0; i < r.length; i++) {
+    const p = r[i], q = r[(i + 1) % r.length];
+    const [a1, a2, b1, b2] = arah === 'x' ? [p[1], q[1], p[0], q[0]] : [p[0], q[0], p[1], q[1]];
+    if ((a1 <= c) === (a2 <= c)) continue;
+    k.push(b1 + (c - a1) * (b2 - b1) / (a2 - a1));
+  }
+  k.sort((m, n) => m - n);
+  /** @type {number[][]} */
+  const seg = [];
+  for (let i = 0; i + 1 < k.length; i += 2) if (k[i + 1] - k[i] > 0.05) seg.push([k[i], k[i + 1]]);
+  return seg;
+}
+/**
+ * Susunan rangka plafon: rangka utama sejajar sisi terpanjang, rangka anak tegak lurus, penggantung pada rangka utama.
+ * Jarak dibagi rata (tidak lebih renggang dari jarak maksimum), dipotong mengikuti bentuk dan lubang plafon.
+ * @returns {{arah: 'x' | 'y', sp: any, utama: {a: number[], b: number[]}[], anak: {a: number[], b: number[]}[], gantung: number[][], panjangUtama: number, panjangAnak: number}}
+ */
+function rangkaPlafon(d) {
+  const sp = spekRangkaPlafon(d), cincin = [poligon(d), ...(lubangDari(d) || [])];
+  let xa = Infinity, ya = Infinity, xb = -Infinity, yb = -Infinity;
+  for (const [x, y] of cincin[0]) { xa = Math.min(xa, x); ya = Math.min(ya, y); xb = Math.max(xb, x); yb = Math.max(yb, y); }
+  const Lx = xb - xa, Ly = yb - ya, arah = Lx >= Ly ? 'x' : 'y';
+  const a0 = arah === 'x' ? ya : xa, pendek = arah === 'x' ? Ly : Lx, b0 = arah === 'x' ? xa : ya, panjang = arah === 'x' ? Lx : Ly;
+  const bagi = (awal, total, jarak) => { const n = Math.max(1, Math.ceil(total / jarak - 1e-9)); return Array.from({length: n}, (_, i) => awal + (i + 0.5) * total / n); };
+  const ke = (sumbu, c, /** @type {number[]} */ [m, n]) => (sumbu === 'x' ? {a: [m, c], b: [n, c]} : {a: [c, m], b: [c, n]});
+  const utama = [], anak = [], gantung = [];
+  for (const c of bagi(a0, pendek, sp.jarakU)) for (const sg of irisanGarisPlafon(cincin, arah, c)) {
+    utama.push(ke(arah, c, sg));
+    const Li = sg[1] - sg[0], n = Li < 0.6 ? 1 : Math.ceil((Li - 0.4) / sp.jarakU - 1e-9) + 1;
+    for (let i = 0; i < n; i++) { const t = n === 1 ? sg[0] + Li / 2 : sg[0] + 0.2 + i * (Li - 0.4) / (n - 1); gantung.push(arah === 'x' ? [t, c] : [c, t]); }
+  }
+  const lain = arah === 'x' ? 'y' : 'x';
+  for (const c of bagi(b0, panjang, sp.jarakA)) for (const sg of irisanGarisPlafon(cincin, lain, c)) anak.push(ke(lain, c, sg));
+  const jml = L => L.reduce((t, s2) => t + Math.hypot(s2.b[0] - s2.a[0], s2.b[1] - s2.a[1]), 0);
+  return {arah, sp, utama, anak, gantung, panjangUtama: jml(utama), panjangAnak: jml(anak)};
+}
 const jarakKudaDari = d => d.jarakKuda > 0 ? d.jarakKuda : ((d.rangka || 'bajaringan') === 'kayu' ? 3.0 : 1.2);
 // Potongan bidang datar 3D (cembung) dengan bidang n·p = c → ruas [p, q] atau null
 function irisMuka(t, n, c) {
@@ -7391,10 +7443,10 @@ function ukurPlafon(d) {
   const p = poligon(d), A = Math.abs(luasBertanda(p)) - luasLubang(d);
   let K = 0, xa = Infinity, xb = -Infinity, ya = Infinity, yb = -Infinity;
   for (let i = 0; i < p.length; i++) { const [x1, y1] = p[i], [x2, y2] = p[(i + 1) % p.length]; K += Math.hypot(x2 - x1, y2 - y1); xa = Math.min(xa, x1); xb = Math.max(xb, x1); ya = Math.min(ya, y1); yb = Math.max(yb, y1); }
-  const Lx = xb - xa, Ly = yb - ya, isi = A / Math.max(1e-6, Lx * Ly);
-  const rangka = ((Math.floor(Lx / 0.6 + 1e-9) + 1) * Ly + (Math.floor(Ly / 0.6 + 1e-9) + 1) * Lx) * isi;
-  K += (lubangDari(d) || []).reduce((s, r) => s + kelilingCincin(r), 0);
-  return {luasPlafon: A, lisPlafon: K, lembarPlafon: Math.ceil(A / (lembarPlafonDari(d)[0] * lembarPlafonDari(d)[1]) * 1.05), rangkaPlafon: rangka, kayuPlafon: (d.rangka === 'kayu') ? rangka * 0.04 * 0.06 : 0};
+  const rk = rangkaPlafon(d), sp = rk.sp, rangka = rk.panjangUtama + rk.panjangAnak;
+  const kayu = d.rangka === 'kayu' ? rk.panjangUtama * sp.utama.b * sp.utama.h + rk.panjangAnak * sp.anak.b * sp.anak.h + rk.gantung.length * PANJANG_GANTUNG * sp.gantung.b * sp.gantung.h : 0;
+  return {luasPlafon: A, lisPlafon: K, lembarPlafon: Math.ceil(A / (lembarPlafonDari(d)[0] * lembarPlafonDari(d)[1]) * 1.05), rangkaPlafon: rangka, kayuPlafon: kayu,
+    panjangUtama: rk.panjangUtama, panjangAnak: rk.panjangAnak, jumlahGantung: rk.gantung.length};
 }
 function bangunPlafon(g, id, d, f) {
   let w = WARNA_PLAFON[d.bahan] || WARNA_PLAFON.grc, tepi = T.edge;
@@ -7408,6 +7460,31 @@ function bangunPlafon(g, id, d, f) {
   for (let x = xa + lbX; x < xb - 0.01; x += lbX) { const s = irisMuka(t, [1, 0, 0], x); if (s) pos.push(...s[0], ...s[1]); }
   for (let y = ya + lbY; y < yb - 0.01; y += lbY) { const s = irisMuka(t, [0, 1, 0], y); if (s) pos.push(...s[0], ...s[1]); }
   if (pos.length) { const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.add(new THREE.LineSegments(lg, matGaris(campur(w, T.edge, 0.35)))); }
+  bangunRangkaPlafon(g, id, d, f, z);
+}
+// rangka plafon di atas penutup: rangka anak menempel, rangka utama di atasnya, penggantung naik dari rangka utama
+function kotakPos(pos, x0, x1, y0, y1, z0, z1) {
+  const v = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]];
+  for (const f of [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7]]) for (const i of f) pos.push(...v[i]);
+}
+function bangunRangkaPlafon(g, id, d, f, z) {
+  const rk = rangkaPlafon(d), sp = rk.sp;
+  if (!rk.utama.length && !rk.anak.length) return;
+  const pos = [], zA = z, zU = z + sp.anak.h, zG = zU + sp.utama.h;
+  const seg = (s2, sumbu, tebal, zb, zt) => {
+    const [x0, y0] = s2.a, [x1, y1] = s2.b, h = tebal / 2;
+    if (sumbu === 'x') kotakPos(pos, Math.min(x0, x1), Math.max(x0, x1), y0 - h, y0 + h, zb, zt); else kotakPos(pos, x0 - h, x0 + h, Math.min(y0, y1), Math.max(y0, y1), zb, zt);
+  };
+  const lain = rk.arah === 'x' ? 'y' : 'x';
+  for (const s2 of rk.anak) seg(s2, lain, sp.anak.b, zA, zA + sp.anak.h);
+  for (const s2 of rk.utama) seg(s2, rk.arah, sp.utama.b, zU, zU + sp.utama.h);
+  for (const [x, y] of rk.gantung) { const h = sp.gantung.b / 2; kotakPos(pos, x - h, x + h, y - h, y + h, zG, zG + PANJANG_GANTUNG); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.computeVertexNormals();
+  const [w] = warnaKeadaan(sp.warna, f), m = new THREE.Mesh(geo, matSelubung(w));
+  m.userData.elemId = id;
+  g.add(m);
 }
 const alatPlafon = {
   hover: null, hoverMiring: null,
@@ -7760,7 +7837,11 @@ function htmlPlafon(id, d) {
   <section><h2>Ukuran untuk RAB</h2><dl class="ukur">
     ${baris('Luas plafon', 'luasPlafon', 'm²')}${baris('Lis plafon', 'lisPlafon', 'm')}
     <dt>Lembar panel ${fmt(lembarPlafonDari(d)[0])} × ${fmt(lembarPlafonDari(d)[1])} (+5%)</dt><dd><span data-u="lembarPlafon"></span><small>lembar</small></dd>
-    ${baris('Panjang rangka grid 60 × 60', 'rangkaPlafon', 'm')}${d.rangka === 'kayu' ? baris('Volume kayu 4/6', 'kayuPlafon', 'm³') : ''}
+    <dt>Rangka utama (tiap 1,20 m)</dt><dd><span data-u="panjangUtama"></span><small>m</small></dd>
+    <dt>Rangka anak (tiap 0,60 m)</dt><dd><span data-u="panjangAnak"></span><small>m</small></dd>
+    <dt>Penggantung (tiap 1,20 m)</dt><dd><span data-u="jumlahGantung"></span><small>buah</small></dd>
+    ${d.rangka === 'kayu' ? baris('Volume kayu rangka', 'kayuPlafon', 'm³') : ''}
+    <dt class="meta">${esc(spekRangkaPlafon(d).utama.label)}; ${esc(spekRangkaPlafon(d).anak.label)}; ${esc(spekRangkaPlafon(d).gantung.label)}</dt><dd></dd>
   </dl></section>
   ${metaUbah(d)}
   <div class="aksi-panel">${tombolPlafon()}${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
@@ -9039,7 +9120,7 @@ function namaGambar(j) {
   if (j && j.startsWith('det:')) return 'LEMBAR DETAIL ' + nomorDet(j);
   return NAMA_2D[j];
 }
-const NAMA_2D = {sampul: 'SAMPUL', daftar: 'DAFTAR GAMBAR', denah: 'DENAH', atap: 'DENAH ATAP', pondasi: 'DENAH PONDASI', detail: 'DETAIL PENULANGAN', kusen: 'DAFTAR KUSEN', depan: 'TAMPAK DEPAN (SELATAN)', belakang: 'TAMPAK BELAKANG (UTARA)', kanan: 'TAMPAK KANAN (TIMUR)', kiri: 'TAMPAK KIRI (BARAT)'};
+const NAMA_2D = {sampul: 'SAMPUL', daftar: 'DAFTAR GAMBAR', denah: 'DENAH', atap: 'DENAH ATAP', plafon: 'RENCANA PLAFON DAN RANGKA', pondasi: 'DENAH PONDASI', detail: 'DETAIL PENULANGAN', kusen: 'DAFTAR KUSEN', depan: 'TAMPAK DEPAN (SELATAN)', belakang: 'TAMPAK BELAKANG (UTARA)', kanan: 'TAMPAK KANAN (TIMUR)', kiri: 'TAMPAK KIRI (BARAT)'};
 // Arah pandang tampak: u = sumbu mendatar di kertas, jauh = jarak dari pengamat
 const PROYEKSI = {
   depan: {u: (x, y) => x, jauh: (x, y) => y},
@@ -9173,7 +9254,7 @@ function irisanBenda(B, Dp, Hh) {
 /* ============ Ruang Lembar: kop bernomor, sampul, daftar gambar, PDF set (v0.26) ============ */
 const n2k = v => Math.round(v * 100) / 100;
 const esk = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const LEMBAR_BAKU = ['sampul', 'daftar', 'denah', 'atap', 'pondasi', 'depan', 'belakang', 'kanan', 'kiri', 'potongan:*', 'kusen', 'detail', 'det:*'];
+const LEMBAR_BAKU = ['sampul', 'daftar', 'denah', 'atap', 'plafon', 'pondasi', 'depan', 'belakang', 'kanan', 'kiri', 'potongan:*', 'kusen', 'detail', 'det:*'];
 const LEMBAR_STRUKTUR = new Set(['pondasi', 'detail']);
 const rankLembar = j => { const i = LEMBAR_BAKU.indexOf(j.startsWith('potongan:') ? 'potongan:*' : j.startsWith('det:') ? 'det:*' : j); return i < 0 ? 99 : i + (j.startsWith('det:') ? nomorDet(j) / 1000 : 0); };
 const ISIAN_SAMPUL = [['judul', 'Judul', 'GAMBAR KERJA'], ['nama', 'Nama proyek', ''], ['lokasi', 'Lokasi', ''], ['pemilik', 'Pemilik / instansi', ''],
@@ -10025,6 +10106,52 @@ function buatSVG(o) {
         isi.push(...ukuranBerantai({dinding: geos.filter(g => g.jenis === 'dinding'), kolom: bawahList.filter(g => g.jenis === 'kolom'), lantai: [],
           luar: {x0, y0, x1, y1}, X, Y, rantaiRinci: false}));
       }
+      const ax = area.x + area.w - 8, ay = area.y + 9;
+      isi.push(`<circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
+        `<polygon points="${ax},${ay - 6} ${ax + 2.4},${ay + 3} ${ax},${ay + 1.6} ${ax - 2.4},${ay + 3}" fill="#000"/>`,
+        teks(ax, ay - 7.6, 'U', 3, 'text-anchor="middle" font-weight="700"'));
+    }
+  } else if (o.jenis === 'plafon') {
+    // rencana plafon: batas tiap plafon, rangka utama (tebal), rangka anak (tipis), penggantung (titik), dan keterangan bahan
+    const plaf = geos.filter(g => g.jenis === 'plafon');
+    if (!plaf.length) info = 'Belum ada plafon untuk dibuat rencana rangkanya. Pasang plafon dengan alat Plafon (Y).';
+    else {
+      const dindingP = geos.filter(g => g.jenis === 'dinding').map(g => poligon(g));
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const p of [...plaf.map(g => poligon(g)), ...dindingP]) for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+      const tp = o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
+      skala = skalaTepi(x1 - x0, y1 - y0, tp, 1.25);
+      const kM = skala / 1000, bx0 = x0 - tp.l * kM, by0 = y0 - tp.b * kM, bx1 = x1 + tp.r * kM, by1 = y1 + tp.t * kM;
+      const s = 1000 / skala;
+      const ox = area.x + (area.w - (bx1 - bx0) * s) / 2, oy = area.y + area.h * 0.2 + (area.h * 0.8 - (by1 - by0) * s) / 2;
+      const X = x => ox + (x - bx0) * s, Y = y => oy + (by1 - y) * s;
+      const pts = p => p.map(q => `${n2(X(q[0]))},${n2(Y(q[1]))}`).join(' ');
+      const gs = (a, b2) => `x1="${n2(X(a[0]))}" y1="${n2(Y(a[1]))}" x2="${n2(X(b2[0]))}" y2="${n2(Y(b2[1]))}"`;
+      for (const p of dindingP) isi.push(`<polygon points="${pts(p)}" fill="#D4D4D4" stroke="#000" stroke-width="0.25"/>`);
+      const ket = new Map();
+      plaf.forEach((g, i) => {
+        const rk = rangkaPlafon(g), sp = rk.sp, lb = lubangDari(g), p = poligon(g);
+        isi.push(`<path d="${[p, ...(lb || [])].map(r => 'M' + r.map(([x, y]) => `${n2(X(x))} ${n2(Y(y))}`).join(' L') + ' Z').join(' ')}" fill="#fff" fill-rule="evenodd" stroke="#000" stroke-width="0.3"/>`);
+        for (const sg of rk.anak) isi.push(`<line ${gs(sg.a, sg.b)} stroke="#6E6E6E" stroke-width="${n2(Math.max(0.15, sp.anak.b * s))}"/>`);
+        for (const sg of rk.utama) isi.push(`<line ${gs(sg.a, sg.b)} stroke="#000" stroke-width="${n2(Math.max(0.4, sp.utama.b * s))}"/>`);
+        for (const [x, y] of rk.gantung) isi.push(`<circle cx="${n2(X(x))}" cy="${n2(Y(y))}" r="0.7" fill="#fff" stroke="#000" stroke-width="0.25"/>`);
+        let xa = Infinity, ya = Infinity, xb = -Infinity, yb = -Infinity;
+        for (const [x, y] of p) { xa = Math.min(xa, x); ya = Math.min(ya, y); xb = Math.max(xb, x); yb = Math.max(yb, y); }
+        const kode = 'P' + (i + 1);
+        isi.push(`<rect x="${n2(X((xa + xb) / 2) - 5)}" y="${n2(Y((ya + yb) / 2) - 3.4)}" width="10" height="5.2" fill="#fff" stroke="#000" stroke-width="0.2"/>`,
+          teks(X((xa + xb) / 2), Y((ya + yb) / 2) - 0.2, kode, 2.4, 'text-anchor="middle" font-weight="700"'),
+          teks(X((xa + xb) / 2), Y((ya + yb) / 2) + 1.7, `${fmt(ukurPlafon(g).luasPlafon)} m²`, 1.6, 'text-anchor="middle"'));
+        const k = `${BAHAN_PLAFON[g.bahan] || BAHAN_PLAFON.grc}; rangka ${sp.nama.toLowerCase()}: ${sp.utama.label} tiap ${Math.round(sp.jarakU * 100)} cm, ${sp.anak.label} tiap ${Math.round(sp.jarakA * 100)} cm, ${sp.gantung.label}; elevasi +${fmt(g.z0 || 0)} m`;
+        if (!ket.has(k)) ket.set(k, []);
+        ket.get(k).push(kode);
+      });
+      let ky = area.y + 4;
+      isi.push(teks(area.x + 2, ky, 'KETERANGAN', 2.4, 'font-weight="700"'));
+      for (const [k, kodes] of ket) { ky += 3.6; isi.push(teks(area.x + 2, ky, `${kodes.join(', ')}: ${k}`, 2.0)); }
+      ky += 4.2;
+      isi.push(`<line x1="${area.x + 2}" y1="${ky - 1}" x2="${area.x + 12}" y2="${ky - 1}" stroke="#000" stroke-width="0.4"/>`, teks(area.x + 14, ky, 'Rangka utama', 2.0),
+        `<line x1="${area.x + 40}" y1="${ky - 1}" x2="${area.x + 50}" y2="${ky - 1}" stroke="#6E6E6E" stroke-width="0.2"/>`, teks(area.x + 52, ky, 'Rangka anak', 2.0),
+        `<circle cx="${area.x + 78}" cy="${ky - 1}" r="0.7" fill="#fff" stroke="#000" stroke-width="0.25"/>`, teks(area.x + 80, ky, 'Penggantung', 2.0));
       const ax = area.x + area.w - 8, ay = area.y + 9;
       isi.push(`<circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
         `<polygon points="${ax},${ay - 6} ${ax + 2.4},${ay + 3} ${ax},${ay + 1.6} ${ax - 2.4},${ay + 3}" fill="#000"/>`,
@@ -11252,15 +11379,20 @@ function dataRAB(ids) {
   tambah(d5, 'AT-040', 'Atap dak beton (luas)', 'm²', at.dak, 'Volume betonnya masuk divisi beton bila dimodelkan sebagai beton');
   // VI. Plafon
   const d6 = div('PEKERJAAN PLAFON');
-  const pl = {grc: 0, gypsum: 0, tripleks4: 0, tripleks6: 0, lis: 0, kayu: 0};
-  for (const [, g] of geos) if (g.jenis === 'plafon') { const u = ukur(g); pl[BAHAN_PLAFON[g.bahan] ? g.bahan : 'grc'] += u.luasPlafon; pl.lis += u.lisPlafon; pl.kayu += u.kayuPlafon; }
+  const pl = {grc: 0, gypsum: 0, tripleks4: 0, tripleks6: 0, lis: 0, kayu: 0, hU: 0, hA: 0, bU: 0, bA: 0, gantung: 0};
+  for (const [, g] of geos) if (g.jenis === 'plafon') { const u = ukur(g); pl[BAHAN_PLAFON[g.bahan] ? g.bahan : 'grc'] += u.luasPlafon; pl.lis += u.lisPlafon; pl.kayu += u.kayuPlafon; pl.gantung += u.jumlahGantung; if (g.rangka === 'hollow' || !g.rangka) { pl.hU += u.panjangUtama; pl.hA += u.panjangAnak; } else if (g.rangka === 'bajaringan') { pl.bU += u.panjangUtama; pl.bA += u.panjangAnak; } }
   tambah(d6, 'PL-002', 'Plafond GRC 4 mm + rangka', 'm²', pl.grc);
   tambah(d6, 'PL-003', 'Plafond gypsum 9 mm + rangka', 'm²', pl.gypsum);
   tambah(d6, 'PL-005', 'Plafond tripleks 4 mm + rangka', 'm²', pl.tripleks4);
   tambah(d6, 'PL-006', 'Plafond tripleks 6 mm + rangka', 'm²', pl.tripleks6);
   tambah(d6, 'PL-004', 'Plafond GRC 4 mm miring di bawah kaki kuda-kuda (teras/tritisan)', 'm²', at.plafonMiring);
   tambah(d6, 'PL-010', 'Lis plafond', 'm\'', pl.lis);
-  tambah(d6, 'PL-011', 'Rangka plafond kayu 4/6', 'm³', pl.kayu);
+  tambah(d6, 'PL-011', 'Rangka plafond kayu (balok induk 5/7, usuk 4/6, penggantung)', 'm³', pl.kayu);
+  tambah(d6, 'PL-012', 'Rangka utama plafond hollow galvalum 40×40', 'm\'', pl.hU);
+  tambah(d6, 'PL-013', 'Rangka anak plafond hollow galvalum 20×40', 'm\'', pl.hA);
+  tambah(d6, 'PL-014', 'Rangka utama plafond baja ringan C75', 'm\'', pl.bU);
+  tambah(d6, 'PL-015', 'Rangka anak plafond baja ringan (hollow 20×40)', 'm\'', pl.bA);
+  tambah(d6, 'PL-016', 'Penggantung rangka plafond (besi ulir Ø8 atau kayu 4/6, 0,30 m)', 'buah', pl.gantung);
   // VII. Pengecatan
   const d7 = div('PEKERJAAN PENGECATAN');
   tambah(d7, 'CA-002', 'Pengecatan dinding (dua sisi)', 'm²', 2 * t.luasDinding);
