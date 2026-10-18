@@ -172,6 +172,11 @@ Setiap perubahan dari luar membawa `diubahOleh` dan `diubahPada`. Lewat MCP, sat
 
 Sunting Alas ditempatkan di tahap 2 karena disebut langsung sebagai hambatan nyata dan mekanisme peganganannya dipakai lagi di tahap 5.
 
+**Keputusan tambahan 18 Oktober 2026 (malam), dikerjakan di PR #21 / v0.33:**
+- *Plafon miring tidak mendapat menu/alat sendiri.* Alasan: bilah alat sudah 23 tombol dan semua huruf A–Z terpakai; plafon datar dan miring sama bahan/rangka/lis-nya, hanya bidangnya yang miring; prinsip RANCANG: pengaturan ada di panel Properti benda yang dipilih. Yang dilakukan: pemilih mode *Per ruang · Gabungan · Miring* terlihat di bilah petunjuk alat Plafon; satu komponen isian plafon (`medanSetelPlafon`) dipakai untuk P, bidang H peran plafon, dan atap (`plafonBahan`, `plafonRangka`); bidang plafon menyimpan `turun` dan bisa diketik ulang; RAB plafon miring menyatu dengan plafon datar (PL-004 ditiadakan).
+- *Ukuran alas plafon/lantai bisa diketik* (lebar X, panjang Y dengan sisi tetap, perluas semua sisi) sebagai pengganti Push/Pull untuk ukuran pasti.
+- Perbaikan kecil atas laporan uji: info kursor dipindah ke lapisan kanvas (gambar goyang), sorotan hanya muka di bawah kursor (grup besar berat), garis potong di atas pelat lantai + daftar Pilih, Extend/Trim = Shift+H (bentrok Tembus), Panel Claude menerima Ctrl+V tangkapan layar.
+
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
 - Dinding mana yang seharusnya ada pintu ("bidang ini harusnya ada pintu").

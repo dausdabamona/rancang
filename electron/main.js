@@ -302,6 +302,12 @@ async function ujiAsap() {
     const u2 = await halaman(`window.rancangUji.isiMedan('l-perluas', '0,2')`);
     const xs2 = u2.data && u2.data.alas.map(q => q.x), ys2 = u2.data && u2.data.alas.map(q => q.y);
     catat('ukuran alas: perluas semua sisi', !!xs2 && Math.min(...xs2) === -0.2 && Math.max(...xs2) === 6.2 && Math.min(...ys2) === -0.2 && Math.max(...ys2) === 3.2, {alas: u2.data && u2.data.alas});
+    // v0.33: plafon miring bawaan atap memakai bahan/rangka pilihan dan masuk baris RAB yang sama dengan plafon datar (PL-007 PVC, PL-012 hollow), tanpa PL-004
+    const ra = await metode.terapkan({perubahan: [{id: 'A1', data: {jenis: 'atap', bentuk: 'pelana', x0: 0, y0: 0, x1: 4, y1: 3, z0: 3, kemiringan: 30, overstek: 0.6, arah: 'x', rangka: 'bajaringan', plafonMiring: 'penuh', plafonBahan: 'pvc', plafonRangka: 'hollow'}}]});
+    catat('buat atap berplafon miring PVC', ra && ra.ok, {r: ra});
+    const rab2 = await metode.rab({});
+    const baris = rab2.flatMap(dv => dv.baris), pvc = baris.find(b => b.kode === 'PL-007'), hollow = baris.find(b => b.kode === 'PL-012'), lama = baris.find(b => b.kode === 'PL-004');
+    catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;
