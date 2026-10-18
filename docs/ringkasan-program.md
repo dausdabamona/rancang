@@ -177,6 +177,11 @@ Sunting Alas ditempatkan di tahap 2 karena disebut langsung sebagai hambatan nya
 - *Ukuran alas plafon/lantai bisa diketik* (lebar X, panjang Y dengan sisi tetap, perluas semua sisi) sebagai pengganti Push/Pull untuk ukuran pasti.
 - Perbaikan kecil atas laporan uji: info kursor dipindah ke lapisan kanvas (gambar goyang), sorotan hanya muka di bawah kursor (grup besar berat), garis potong di atas pelat lantai + daftar Pilih, Extend/Trim = Shift+H (bentrok Tembus), Panel Claude menerima Ctrl+V tangkapan layar.
 
+**Desain ulang v0.34 (mock-up disetujui 18 Oktober 2026 malam, artifact *Desain Ulang RANCANG v0.34*).** Aturan pengguna: menu bisa dilipat agar ruang kerja luas; informatif tapi tidak berlebihan (tiga tingkat: selalu tampak → saat ada pilihan → hanya bila diminta); pintasan hanya untuk alat yang sering dipakai, mengikuti SketchUp/AutoCAD.
+- Tahap A (v0.34.0): peta pintasan baru, palet perintah Ctrl+K, menu alat tiga keadaan, panel jadi rel tab, mode fokus.
+- Tahap B (berikutnya): panel bertab Properti · Objek (outliner) · Claude, kartu properti ringkas mengambang di mode fokus.
+- Tahap C: tab Claude di desktop lewat API key Anthropic (berbayar per pakai) di samping jalur MCP.
+
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
 - Dinding mana yang seharusnya ada pintu ("bidang ini harusnya ada pintu").
