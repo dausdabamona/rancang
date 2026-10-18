@@ -452,6 +452,15 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
 .lembar-daftar{width:232px;background:var(--color-bg)}
 .lembar-daftar li.aktif{background:var(--color-accent-100);color:var(--color-accent-800);border-color:transparent}
 .pratinjau-2d{background:var(--rc-paper);border:0}
+/* menu dan panel bisa dilipat (v0.31.1) */
+body.rail-tutup .rail,body.panel-tutup #panel,body.panel-tutup #panel-claude{display:none}
+body.panel-tutup{--rc-panel-w:0px}
+#btn-rail[aria-pressed="true"],#btn-sisi[aria-pressed="true"]{background:transparent;color:inherit}
+.rail-grup.lipat>.rail-grid{display:none}
+.rail-grup>.kicker{cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none}
+.rail-grup>.kicker::before{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:-2px 2px 0 0}
+.rail-grup.lipat>.kicker::before{transform:rotate(-45deg);margin:0 2px 0 0}
+.rail-grup>.kicker:hover{color:var(--rc-accent-text)}
 @media (max-width:760px){
   body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto 62vh auto auto;grid-template-areas:"atas" "rail" "bar" "view" "bawah" "panel"}
   .atas{height:auto;flex-wrap:wrap;padding:var(--space-2)}
@@ -472,6 +481,10 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
     <button class="alat" id="btn-2d" title="Gambar 2D dan ekspor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 15h16M11 4v11"/></svg><span class="teks">Gambar 2D</span></button>
   </div>
   <div class="spasi"></div>
+  <div class="kelompok" role="toolbar" aria-label="Tata letak">
+    <button class="alat" id="btn-rail" aria-pressed="true" title="Tampilkan atau sembunyikan menu alat (Ctrl+B)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M9 4v16"/></svg><span class="teks">Menu</span></button>
+    <button class="alat" id="btn-sisi" aria-pressed="true" title="Tampilkan atau sembunyikan panel properti (Ctrl+J)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M15 4v16"/></svg><span class="teks">Properti</span></button>
+  </div>
   <span class="status" id="status" data-s="muat" role="status">Memuat…</span>
 </header>
 
@@ -7869,6 +7882,8 @@ window.addEventListener('keydown', e => {
   if (e.key.startsWith('Arrow') && S.tool === 'pilih' && S.sel.size && !ctrl) { e.preventDefault(); geserPilihan(e.key, e.shiftKey); return; }
   const PANAH = {ArrowRight: 'x', ArrowLeft: 'y', ArrowUp: 'z', ArrowDown: null};
   if (e.key in PANAH && (S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' || S.tool === 'busur' || S.tool === 'cermin' || (S.tool === 'bantu' && alatBantu.mode === 'sudut'))) { e.preventDefault(); if (!e.repeat) aturKunci(PANAH[e.key]); return; }
+  if (ctrl && k === 'b') { e.preventDefault(); $('#btn-rail').click(); return; }
+  if (ctrl && k === 'j') { e.preventDefault(); $('#btn-sisi').click(); return; }
   if (ctrl && k === 's') { e.preventDefault(); simpanProyek(); return; }
   if (ctrl && k === 'o') { e.preventDefault(); if (S.bisaUbah) bukaProyek(); return; }
   if (ctrl && k === 'z' && !e.shiftKey) { e.preventDefault(); urungkan(); return; }
@@ -8551,6 +8566,26 @@ panel.addEventListener('toggle', e => {
   const sum = e.target.querySelector && e.target.querySelector(':scope > summary');
   if (sum) { if (e.target.open) PANEL_TUTUP.delete(sum.textContent); else PANEL_TUTUP.add(sum.textContent); }
 }, true);
+/* Lipat menu alat, grup alat, dan panel properti; pilihan diingat per peramban */
+const TATA = {rail: true, sisi: true, grup: []};
+try { Object.assign(TATA, JSON.parse(localStorage.getItem('rancang-tata') || '{}')); } catch (_) {}
+function terapkanTata(simpan) {
+  document.body.classList.toggle('rail-tutup', !TATA.rail);
+  document.body.classList.toggle('panel-tutup', !TATA.sisi);
+  $('#btn-rail').setAttribute('aria-pressed', String(TATA.rail));
+  $('#btn-sisi').setAttribute('aria-pressed', String(TATA.sisi));
+  document.querySelectorAll('.rail-grup').forEach(g => g.classList.toggle('lipat', TATA.grup.includes(g.querySelector('.kicker').textContent)));
+  if (simpan) { try { localStorage.setItem('rancang-tata', JSON.stringify(TATA)); } catch (_) {} }
+  window.dispatchEvent(new Event('resize'));
+}
+$('#btn-rail').addEventListener('click', () => { TATA.rail = !TATA.rail; terapkanTata(true); });
+$('#btn-sisi').addEventListener('click', () => { TATA.sisi = !TATA.sisi; terapkanTata(true); });
+document.querySelectorAll('.rail-grup > .kicker').forEach(k => k.addEventListener('click', () => {
+  const n = k.textContent, i = TATA.grup.indexOf(n);
+  if (i >= 0) TATA.grup.splice(i, 1); else TATA.grup.push(n);
+  terapkanTata(true);
+}));
+terapkanTata(false);
 function renderPanel(paksa) {
   for (const id of [...S.sel]) if (!ambil(id)) S.sel.delete(id);
   const kunci = [...S.sel].sort().join(',') + '|' + S.bisaUbah + '|' + !!S.edit;
@@ -12910,6 +12945,7 @@ function segarLampiran() {
 }
 function bukaClaude(buka = !CLAUDE.terbuka) {
   CLAUDE.terbuka = buka;
+  if (buka && !TATA.sisi) { TATA.sisi = true; terapkanTata(true); }
   $('#panel-claude').hidden = !buka; $('#panel').hidden = buka;
   $('#btn-claude').setAttribute('aria-pressed', String(buka));
   if (buka) setTimeout(() => $('#cl-input').focus(), 0);
