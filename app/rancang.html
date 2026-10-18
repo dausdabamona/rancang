@@ -577,7 +577,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 
 | Awalan | jenis | Isian wajib | Contoh |
 |---|---|---|---|
-| D | dinding | awal{x,y}, akhir{x,y} (as dinding), tebal, tinggi, z0. Opsional: profilAtas [[jarak dari awal (m), tinggi (m)], …] untuk tepi atas bertangga/miring (tinggi = titik tertinggi) | `{"jenis":"dinding","nama":"Dinding depan","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"tebal":0.15,"tinggi":3.5,"z0":-0.11}` |
+| D | dinding | awal{x,y}, akhir{x,y} (as dinding), tebal, tinggi, z0. Opsional: profilAtas [[jarak dari awal (m), tinggi (m)], …] untuk tepi atas bertangga/miring (tinggi = titik tertinggi), bahan ('bata' bawaan, 'tripleks', 'grc', 'gypsum' = sekat lembaran 2 sisi di atas rangka; tebal ±0,08–0,10) dan rangka ('hollow' bawaan / 'kayu') untuk sekat | `{"jenis":"dinding","nama":"Dinding depan","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"tebal":0.15,"tinggi":3.5,"z0":-0.11}` |
 | B | bukaan | tipe 'pintu'/'jendela', dinding (id), jarak (dari ujung awal dinding ke tepi bukaan), lebar, tinggi, ambang (dari dasar dinding), kode | `{"jenis":"bukaan","tipe":"pintu","kode":"P1","dinding":"D5","jarak":1.2,"lebar":0.8,"tinggi":2.1,"ambang":0.11}` |
 | V | volume | alas [{x,y}…] (≥3 titik), z0, tinggi. Bentuk lain: `bentuk:'lingkaran'` + pusat, jari; `bentuk:'busur'` + awal, akhir, tonjolan | `{"jenis":"volume","nama":"Lantai Kamar 1","alas":[{"x":0,"y":0},{"x":3,"y":0},{"x":3,"y":4},{"x":0,"y":4}],"z0":-0.11,"tinggi":0.11,"lantai":"ruang","penutupLantai":"k40"}` |
 | C | kolom | tipe 'praktis'/'struktur', x, y (pusat), b (lebar X), h (lebar Y), tinggi, z0, tul{n,d,ulir}, sengkang{d,s}, fc, selimut | `{"jenis":"kolom","tipe":"praktis","x":0,"y":0,"b":0.15,"h":0.15,"tinggi":3.5,"z0":-0.11,"tul":{"n":4,"d":10,"ulir":false},"sengkang":{"d":8,"s":0.15},"fc":14.5,"selimut":0.02}` |
@@ -801,7 +801,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * D — dinding. `awal`/`akhir` adalah as dinding.
- * @typedef {DasarElemen & {jenis: 'dinding', awal: Titik2, akhir: Titik2, tebal: number, tinggi: number, z0?: number, profilAtas?: [number, number][]}} Dinding
+ * @typedef {DasarElemen & {jenis: 'dinding', awal: Titik2, akhir: Titik2, tebal: number, tinggi: number, z0?: number, profilAtas?: [number, number][], bahan?: 'bata' | 'tripleks' | 'grc' | 'gypsum', rangka?: 'hollow' | 'kayu'}} Dinding
  */
 
 /**
@@ -963,7 +963,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * Pengaturan proyek (dokumen `pengaturan/proyek`).
- * @typedef {{nama: string, tebalDinding: number, tinggiDinding: number, kemiringanAtap: number, overstekAtap: number, faktorBesi: number,
+ * @typedef {{nama: string, tebalDinding: number, tinggiDinding: number, kemiringanAtap: number, overstekAtap: number, faktorBesi: number, bahanDinding?: 'bata' | 'tripleks' | 'grc' | 'gypsum',
  *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[]}} Setelan
  */
 
@@ -1085,6 +1085,15 @@ const kodeOf = id => (id[0] === '_' ? id[1] : id[0]);
 const petaDari = id => { const c = kodeOf(id); return c === 'G' ? S.grup : c === 'K' ? S.komp : c === 'T' ? S.kusen : S.elems; };
 const koleksi = id => (id[0] === '_' ? null : id[0] === 'G' ? 'grup' : id[0] === 'K' ? 'komponen' : id[0] === 'T' ? 'kusen' : 'elemen');
 const ambil = id => petaDari(id).get(id);
+// Bahan dinding: bata plester (bawaan) dan sekat lembaran di atas rangka (tripleks, GRC, gypsum)
+const BAHAN_DINDING = {
+  bata: {nama: 'Bata plester', warna: null, tebal: 0.15},
+  tripleks: {nama: 'Tripleks 9 mm (sekat)', warna: '#D9BC8C', tebal: 0.08, lembar: [1.22, 2.44], kode: 'DN-020', uraian: 'Pasangan lembaran tripleks 9 mm'},
+  grc: {nama: 'GRC 6 mm (sekat)', warna: '#E4E2DA', tebal: 0.08, lembar: [1.2, 2.4], kode: 'DN-021', uraian: 'Pasangan lembaran GRC 6 mm'},
+  gypsum: {nama: 'Gypsum 12 mm (sekat)', warna: '#F4F2EC', tebal: 0.10, lembar: [1.2, 2.4], kode: 'DN-022', uraian: 'Pasangan lembaran gypsum 12 mm'}
+};
+const RANGKA_SEKAT = {hollow: 'Hollow galvanis 4×4', kayu: 'Kayu 5/7'};
+const sekatDinding = d => !!d && d.jenis === 'dinding' && !!d.bahan && d.bahan !== 'bata' && !!BAHAN_DINDING[d.bahan];
 const titikSah = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
 /**
  * Periksa kesahihan data satu elemen menurut jenisnya (dipakai saat memuat, menerima perubahan luar, dan sebelum menggambar).
@@ -1093,7 +1102,7 @@ const titikSah = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
  */
 function sah(d) {
   if (!d || typeof d !== 'object') return false;
-  if (d.jenis === 'dinding') return titikSah(d.awal) && titikSah(d.akhir) && d.tebal > 0 && d.tinggi >= 0
+  if (d.jenis === 'dinding') return titikSah(d.awal) && titikSah(d.akhir) && d.tebal > 0 && d.tinggi >= 0 && (d.bahan === undefined || !!BAHAN_DINDING[d.bahan]) && (d.rangka === undefined || !!RANGKA_SEKAT[d.rangka])
     && (d.profilAtas === undefined || (Array.isArray(d.profilAtas) && d.profilAtas.length >= 2 && d.profilAtas.length <= 16
       && d.profilAtas.every((q, i) => Array.isArray(q) && Number.isFinite(q[0]) && Number.isFinite(q[1]) && q[1] >= 0 && (i === 0 || q[0] >= d.profilAtas[i - 1][0]))));
   if ((d.jenis === 'plafon' || d.jenis === 'volume') && d.lubang !== undefined && !(Array.isArray(d.lubang) && d.lubang.every(r => Array.isArray(r) && r.length >= 3 && r.every(titikSah)))) return false;
@@ -2491,7 +2500,7 @@ function bangun(id, d, f, kunci) {
   if (d.jenis === 'sapuan') { bangunSapuan(g, id, d, f); return g; }
   if (STRUKTUR.has(d.jenis)) { bangunStruktur(g, id, d, f); return g; }
   const h = Math.max(0, d.tinggi || 0);
-  let warna = d.jenis === 'dinding' ? T.faceWall : (d.lantai && warnaLantai(d)) || (h > 0 ? T.faceVol : T.face);
+  let warna = d.jenis === 'dinding' ? (sekatDinding(d) ? BAHAN_DINDING[d.bahan].warna : T.faceWall) : (d.lantai && warnaLantai(d)) || (h > 0 ? T.faceVol : T.face);
   let tepi = T.edge;
   if (f.kilat) { warna = campur(warna, T.claude, 0.45); tepi = T.claude; }
   else if (f.dipilih) { warna = campur(warna, T.select, 0.35); tepi = T.select; }
@@ -4774,8 +4783,8 @@ const alatDinding = {
  * @param {Titik2} b
  */
 function buatDinding(a, b) {
-  const id = idBaru('D');
-  terapkan([{id, sesudah: denganKonteks({jenis: 'dinding', nama: 'Dinding ' + id.replace('_', ''), awal: {x: r2(a.x), y: r2(a.y)}, akhir: {x: r2(b.x), y: r2(b.y)}, tebal: S.setel.tebalDinding, tinggi: S.setel.tinggiDinding, z0: 0, catatan: ''})}]);
+  const id = idBaru('D'), bhn = BAHAN_DINDING[S.setel.bahanDinding] && S.setel.bahanDinding !== 'bata' ? S.setel.bahanDinding : null;
+  terapkan([{id, sesudah: denganKonteks({jenis: 'dinding', nama: 'Dinding ' + id.replace('_', ''), awal: {x: r2(a.x), y: r2(a.y)}, akhir: {x: r2(b.x), y: r2(b.y)}, tebal: bhn ? BAHAN_DINDING[bhn].tebal : S.setel.tebalDinding, tinggi: S.setel.tinggiDinding, z0: 0, ...(bhn ? {bahan: bhn, rangka: 'hollow'} : {}), catatan: ''})}]);
 }
 
 // ===== Push/Pull untuk benda pejal (v0.30) =====
@@ -8724,6 +8733,8 @@ function htmlElemen(id, d) {
     ${d.bentuk === 'lingkaran' ? medanAngka('p-px', 'Pusat X (m)', d.pusat.x) + medanAngka('p-py', 'Pusat Y (m)', d.pusat.y) + medanAngka('p-jari', 'Jari-jari (m)', d.jari) : ''}
     ${d.bentuk === 'busur' ? medanAngka('p-tonjolan', 'Tonjolan busur (m)', d.tonjolan) : ''}
     ${medanAngka('p-tinggi', dinding && profilDinding(d) ? 'Tinggi tertinggi (m)' : 'Tinggi (m)', d.tinggi || 0)}
+    ${dinding ? `<label for="p-bahan">Bahan dinding</label><select id="p-bahan" ${dis()}>${opsiDari(d.bahan || 'bata', Object.fromEntries(Object.entries(BAHAN_DINDING).map(([k, v]) => [k, v.nama])))}</select>` : ''}
+    ${sekatDinding(d) ? `<label for="p-rangka">Rangka sekat</label><select id="p-rangka" ${dis()}>${opsiDari(d.rangka || 'hollow', RANGKA_SEKAT)}</select>` : ''}
     ${dinding ? `<label for="p-profilAtas">Tepi atas bertangga</label><input id="p-profilAtas" class="teks" type="text" placeholder="jarak:tinggi; ..., mis. 0:2,2; 0,5:2,2; 1:1,6" value="${esc(profilDinding(d) ? d.profilAtas.map(q => `${fmt(q[0])}:${fmt(q[1])}`).join('; ') : '')}" ${dis()}>` : ''}
     ${medanAngka('p-z0', 'Elevasi dasar (m)', d.z0 || 0)}
     ${medanCatatan('p-catatan', d.catatan)}
@@ -9027,6 +9038,7 @@ function htmlRingkasan() {
   return `<section><h2>Proyek</h2><div class="medan">
     ${medanTeks('s-nama', 'Nama proyek', S.setel.nama)}
     <label for="s-satuan">Satuan ketik dan label ukur</label><select id="s-satuan" ${dis()}><option value="m"${satuanCm() ? '' : ' selected'}>meter (m)</option><option value="cm"${satuanCm() ? ' selected' : ''}>sentimeter (cm)</option></select>
+    <label for="s-bahan">Bahan dinding baru</label><select id="s-bahan" ${dis()}>${opsiDari(S.setel.bahanDinding || 'bata', Object.fromEntries(Object.entries(BAHAN_DINDING).map(([k, v]) => [k, v.nama])))}</select>
     ${medanAngka('s-tebal', 'Tebal dinding baru (m)', S.setel.tebalDinding)}
     ${medanAngka('s-tinggi', 'Tinggi dinding baru (m)', S.setel.tinggiDinding)}
     ${medanAngka('s-kemiringan', 'Kemiringan atap baru (°)', S.setel.kemiringanAtap)}
@@ -9056,14 +9068,15 @@ function htmlRingkasan() {
  * @returns {Record<string, any>}
  */
 function total(ids) {
-  const t = {nD: 0, nV: 0, nP: 0, nJ: 0, nA: 0, nKP: 0, nKS: 0, nF: 0, panjangSlof: 0, panjangRingbalk: 0, luasPlafon: 0, lisPlafon: 0, luasRangka: 0, panjang: 0, luasDinding: 0, volDinding: 0, luasBukaan: 0, luasAlas: 0, volVolume: 0, luasAtap: 0, nok: 0, jurai: 0, lisplang: 0, rekap: rekapBaru()};
+  const t = {nD: 0, nV: 0, nP: 0, nJ: 0, nA: 0, nKP: 0, nKS: 0, nF: 0, panjangSlof: 0, panjangRingbalk: 0, luasPlafon: 0, lisPlafon: 0, luasRangka: 0, panjang: 0, luasDinding: 0, volDinding: 0, sekat: {}, luasBukaan: 0, luasAlas: 0, volVolume: 0, luasAtap: 0, nok: 0, jurai: 0, lisplang: 0, rekap: rekapBaru()};
   const {el} = ekspansi(ids), bidAtapT = [];
   for (const id of el) {
     if (S.sembunyi.has(id)) continue;
     for (const g of geometriElemen(id, S.elems.get(id))) {
       const u = ukur(g);
       if (g.jenis === 'dinding') {
-        t.nD++; t.panjang += u.panjang; t.luasDinding += u.luasSisi; t.volDinding += u.volume;
+        t.nD++; t.panjang += u.panjang;
+        if (sekatDinding(g)) { const k = g.bahan + '|' + (g.rangka || 'hollow'); t.sekat[k] = (t.sekat[k] || 0) + u.luasSisi; } else { t.luasDinding += u.luasSisi; t.volDinding += u.volume; }
         t.nP += u.nPintu; t.nJ += u.nJendela; t.luasBukaan += u.luasBukaan;
       } else if (g.jenis === 'plafon') { t.luasPlafon += u.luasPlafon; t.lisPlafon += u.lisPlafon; }
       else if (g.jenis === 'bidang') {
@@ -9087,7 +9100,7 @@ function total(ids) {
   const dindingSemua = [], kolomSemua = [], ringSemua = [];
   for (const id of el) {
     if (S.sembunyi.has(id)) continue;
-    for (const g of geometriElemen(id, S.elems.get(id))) { if (g.jenis === 'dinding') dindingSemua.push(g); else if (g.jenis === 'kolom') kolomSemua.push(g); else if (g.jenis === 'ringbalk') ringSemua.push(g); }
+    for (const g of geometriElemen(id, S.elems.get(id))) { if (g.jenis === 'dinding') { if (!sekatDinding(g)) dindingSemua.push(g); } else if (g.jenis === 'kolom') kolomSemua.push(g); else if (g.jenis === 'ringbalk') ringSemua.push(g); }
   }
   t.luasKolomDiDinding = 0;
   // Ring balk yang menumpang di as dinding mengurangi pasangan dinding sepanjang tumpang tindihnya
@@ -9304,6 +9317,7 @@ function ubahMedan(e) {
   const [awal, f] = t.id.split('-');
   if (awal === 's') {
     if (f === 'nama') S.setel.nama = t.value.trim() || 'Proyek baru';
+    else if (f === 'bahan') { if (BAHAN_DINDING[t.value]) S.setel.bahanDinding = t.value; }
     else if (f === 'satuan') { S.setel.satuan = t.value === 'cm' ? 'cm' : 'm'; const k = $('#vcb-label'); if (k) k.textContent = labelVcb(); minta(); }
     else {
       const v = angka(t.value);
@@ -9527,6 +9541,14 @@ function ubahMedan(e) {
   const b = salin(d);
   if (f === 'nama') b.nama = t.value.trim() || d.nama;
   else if (f === 'catatan') b.catatan = t.value;
+  else if (f === 'bahan') {
+    if (!BAHAN_DINDING[t.value]) return;
+    const da = /** @type {any} */ (d), lama = BAHAN_DINDING[da.bahan || 'bata'];
+    if (t.value === 'bata') { delete b.bahan; delete b.rangka; } else { b.bahan = t.value; b.rangka = da.rangka || 'hollow'; }
+    // tebal ikut bawaan bahan selama masih memakai tebal bawaan bahan sebelumnya
+    if (Math.abs((da.tebal || 0) - lama.tebal) < 1e-6) b.tebal = BAHAN_DINDING[t.value].tebal;
+  }
+  else if (f === 'rangka') { if (RANGKA_SEKAT[t.value]) b.rangka = t.value; }
   else if (f === 'profilAtas') {
     // "jarak:tinggi; jarak:tinggi; ..." diukur dari awal as dinding; kosong = tepi atas rata
     const teks = t.value.trim();
@@ -11783,6 +11805,12 @@ function dataRAB(ids) {
   tambah(d3, 'BT-010', 'Pasangan dinding bata 1PC:4PS', 'm²', t.luasDinding, 'Bersih satu sisi, sudah dikurangi bukaan, kolom, ring balk');
   tambah(d3, 'BT-011', 'Plesteran 1PC:4PS tebal 15 mm (dua sisi)', 'm²', 2 * t.luasDinding);
   tambah(d3, 'BT-012', 'Acian (dua sisi)', 'm²', 2 * t.luasDinding);
+  // dinding sekat lembaran: lembar dua sisi di atas rangka, dicat
+  for (const k of Object.keys(t.sekat).sort()) {
+    const [bhn, rgk] = k.split('|'), B = BAHAN_DINDING[bhn], luas = t.sekat[k], [lw, lh] = B.lembar;
+    tambah(d3, B.kode + 'a', `${B.uraian}, dua sisi`, 'm²', 2 * luas, `Sekitar ${Math.ceil(2 * luas / (lw * lh) * 1.1)} lembar ${fmt(lw)} × ${fmt(lh)} m (sisa potong 10%)`);
+    tambah(d3, B.kode + 'b', `Rangka sekat ${RANGKA_SEKAT[rgk] || rgk}, jarak 60 cm`, 'm²', luas);
+  }
   // IV. Kusen, pintu, jendela
   const d4 = div('PEKERJAAN KUSEN, PINTU, DAN JENDELA');
   const buk = new Map();
@@ -11858,7 +11886,7 @@ function dataRAB(ids) {
   tambah(d6, 'PL-016', 'Penggantung rangka plafond (besi ulir Ø8 atau kayu 4/6, 0,30 m)', 'buah', pl.gantung);
   // VII. Pengecatan
   const d7 = div('PEKERJAAN PENGECATAN');
-  tambah(d7, 'CA-002', 'Pengecatan dinding (dua sisi)', 'm²', 2 * t.luasDinding);
+  tambah(d7, 'CA-002', 'Pengecatan dinding (dua sisi)', 'm²', 2 * (t.luasDinding + Object.values(t.sekat).reduce((a, v) => a + v, 0)));
   tambah(d7, 'CA-003', 'Pengecatan plafond', 'm²', pl.grc + pl.gypsum + pl.tripleks4 + pl.tripleks6);
   // VIII. Sanitair dari pustaka (satu unit per benda; bagian pelengkap tidak dihitung lagi)
   const dS = div('PEKERJAAN SANITAIR');
