@@ -7283,10 +7283,10 @@ function susunTepiAtap(d) {
   if (mode !== 'tanpa' && typeof polygonClipping !== 'undefined') {
     const turunP = kayu ? K.penutup + K.gording + K.kaki + turunTambah : 0.15, tebalP = tebalPlafon;
     // tritisan: di luar sisi luar ring balk (as dinding + 10 cm) atap ini, dan di luar denah atap lain (mis. teras yang berplafon sendiri)
-    const kotakDenah = e => { const b = batasAtap(e), m = 0.10; return [[b.x0 - m, b.y0 - m], [b.x1 + m, b.y0 - m], [b.x1 + m, b.y1 + m], [b.x0 - m, b.y1 + m]]; };
+    const kotakDenah = (e, m = 0.10) => { const b = batasAtap(e); return [[b.x0 - m, b.y0 - m], [b.x1 + m, b.y0 - m], [b.x1 + m, b.y1 + m], [b.x0 - m, b.y1 + m]]; };
     const kotakBid = [...new Map(bidDekat.filter(x => x.dinding).map(x => [JSON.stringify(x.dinding), x.dinding])).values()];
     // atap tetangga yang tanpa plafon miring tidak boleh melubangi plafon ini; ujung luar diperpanjang 30 cm ke bawah papan lisplang agar tak ada celah
-    const denah = kotakDenah(d), denahLain = [...atapLain(d).filter(e => (e.plafonMiring || 'tanpa') !== 'tanpa'), ...kotakBid].map(kotakDenah), ujungLuar = Math.max(0, turunP - 0.30);
+    const denah = kotakDenah(d, 0.08), denahLain = [...atapLain(d).filter(e => (e.plafonMiring || 'tanpa') !== 'tanpa'), ...kotakBid].map(e => kotakDenah(e, 0.04)), ujungLuar = Math.max(0, turunP - 0.30);
     for (const info of hasil.muka) {
       // tepi luar: proyeksi tegak lurus atap dari sisi dalam lisplang (papan juga tegak lurus atap);
       // tepi dalam: tegak di sisi luar ring balk, agar plafon tepat bertemu sudut atas ring balk
@@ -7300,6 +7300,17 @@ function susunTepiAtap(d) {
         const bawah = atas.map(v => v.clone().addScaledVector(n, -tebalP));
         const M = atas.length, F = [atas.map(v => v.toArray()), bawah.slice().reverse().map(v => v.toArray())];
         for (let k = 0; k < M; k++) F.push([atas[k], atas[(k + 1) % M], bawah[(k + 1) % M], bawah[k]].map(v => v.toArray()));
+        // tepi dalam (di garis denah atap) naik lebih tinggi dari puncak dinding: tutup celahnya dengan plat tegak ke bawah sampai dudukan atap
+        if (mode === 'tritisan') {
+          const bt = batasAtap(d), m = 0.08, zD = d.z0 || 0, X0 = bt.x0 - m, X1 = bt.x1 + m, Y0 = bt.y0 - m, Y1 = bt.y1 + m, e = 0.005;
+          for (let k = 0; k < M; k++) {
+            const A = atas[k], B = atas[(k + 1) % M];
+            const diDenah = (Math.abs(A.x - X0) < e && Math.abs(B.x - X0) < e) || (Math.abs(A.x - X1) < e && Math.abs(B.x - X1) < e) || (Math.abs(A.y - Y0) < e && Math.abs(B.y - Y0) < e) || (Math.abs(A.y - Y1) < e && Math.abs(B.y - Y1) < e);
+            if (!diDenah || Math.max(A.z, B.z) - zD < 0.02) continue;
+            const a0 = A.clone(), b0 = B.clone(), a1 = V(A.x, A.y, Math.min(zD, A.z)), b1 = V(B.x, B.y, Math.min(zD, B.z));
+            F.push([a0, b0, b1, a1].map(v => v.toArray()), [a1, b1, b0, a0].map(v => v.toArray()));
+          }
+        }
         hasil.plafon.push({muka: F, atas: atas.map(v => v.toArray()), luas: luas3D(atas.map(v => v.toArray()))});
       }
     }
