@@ -583,7 +583,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | S | slof | awal, akhir, b, h, z0 (dasar), tul, sengkang, fc, selimut | `{"jenis":"slof","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"b":0.15,"h":0.2,"z0":-0.31,"tul":{"n":4,"d":10,"ulir":false},"sengkang":{"d":8,"s":0.15},"fc":18.7,"selimut":0.025}` |
 | R | ringbalk | sama dengan slof | z0 = dasar ring balk |
 | F | pondasi | tipe 'batukali' (awal, akhir, lebarAtas, lebarBawah, tinggi, aanstamping, pasir, z0); 'footplat' (x, y, p, l, tebal, tulPlat{d,s,ulir}, pedestal{b,h}, puncakPedestal, tul, sengkang, fc, selimut, z0); 'umpak' (x, y, bawah, atas, tinggi, fc, z0) | `{"jenis":"pondasi","tipe":"batukali","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"lebarAtas":0.3,"lebarBawah":0.7,"tinggi":0.7,"aanstamping":0.15,"pasir":0.05,"z0":-0.31}` |
-| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa','penuh','tritisan'), kuda{kaki,tarik,makelar,tiang,sokong,skor,gording,bubungan,klos: [lebar,tinggi] m; lisMundur (jarak ujung spandek ke lisplang, m), jarakGording, …}, lisplangSisi{…}, overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
+| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa','penuh','tritisan'), kuda{kaki,tarik,makelar,tiang,sokong,skor,gording,bubungan,klos: [lebar,tinggi] m; lisMundur (jarak ujung spandek ke lisplang, m), jarakGording, …}, lisplangSisi{kunciSisi:{pasang,bahan,tebal,tinggi,mundur,awal,akhir (m; + perpanjang, − pangkas ujung papan)}}, overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
 | H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
 | J | batang | Batang lurus 3D (kuda-kuda, gording, usuk, reng, klos): awal{x,y,z}, akhir{x,y,z}, b (lebar), h (tinggi penampang), bahan ('kayu'/'bajaringan'), peran ('kaki','tarik','makelar','tiang','sokong','skor','klos','gording','nok','usuk','reng','skor','rangka','lain'). Opsional: atas [x,y,z] (arah tinggi penampang), jangkar ('tengah' = sumbu di tengah penampang; 'atas' = sumbu di sisi atas) | `{"jenis":"batang","peran":"kaki","bahan":"kayu","awal":{"x":0,"y":0,"z":3.6},"akhir":{"x":0,"y":3,"z":5.2},"b":0.06,"h":0.12,"jangkar":"tengah"}` |
 | U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
@@ -857,7 +857,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /** @typedef {'tritisan-utara' | 'tritisan-selatan' | 'tritisan-timur' | 'tritisan-barat' | string} KunciSisiAtap Kunci sisi atap (mis. 'gunung-selatan-2') */
 /**
  * Pengaturan lisplang satu sisi atap.
- * @typedef {{pasang?: boolean, bahan?: 'papan' | 'grc', tebal?: number, tinggi?: number, mundur?: number}} LisplangSisi
+ * @typedef {{pasang?: boolean, bahan?: 'papan' | 'grc', tebal?: number, tinggi?: number, mundur?: number, awal?: number, akhir?: number}} LisplangSisi
  */
 /**
  * Ukuran dan susunan kuda-kuda kayu per atap (cm untuk penampang, % untuk posisi).
@@ -7096,7 +7096,9 @@ function susunTepiAtap(d) {
   const atur = kunci => {
     const o = (d.lisplangSisi || {})[kunci] || {}, bahan = o.bahan || bahanAtap;
     if (o.pasang === false || bahan === 'tanpa' || !UKURAN_LISPLANG[bahan]) return null;
-    return {bahan, tebal: o.tebal > 0 ? o.tebal : UKURAN_LISPLANG[bahan][0], tinggi: o.tinggi > 0 ? o.tinggi : tinggiAuto(bahan), mundur: o.mundur >= 0 ? o.mundur : (kayu ? K.lisMundur : 0)};
+    return {bahan, tebal: o.tebal > 0 ? o.tebal : UKURAN_LISPLANG[bahan][0], tinggi: o.tinggi > 0 ? o.tinggi : tinggiAuto(bahan), mundur: o.mundur >= 0 ? o.mundur : (kayu ? K.lisMundur : 0),
+      // perpanjang (+) / pangkas (-) ujung papan sepanjang sisinya (m)
+      awal: Number.isFinite(o.awal) ? batas(o.awal, -5, 5) : 0, akhir: Number.isFinite(o.akhir) ? batas(o.akhir, -5, 5) : 0};
   };
   const penutup = kayu ? K.penutup : 0.003;
   for (const info of hasil.muka) {
@@ -7115,10 +7117,16 @@ function susunTepiAtap(d) {
       const j = (i + 1) % N, s = e.set;
       const atas = k => V(...(k[0])).addScaledVector(n, -penutup);
       const tA = [atas([O.awal[i]]), atas([O.akhir[j]]), atas([I.akhir[j]]), atas([I.awal[i]])], vi = [i, j, j, i];
+      // perpanjang / pangkas ujung papan (pemotongan tegak lurus sisi); panjang sisa minimal 5 cm
+      if (s.awal || s.akhir) {
+        const L0 = tA[0].distanceTo(tA[1]), dir = tA[1].clone().sub(tA[0]).normalize();
+        const pa = Math.max(s.awal, -(L0 - 0.05)), pb = Math.max(s.akhir, -(L0 + pa - 0.05));
+        tA[0].addScaledVector(dir, -pa); tA[3].addScaledVector(dir, -pa); tA[1].addScaledVector(dir, pb); tA[2].addScaledVector(dir, pb);
+      }
       const bawah = tA.map((v, x) => { const dv = turun[vi[x]], c = Math.max(0.3, -dv.dot(n)); return v.clone().addScaledVector(dv, s.tinggi / c); });
       const cc = [...tA, ...bawah].map(v => v.toArray());
       const F = [[0, 1, 2, 3], [7, 6, 5, 4], [0, 4, 5, 1], [1, 5, 6, 2], [2, 6, 7, 3], [3, 7, 4, 0]].map(f => f.map(k => cc[k]));
-      const panjang = Math.hypot(O.akhir[j][0] - O.awal[i][0], O.akhir[j][1] - O.awal[i][1], O.akhir[j][2] - O.awal[i][2]);
+      const panjang = tA[0].distanceTo(tA[1]);
       hasil.papan.push({titik: cc, muka: F, sisi: e.kunci, set: s, panjang});
       hasil.panjang += panjang;
     });
@@ -8821,8 +8829,9 @@ function htmlLisplangSisi(id, d) {
   return `<section><h2>Lisplang sisi ${esc(pilih)}</h2><div class="medan">
     <label for="q-pasang">Dipasang</label><select id="q-pasang" ${dis()}>${opsi(pasang ? 'ya' : 'tidak', {ya: 'Ya', tidak: 'Tidak'})}</select>
     ${pasang ? `<label for="q-bahan">Bahan</label><select id="q-bahan" ${dis()}>${opsi(s.bahan, {papan: 'Papan kayu', grc: 'GRC'})}</select>
-    ${medanAngka('q-tebal', 'Tebal (m)', s.tebal)}${medanAngka('q-tinggi', 'Tinggi papan (m)', s.tinggi)}${medanAngka('q-mundur', 'Mundur dari ujung seng (m)', s.mundur)}` : ''}
-  </div><p class="meta">Panjang ${fmt(papan ? papan.panjang : 0)} m. Sudut dengan sisi lain dipotong verstek mengikuti tebal dan jarak mundurnya.</p>
+    ${medanAngka('q-tebal', 'Tebal (m)', s.tebal)}${medanAngka('q-tinggi', 'Tinggi papan (m)', s.tinggi)}${medanAngka('q-mundur', 'Mundur dari ujung seng (m)', s.mundur)}
+    ${medanAngka('q-awal', 'Ujung awal: perpanjang + / pangkas − (m)', s.awal)}${medanAngka('q-akhir', 'Ujung akhir: perpanjang + / pangkas − (m)', s.akhir)}` : ''}
+  </div><p class="meta">Panjang ${fmt(papan ? papan.panjang : 0)} m. Sudut dengan sisi lain dipotong verstek mengikuti tebal dan jarak mundurnya. Ujung awal/akhir diisi positif untuk memperpanjang dan negatif untuk memangkas papan ini.</p>
   <div class="aksi-panel">${tombol('lis-reset-sisi', 'Kembalikan sisi ini ke bawaan')}</div></section>`;
 }
 function htmlInstance(id, d) {
@@ -9273,8 +9282,8 @@ function ubahMedan(e) {
     if (f === 'pasang') { if (t.value === 'tidak') o.pasang = false; else delete o.pasang; }
     else if (f === 'bahan') o.bahan = t.value;
     else {
-      const v = angka(t.value), ok = f === 'mundur' ? v >= 0 && v <= 1 : f === 'tebal' ? v >= 0.005 && v <= 0.1 : v >= 0.05 && v <= 0.6;
-      if (!ok) return tolakAngka(f === 'mundur' ? 'Jarak mundur antara 0 dan 1 m.' : f === 'tebal' ? 'Tebal antara 0,005 dan 0,10 m.' : 'Tinggi papan antara 0,05 dan 0,60 m.');
+      const v = angka(t.value), ok = f === 'awal' || f === 'akhir' ? v >= -5 && v <= 5 : f === 'mundur' ? v >= 0 && v <= 1 : f === 'tebal' ? v >= 0.005 && v <= 0.1 : v >= 0.05 && v <= 0.6;
+      if (!ok) return tolakAngka(f === 'awal' || f === 'akhir' ? 'Perpanjang/pangkas antara -5 dan 5 m.' : f === 'mundur' ? 'Jarak mundur antara 0 dan 1 m.' : f === 'tebal' ? 'Tebal antara 0,005 dan 0,10 m.' : 'Tinggi papan antara 0,05 dan 0,60 m.');
       o[f] = r2(v * 1000) / 1000;
     }
     b.lisplangSisi = {...(b.lisplangSisi || {}), [k]: o};
