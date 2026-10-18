@@ -7215,11 +7215,12 @@ function susunTepiAtap(d) {
     // tritisan: di luar sisi luar ring balk (as dinding + 10 cm) atap ini, dan di luar denah atap lain (mis. teras yang berplafon sendiri)
     const kotakDenah = e => { const b = batasAtap(e), m = 0.10; return [[b.x0 - m, b.y0 - m], [b.x1 + m, b.y0 - m], [b.x1 + m, b.y1 + m], [b.x0 - m, b.y1 + m]]; };
     const kotakBid = [...new Map(bidDekat.filter(x => x.dinding).map(x => [JSON.stringify(x.dinding), x.dinding])).values()];
-    const denah = kotakDenah(d), denahLain = [...atapLain(d), ...kotakBid].map(kotakDenah);
+    // atap tetangga yang tanpa plafon miring tidak boleh melubangi plafon ini; ujung luar diperpanjang 30 cm ke bawah papan lisplang agar tak ada celah
+    const denah = kotakDenah(d), denahLain = [...atapLain(d).filter(e => (e.plafonMiring || 'tanpa') !== 'tanpa'), ...kotakBid].map(kotakDenah), ujungLuar = Math.max(0, turunP - 0.30);
     for (const info of hasil.muka) {
       // tepi luar: proyeksi tegak lurus atap dari sisi dalam lisplang (papan juga tegak lurus atap);
       // tepi dalam: tegak di sisi luar ring balk, agar plafon tepat bertemu sudut atas ring balk
-      const {n} = info, nD = normalMuka(info.dalam), I2 = info.dalam.map(q => [q[0] - n.x * turunP, q[1] - n.y * turunP]);
+      const {n} = info, nD = normalMuka(info.dalam), I2 = info.dalam.map(q => [q[0] - n.x * ujungLuar, q[1] - n.y * ujungLuar]);
       let bagian = [[I2]];
       if (mode === 'tritisan') { try { bagian = polygonClipping.difference([I2], [denah], ...denahLain.map(r => [r])); } catch { bagian = []; } }
       for (const poly of bagian) {
