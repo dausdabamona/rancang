@@ -524,6 +524,7 @@ body.panel-tutup{--rc-panel-w:0px}
     <button class="alat" data-alat="putar" aria-pressed="false" title="Putar (U), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/><circle cx="12" cy="12" r="1.2"/></svg><span class="teks">Putar</span><kbd>U</kbd></button>
     <button class="alat" data-alat="cermin" aria-pressed="false" title="Cermin (I): klik dua titik garis cermin; tekan Ctrl untuk Cermin + Salin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2.4 2.4"/><path d="M9.5 7 3.5 17h6z"/><path d="M14.5 7l6 10h-6z"/></svg><span class="teks">Cermin</span><kbd>I</kbd></button>
     <button class="alat" data-alat="hapus" aria-pressed="false" title="Hapus (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 20h12M5 15l9-10 6 6-9 9H8z"/></svg><span class="teks">Hapus</span><kbd>E</kbd></button>
+    <button class="alat" data-alat="perluas" aria-pressed="false" title="Perpanjang/Pangkas lisplang (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h10M10 8l4 4-4 4M19 5v14"/></svg><span class="teks">Extend/Trim</span><kbd>H</kbd></button>
   </div></div>
   <div class="rail-grup"><span class="kicker">Lihat</span><div class="rail-grid">
     <button class="alat" data-alat="orbit" aria-pressed="false" title="Orbit (O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M17 6.5l2 1.8-2.6.8"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg><span class="teks">Orbit</span><kbd>O</kbd></button>
@@ -5815,6 +5816,66 @@ const alatHapus = {
   }
 };
 
+// Alat Perpanjang/Pangkas (extend/trim) ujung papan lisplang: klik papan, lalu klik batasnya (papan lisplang lain atau dinding)
+const alatPerluas = {
+  petunjuk: '<b>Perpanjang/Pangkas:</b> 1) klik papan lisplang (dekat ujung yang diubah), 2) klik batasnya: papan lisplang lain atau dinding. Ujung papan otomatis diperpanjang atau dipangkas sampai bertemu batas. Esc membatalkan, Ctrl+Z mengembalikan.',
+  vcb: 'Ukuran',
+  pilih: null,
+  sibuk() { return !!this.pilih; },
+  batal() { this.pilih = null; soroti(null); S.label = []; minta(); },
+  // garis batas dalam denah {a:[x,y], u:[ux,uy]} dari hasil klik, atau null
+  garisBatas(h) {
+    const u = h.object.userData, d = /** @type {any} */ (ambil(u.elemId));
+    if (!d) return null;
+    if (d.jenis === 'dinding') return {a: [d.awal.x, d.awal.y], u: [d.akhir.x - d.awal.x, d.akhir.y - d.awal.y], nama: d.nama || u.elemId};
+    if (u.sisi && d.jenis === 'atap') {
+      const bd = susunTepiAtap(d).papan.find(x => x.sisi === u.sisi);
+      if (!bd) return null;
+      const [p0, p1] = bd.titik;
+      return {a: [p0[0], p0[1]], u: [p1[0] - p0[0], p1[1] - p0[1]], nama: 'lisplang ' + u.sisi};
+    }
+    return null;
+  },
+  move(e) { const h = hitObjek(e, null, true).find(x => x.object.userData.sisi || (/** @type {any} */ (ambil(x.object.userData.elemId)) || {}).jenis === 'dinding'); soroti(h ? h.object : null); },
+  down(e) {
+    // papan lisplang tipis: pakai hit toleran lalu ambil yang berupa papan (langkah 1) atau papan/dinding (langkah 2)
+    const semua = hitObjek(e, null, true), cocok = x => x.object.userData.sisi || (/** @type {any} */ (ambil(x.object.userData.elemId)) || {}).jenis === 'dinding';
+    const h = (this.pilih ? semua.find(cocok) : semua.find(x => x.object.userData.sisi)) || semua[0];
+    if (!h) return;
+    const u = h.object.userData;
+    if (!this.pilih) {
+      const d = /** @type {any} */ (ambil(u.elemId));
+      if (!(d && d.jenis === 'atap' && u.sisi)) return toast('Langkah 1: klik papan lisplang yang ujungnya mau diubah.');
+      const bd = susunTepiAtap(d).papan.find(x => x.sisi === u.sisi);
+      if (!bd) return toast('Papan lisplang tidak ditemukan.');
+      this.pilih = {id: u.elemId, sisi: u.sisi, titik: {x: h.point.x, y: h.point.y}};
+      toast('Langkah 2: klik batasnya (papan lisplang lain atau dinding). Ujung terdekat dengan klik pertama yang diubah.');
+      return;
+    }
+    const g = this.garisBatas(h);
+    if (!g) return toast('Batas harus papan lisplang lain atau dinding.');
+    const {id, sisi, titik} = this.pilih, d = /** @type {any} */ (ambil(id));
+    const bd = susunTepiAtap(d).papan.find(x => x.sisi === sisi);
+    if (!d || !bd) { this.batal(); return; }
+    const [p0, p1] = bd.titik, L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+    if (L < 1e-6) { this.batal(); return; }
+    const ux = (p1[0] - p0[0]) / L, uy = (p1[1] - p0[1]) / L, det = ux * g.u[1] - uy * g.u[0];
+    if (Math.abs(det) < 1e-6) return toast('Batas sejajar dengan papan, tidak bisa berpotongan. Pilih batas lain.');
+    // jarak t dari ujung awal papan ke titik potong garis batas
+    const t = ((g.a[0] - p0[0]) * g.u[1] - (g.a[1] - p0[1]) * g.u[0]) / det;
+    const tk = (titik.x - p0[0]) * ux + (titik.y - p0[1]) * uy, ujungAwal = tk < L / 2;
+    const geser = ujungAwal ? -t : t - L;   // + = perpanjang, − = pangkas
+    if (Math.abs(geser) > 5 || (ujungAwal ? L + t : t) < 0.05) { toast('Hasilnya di luar batas wajar (±5 m dan sisa papan minimal 5 cm).'); return; }
+    const b = salin(d), o = {...((b.lisplangSisi || {})[sisi] || {})}, kini = ujungAwal ? (bd.set.awal || 0) : (bd.set.akhir || 0);
+    o[ujungAwal ? 'awal' : 'akhir'] = r2((kini + geser) * 1000) / 1000;
+    b.lisplangSisi = {...(b.lisplangSisi || {}), [sisi]: o};
+    terapkan([{id, sesudah: b}]);
+    S.lisSisi = {atap: id, sisi};
+    this.pilih = null; soroti(null);
+    toast(`Ujung ${ujungAwal ? 'awal' : 'akhir'} ${geser >= 0 ? 'diperpanjang' : 'dipangkas'} ${fmt(Math.abs(geser))} m sampai ${g.nama}.`);
+  }
+};
+
 // Alat pasang pintu atau jendela: arahkan ke dinding, klik untuk memasang
 /**
  * Alat pintu atau jendela: klik dinding untuk memasang bukaan dengan ukuran bawaan atau yang diketik.
@@ -8146,8 +8207,8 @@ const alatSanitair = {
     toast(SANITAIR[this.kunci].nama + ' dipasang (' + iid + '). Tab mengganti benda.');
   }
 };
-const ALAT = {sanitair: alatSanitair, pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, cermin: alatCermin, bantu: alatBantu, hapus: alatHapus, orbit: alatOrbit, iris: alatIris};
-const UBAH = new Set(['sanitair', 'bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'cermin', 'bantu', 'hapus']);
+const ALAT = {sanitair: alatSanitair, pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, cermin: alatCermin, bantu: alatBantu, hapus: alatHapus, perluas: alatPerluas, orbit: alatOrbit, iris: alatIris};
+const UBAH = new Set(['sanitair', 'bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'pondasi', 'potong', 'anotasi', 'dorong', 'pindah', 'putar', 'cermin', 'bantu', 'hapus', 'perluas']);
 const alat = () => ALAT[S.tool];
 function batalAlat() { const a = alat(); if (a.batal) a.batal(); else reset(); lepasKunci(); }
 const NAMA_SUMBU = {x: 'sumbu X (merah)', y: 'sumbu Y (hijau)', z: 'sumbu Z (biru)'};
@@ -8396,7 +8457,7 @@ window.addEventListener('keydown', e => {
   if (e.shiftKey && k === 'z') { zoomSemua(); return; }
   if (k === 'g' && !e.shiftKey) { if (S.bisaUbah) jadikanKomponen(); return; }
   if (k === 'h' && !e.shiftKey) { aturTembus(); return; }
-  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', y: 'plafon', k: 'kolom', z: 'sanitair', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', v: 'bantu', e: 'hapus', o: 'orbit'};
+  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', y: 'plafon', k: 'kolom', z: 'sanitair', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', v: 'bantu', e: 'hapus', h: 'perluas', o: 'orbit'};
   if (peta[k] && !e.shiftKey) { e.preventDefault(); setAlat(peta[k]); }
 });
 document.querySelectorAll('[data-alat]').forEach(b => b.addEventListener('click', () => setAlat(b.dataset.alat)));
