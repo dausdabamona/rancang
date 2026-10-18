@@ -151,6 +151,8 @@ export const ALAT = [
     inputSchema: objek({ids: {type: 'array', items: {type: 'string'}, minItems: 1}}, ['ids'])},
   {name: 'terapkan_perubahan', description: 'Tambah, ubah, atau hapus beberapa dokumen sekaligus. Data menimpa seluruh dokumen; data null = hapus. Semua diperiksa dulu dan ditolak utuh bila ada yang tidak sah. Di aplikasi, perubahan disorot dan bisa di-Undo (Ctrl+Z).',
     inputSchema: objek({perubahan: {type: 'array', minItems: 1, items: objek({id: {type: 'string', description: 'mis. D12, B3, V4, G1, T2'}, data: {type: ['object', 'null'], description: 'Data lengkap dokumen, atau null untuk menghapus'}}, ['id', 'data'])}}, ['perubahan'])},
+  {name: 'pecah_atap', description: 'Pecah atap parametrik (pelana, limas, sandar) menjadi grup berisi bidang (H: penutup per bidang, gunungan, lisplang, plafon miring) dan batang (J: tiap kuda-kuda satu subgrup, gording, nok, usuk, reng, klos) agar bisa diedit satu per satu. Volume RAB tetap sama. Bisa di-Undo di aplikasi.',
+    inputSchema: objek({id: {type: 'string', description: 'id atap, mis. A1'}}, ['id'])},
   {name: 'ringkasan_ukuran', description: 'Ringkasan ukuran: panjang dan luas dinding, bukaan, luas lantai, atap, volume beton dan besi, dsb.',
     inputSchema: objek({ids: daftarId})},
   {name: 'volume_rab', description: 'Volume pekerjaan RAB per divisi (kode HSP, uraian, satuan, volume) seperti ekspor Excel di aplikasi.',
@@ -201,6 +203,7 @@ export async function jalankanAlat(nama, a = {}) {
       if (r.ok) tulisProyekBerkas(jalur, d);
       return teks({...r, catatan: 'Aplikasi tertutup: perubahan ditulis ke berkas dan diperiksa lengkap saat aplikasi dibuka.'});
     }
+    case 'pecah_atap': return teks(await rpc(await pastikanAplikasi(), 'pecahAtap', {id: a.id}));
     case 'ringkasan_ukuran': return teks(await rpc(await pastikanAplikasi(), 'ringkasan', {ids: a.ids || []}));
     case 'volume_rab': return teks(await rpc(await pastikanAplikasi(), 'rab', {ids: a.ids || []}));
     case 'gambar_2d': {

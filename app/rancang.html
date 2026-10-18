@@ -375,6 +375,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa','penuh','tritisan'), kuda{…}, lisplangSisi{…}, overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
 | H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
 | J | batang | Batang lurus 3D (kuda-kuda, gording, usuk, reng, klos): awal{x,y,z}, akhir{x,y,z}, b (lebar), h (tinggi penampang), bahan ('kayu'/'bajaringan'), peran ('kaki','tarik','makelar','tiang','sokong','klos','gording','nok','usuk','reng','rangka','lain'). Opsional: atas [x,y,z] (arah tinggi penampang), jangkar ('tengah' = sumbu di tengah penampang; 'atas' = sumbu di sisi atas) | `{"jenis":"batang","peran":"kaki","bahan":"kayu","awal":{"x":0,"y":0,"z":3.6},"akhir":{"x":0,"y":3,"z":5.2},"b":0.06,"h":0.12,"jangkar":"tengah"}` |
+| U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'), rangka ('hollow'/'kayu'). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
 | X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya) | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
 | N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik, ujung, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah' | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
@@ -394,7 +395,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 - G (grup): `{"nama":"Rumah","induk":null}`. Elemen masuk grup lewat isian `grup`.
 - K (komponen): `{"nama":"Kloset","elemen":[…data elemen lokal…]}`; dipasang lewat instance.
-- T (tipe kusen): `{"kode":"P1","untuk":"pintu","nama":"Pintu panil","daun":1,"isi":"panil6","buka":"kiri","profil":0.06,"boven":{"tinggi":0.4,"kolom":2,"baris":1}}`. isi: panil6, kaca, polos, jalusi; buka: kiri, kanan, kupu, tetap. Berlaku untuk semua bukaan berkode sama.
+- T (tipe kusen): `{"kode":"P1","untuk":"pintu","nama":"Pintu panil","daun":1,"isi":"panil6","buka":"kiri","profil":0.06,"boven":{"tinggi":0.4,"kolom":2,"baris":1}}`. isi: panil6, kaca, polos, jalusi, kosong (tanpa daun, kusen saja); buka: kiri, kanan, kupu, tetap. Berlaku untuk semua bukaan berkode sama.
 
 ## Kebiasaan yang baik
 
@@ -3246,6 +3247,10 @@ function rangka3D(g) {
   for (const q of ujung) titik.set(k(q), q);
   return {titik: [...titik.values()], rusuk: [...rusuk.values()]};
 }
+// Langkah gerak mengikuti zoom: kelipatan rapi (5 cm, 1 cm, 5 mm, 1 mm) yang di layar tak lebih dari ±1,5 px,
+// jadi gerakan terasa mulus seperti SketchUp tetapi angkanya tetap bulat
+function langkahHalus() { const m = meterPerPiksel() * 1.5; return [0.05, 0.01, 0.005, 0.001].find(l => l <= m) || 0.001; }
+const bulatHalus = (v, l) => r2(Math.round(v / l) * l);
 // Titik tengah ruas: as dinding/slof/ring balk/pondasi, tepi alas bidang, tepi as atap
 function titikTengah(g) {
   if (g.bentuk || g.jenis === 'anotasi' || g.jenis === 'kolom') return [];
@@ -3254,10 +3259,6 @@ function titikTengah(g) {
   if (t.length < 3) return [];
   return t.map((q, i) => { const w = t[(i + 1) % t.length]; return [(q[0] + w[0]) / 2, (q[1] + w[1]) / 2]; });
 }
-// Langkah gerak mengikuti zoom: kelipatan rapi (5 cm, 1 cm, 5 mm, 1 mm) yang di layar tak lebih dari ±1,5 px,
-// jadi gerakan terasa mulus seperti SketchUp tetapi angkanya tetap bulat
-function langkahHalus() { const m = meterPerPiksel() * 1.5; return [0.05, 0.01, 0.005, 0.001].find(l => l <= m) || 0.001; }
-const bulatHalus = (v, l) => r2(Math.round(v / l) * l);
 
 // Cache per elemen: titik [x, y, z, jenis, puncak] (puncak = titik di atas elemen, hanya dipakai bila opsi.atas),
 // rusuk [[a, b], …] untuk snap "pada tepi", dan kotak pembatas mesh (THREE.Box3) untuk menyaring sinar.
