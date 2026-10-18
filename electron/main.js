@@ -184,6 +184,7 @@ const metode = {
       jenisGambar: await halaman('window.rancangAPI.jenisGambar2D()')};
   },
   model: async () => ({proyek: proyek.jalur, ...proyek.awal()}),
+  pilihan: () => halaman('window.rancangAPI.pilihan()'),
   terapkan: async ({perubahan, oleh}) => {
     const r = await halaman(`window.rancangAPI.terapkanLuar(${arg(perubahan)}, ${arg(oleh || 'claude')})`);
     if (r && r.ok) proyek.simpanSekarang();
@@ -284,6 +285,13 @@ async function ujiAsap() {
       tinggi = (await halaman('window.rancangAPI.model()')).elemen.D2.tinggi;
     }
     catat('muat ulang perubahan berkas dari luar', tinggi === 2.5);
+    // v0.33: pilihan pengguna terbaca lewat rancangAPI dan tampil di bilah bawah
+    const pil = await halaman(`(() => ({info: window.rancangUji.pilih(['D1']), pilihan: window.rancangAPI.pilihan()}))()`);
+    catat('pilihan pengguna', pil.pilihan.terpilih.length === 1 && pil.pilihan.terpilih[0].id === 'D1' && /Dinding D1/.test(pil.info), {info: pil.info});
+    // v0.33: kursor lewat di atas sudut dinding D1/D2 pada alat Pilih: dinding terdepan disorot, disebut di bilah bawah, lalu bersih lagi
+    await halaman(`window.rancangUji.pilih([])`);
+    const sorot = await halaman(`window.rancangUji.lewat(4, 1.5, 1.5)`);
+    catat('sorotan kursor alat Pilih', /^D[12]$/.test(sorot.kunci) && sorot.jumlahMesh > 0 && new RegExp('Dinding ' + sorot.kunci).test(sorot.info) && sorot.bersih, sorot);
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;

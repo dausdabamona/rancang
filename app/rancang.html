@@ -444,6 +444,11 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
 .bawah{padding-top:var(--space-2);min-height:48px;gap:var(--space-4);flex-wrap:nowrap}
 .petunjuk{flex:1 1 auto;font-size:13px}
 .petunjuk b{font-weight:600;color:var(--color-text);margin-right:6px}
+/* info kursor/pilihan (v0.33): benda yang akan terpilih bila diklik, atau ringkasan pilihan sekarang */
+.kursor-info{flex:0 1 auto;min-width:0;max-width:52ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--color-text);padding:4px 10px;border-radius:var(--radius-md);background:var(--color-surface);font-variant-numeric:tabular-nums}
+.kursor-info:empty{display:none}
+.kursor-info b{font-weight:600;color:var(--color-accent)}
+.kursor-info small{font-size:12px;color:var(--rc-muted)}
 .vcb{flex:none;padding:4px 4px 4px 12px;border-radius:var(--radius-md);gap:10px}
 .vcb label{font-size:13px}
 .vcb input{width:var(--rc-field-w);min-height:32px;padding:4px 8px;font-size:14px;background:var(--color-surface);border-color:var(--color-divider);border-radius:var(--radius-md);color:var(--rc-muted)}
@@ -631,6 +636,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 <footer class="bawah">
   <div class="petunjuk" id="petunjuk"></div>
+  <div class="kursor-info" id="kursor-info" aria-live="polite"></div>
   <div class="vcb">
     <label for="vcb" id="vcb-label">Ukuran</label>
     <input id="vcb" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-describedby="petunjuk">
@@ -997,6 +1003,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  * @property {any} snap titik snap yang sedang ditampilkan
  * @property {boolean} ketik
  * @property {any} sorot mesh yang disorot
+ * @property {{kunci: string | null, ids: Set<string> | null, tukar: {mesh: any, mat: any}[]}} sorotKursor sorotan kursor alat Pilih
  * @property {string} panelKunci
  * @property {Map<string, any>} antrean
  * @property {number} sibuk
@@ -1076,6 +1083,7 @@ const S = {
   db: null, unduh: null, mode: 'muat', bisaUbah: true,
   undo: [], redo: [],
   label: [], snap: null, ketik: false, sorot: null, panelKunci: '',
+  sorotKursor: {kunci: null, ids: null, tukar: []}, // sorotan kursor alat Pilih: sasaran klik yang sedang disorot (v0.33)
   antrean: new Map(), sibuk: 0,
   pratBuk: new Map()       // pratinjau bukaan yang sedang digeser
 };
@@ -3138,6 +3146,8 @@ function lepas(id) {
   const g = objek.get(id);
   if (!g) return;
   if (S.sorot) { let o = S.sorot; while (o && o !== g) o = o.parent; if (o === g) S.sorot = null; }
+  // benda yang disorot kursor dibangun ulang: kunci dilepas agar gerak kursor berikutnya menyorot mesh yang baru
+  if (S.sorotKursor.ids && S.sorotKursor.ids.has(id)) S.sorotKursor.kunci = null;
   root.remove(g);
   g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   objek.delete(id);
@@ -3427,7 +3437,7 @@ function bacaTema() {
   scene.background = new THREE.Color(T.sceneBg);
   for (const m of matCache.values()) m.dispose();
   for (const m of garisCache.values()) m.dispose();
-  matCache.clear(); garisCache.clear(); S.sorot = null;
+  matCache.clear(); garisCache.clear(); S.sorot = null; S.sorotKursor = {kunci: null, ids: null, tukar: []};
   for (const k in matSorotCache) { matSorotCache[k].dispose(); delete matSorotCache[k]; }
   bangunLatar(); bangunSemua(); minta();
 }
@@ -4628,6 +4638,7 @@ const alatPilih = {
     if (peg) { alatIris.mulai(peg, e); return; }
     this.tekan = {x: e.clientX, y: e.clientY, awal: new Set(S.sel), kotak: false};
     try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* abaikan */ }
+    sorotiKursor(null); // sorotan kursor dilepas; sesudah klik, tampilan pilihan yang bicara
     const hits = hitObjek(e, null, true);
     if (!hits.length) { this.siklus = null; if (!e.shiftKey && !e.ctrlKey && !e.metaKey) S.sel.clear(); segarPilihan(); return; }
     // klik lagi di titik yang sama memilih objek berikutnya di belakangnya (seperti siklus pilih di CAD)
@@ -4655,17 +4666,29 @@ const alatPilih = {
   },
   move(e) {
     const k = this.tekan;
-    if (!k || !(e.buttons & 1)) return;
+    if (!k || !(e.buttons & 1)) { this.lewat(e); return; }
     if (!k.kotak && Math.hypot(e.clientX - k.x, e.clientY - k.y) < 6) return;
     k.kotak = true;
     gambarKotakPilih(k, {x: e.clientX, y: e.clientY});
+  },
+  // Kursor lewat tanpa menekan: sorot sasaran klik dan tulis nama serta jalurnya di bilah bawah (v0.33)
+  lewat(e) {
+    if (pilihPeganganIris(e)) { sorotiKursor(null); tulisInfoKursor(infoPilihan()); return; }
+    const hits = hitObjek(e, null, true), h = hits[0], eid = h && h.object.userData.elemId;
+    const t = h ? sasaranKlik(eid) : null;
+    if (!t) { sorotiKursor(null); tulisInfoKursor(infoPilihan()); return; }
+    if (S.sorotKursor.kunci !== t) sorotiKursor(ekspansi([t]).el, t);
+    const jalur = jalurBenda(t);
+    const isi = t === eid ? '' : ` <small>← ${namaBenda(eid)}</small>`;
+    const lain = hits.length > 1 ? ` <small>· ${hits.length - 1} lagi di belakang (Alt+klik)</small>` : '';
+    tulisInfoKursor(`<b>${namaBenda(t)}</b>${isi}${jalur.length ? ` <small>di ${jalur.join(' · ')}</small>` : ''}${lain}`);
   },
   up(e) {
     const k = this.tekan;
     this.tekan = null;
     if (k && k.kotak) selesaiKotakPilih(k, {x: e.clientX, y: e.clientY}, e, k.awal);
   },
-  batal() { this.tekan = null; kotakPilihEl.hidden = true; reset(); },
+  batal() { this.tekan = null; kotakPilihEl.hidden = true; sorotiKursor(null); tulisInfoKursor(infoPilihan()); reset(); },
   dbl(e) {
     const h = pilihObjek(e, null, true);
     if (!h) return;
@@ -5084,6 +5107,63 @@ function soroti(mesh) {
     mesh.material = matSorotCache[k];
   }
   minta();
+}
+
+/* ===== Sorotan kursor dan info kursor di alat Pilih (v0.33) ===== */
+// Seluruh benda yang AKAN terpilih bila diklik (grup = semua isinya) disorot saat kursor lewat, seperti sorotan biru
+// SketchUp, dan bilah bawah menyebut nama serta jalurnya. Pengguna tahu sasaran klik sebelum menekan.
+function matSorotKursor(asli) {
+  const tembus = !!(asli && asli.transparent), k = (tembus ? 'kursor-tembus:' : 'kursor:') + T.accent;
+  if (!matSorotCache[k]) matSorotCache[k] = new THREE.MeshLambertMaterial({color: new THREE.Color(campur(T.faceVol, T.accent, 0.4)), side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, ...(tembus ? {transparent: true, opacity: 0.55, depthWrite: false} : {})});
+  return matSorotCache[k];
+}
+// ids: elemen yang disorot (sudah diurai lewat ekspansi); kunci: sasaran klik, agar tidak dihitung ulang saat kursor masih di benda yang sama
+function sorotiKursor(ids, kunci = null) {
+  const SK = S.sorotKursor;
+  if (SK.kunci === kunci && (kunci !== null || !SK.tukar.length)) return;
+  for (const {mesh, mat} of SK.tukar) mesh.material = mat;
+  SK.tukar = []; SK.kunci = kunci; SK.ids = ids || null;
+  if (ids && ids.size) {
+    const grupMesh = new Set();
+    for (const id of ids) { const d = S.elems.get(id), g = objek.get(d && d.jenis === 'bukaan' ? d.dinding : id); if (g) grupMesh.add(g); }
+    for (const g of grupMesh) g.traverse(o => {
+      if (!o.isMesh || !o.material || o.userData.face === 'penanda' || !ids.has(o.userData.elemId)) return;
+      SK.tukar.push({mesh: o, mat: o.material});
+      o.material = matSorotKursor(o.material);
+    });
+  }
+  minta();
+}
+// Sasaran klik tanpa efek samping (untuk sorotan kursor): meniru targetDariKlik tanpa mengubah konteks grup
+function sasaranKlik(eid) {
+  if (S.tembus && !S.edit && S.elems.has(eid)) return eid;
+  const t = targetKlik(eid);
+  if (t !== undefined) return t;
+  const k = S.konteks; S.konteks = null;
+  try { return targetKlik(eid); } finally { S.konteks = k; }
+}
+const idTampil = id => id.replace('_', '');
+function namaBenda(id) {
+  if (kodeOf(id) === 'G') { const g = S.grup.get(id); return `Grup ${esc(g && g.nama ? g.nama : idTampil(id))}`; }
+  const d = S.elems.get(id);
+  if (!d) return esc(idTampil(id));
+  return `${esc(namaJenis(d))} ${esc(idTampil(id))}${d.nama ? ` <small>${esc(d.nama)}</small>` : ''}`;
+}
+// Rantai grup induk dari yang terdekat, berhenti di grup yang sedang dibuka
+function jalurBenda(id) {
+  const r = [];
+  for (const g of leluhur(id)) { if (g === S.konteks) break; r.push(namaBenda(g)); }
+  return r;
+}
+function tulisInfoKursor(html) { const el = $('#kursor-info'); if (el && el.innerHTML !== html) el.innerHTML = html; }
+// Ringkasan pilihan sekarang: tampil saat kursor tidak di atas benda, dan setiap pilihan berubah
+function infoPilihan() {
+  const sel = [...S.sel];
+  if (S.muka) return `<b>Muka ${esc(namaMuka(S.muka.k))}</b> dari ${namaBenda(S.muka.id)}`;
+  if (!sel.length) return S.konteks ? `<small>Di dalam ${namaBenda(S.konteks)} · tidak ada yang dipilih</small>` : '';
+  if (sel.length === 1) { const j = jalurBenda(sel[0]); return `<b>${namaBenda(sel[0])}</b>${j.length ? ` <small>di ${j.join(' · ')}</small>` : ''}`; }
+  return `<b>${sel.length} terpilih:</b> ${sel.slice(0, 3).map(namaBenda).join(', ')}${sel.length > 3 ? ` <small>+${sel.length - 3} lagi</small>` : ''}`;
 }
 
 const alatPindah = {
@@ -8401,7 +8481,10 @@ function akhirPointer(e) {
 }
 canvas.addEventListener('pointerup', akhirPointer);
 canvas.addEventListener('pointercancel', akhirPointer);
-canvas.addEventListener('pointerleave', () => { if ((S.tool === 'dorong' && !alatDorong.aktif) || S.tool === 'hapus') soroti(null); });
+canvas.addEventListener('pointerleave', () => {
+  if ((S.tool === 'dorong' && !alatDorong.aktif) || S.tool === 'hapus') soroti(null);
+  if (S.tool === 'pilih') { sorotiKursor(null); tulisInfoKursor(infoPilihan()); }
+});
 canvas.addEventListener('dblclick', e => { if (alat().dbl) alat().dbl(e); });
 canvas.addEventListener('click', e => { if (e.detail === 3 && alat().tiga) alat().tiga(e); });
 canvas.addEventListener('wheel', e => {
@@ -8545,7 +8628,7 @@ $('#btn-urung').addEventListener('click', urungkan);
 $('#btn-ulang').addEventListener('click', ulangi);
 
 /* ============ Panel properti ============ */
-function segarPilihan() { if (S.muka && !(S.sel.size === 1 && S.sel.has(S.muka.id))) S.muka = null; bangunSemua(); S.panelKunci = ''; renderPanel(true); minta(); }
+function segarPilihan() { if (S.muka && !(S.sel.size === 1 && S.sel.has(S.muka.id))) S.muka = null; bangunSemua(); S.panelKunci = ''; renderPanel(true); tulisInfoKursor(infoPilihan()); minta(); }
 const baris = (label, kunci, satuan) => `<dt>${label}</dt><dd><span data-u="${kunci}"></span><small>${satuan}</small></dd>`;
 const dis = () => (S.bisaUbah ? '' : 'disabled');
 function medanAngka(id, label, nilai) {
@@ -13598,7 +13681,33 @@ window.rancangAPI = Object.freeze({
   rab: ids => { const r = dataRAB(ids && ids.length ? ids : semuaId()); return r.divisi; },
   ringkasan: ids => total(ids && ids.length ? ids : semuaId()),
   ukurElemen: id => { const d = S.elems.get(id); return d ? ukur(d) : null; },
+  // Pilihan pengguna saat ini (v0.33): acuan kata "ini/itu/yang dipilih" bagi Claude lewat MCP maupun Panel Claude
+  pilihan: () => ({
+    terpilih: [...S.sel].map(id => kodeOf(id) === 'G'
+      ? {id, jenis: 'grup', nama: (S.grup.get(id) || {}).nama || undefined, jumlahElemen: ekspansi([id]).el.size}
+      : (d => d ? {id, jenis: d.jenis, nama: d.nama || undefined, tipe: d.tipe || d.bentuk || undefined, grup: d.grup || undefined, dinding: d.dinding || undefined} : {id})(/** @type {any} */ (S.elems.get(id)))),
+    muka: S.muka ? {id: S.muka.id, muka: S.muka.k} : null,
+    grupDibuka: S.konteks || null,
+    editKomponen: S.edit ? S.edit.kid : null,
+    alat: S.tool,
+    tersembunyi: S.sembunyi.size
+  }),
   pecahAtap: id => { const d = S.elems.get(id); if (!S.bisaUbah || !d || d.jenis !== 'atap' || d.bentuk === 'datar') return {ok: false}; pecahAtap(id); return {ok: !S.elems.has(id), grup: [...S.sel][0]}; }
+});
+
+// Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
+window.rancangUji = Object.freeze({
+  pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
+  // kursor lewat di atas titik dunia (x, y, z) pada alat Pilih; hasil: sasaran yang disorot dan teks bilah bawah
+  lewat: (x, y, z) => {
+    setAlat('pilih');
+    const rc = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(camera);
+    alatPilih.lewat({clientX: rc.left + (v.x + 1) / 2 * rc.width, clientY: rc.top + (1 - v.y) / 2 * rc.height, buttons: 0});
+    const r = {kunci: S.sorotKursor.kunci, jumlahMesh: S.sorotKursor.tukar.length, info: $('#kursor-info').textContent};
+    alatPilih.batal();
+    r.bersih = S.sorotKursor.tukar.length === 0 && S.sorotKursor.kunci === null;
+    return r;
+  }
 });
 
 /* ============ Panel Claude (v0.27): obrolan dengan Claude memakai akun Claude pengguna (kemampuan `sample`) ============ */
@@ -13616,7 +13725,7 @@ function ringkasProyek() {
     `Jumlah elemen per jenis: ${Object.entries(hitung).map(([k, v]) => `${k} ${v}`).join(', ') || 'kosong'}; grup ${S.grup.size}, komponen ${S.komp.size}, tipe kusen ${S.kusen.size}.`,
     `Nomor id terbesar: ${'DBVCSRFAPXNGTLEQM'.split('').map(a => `${a}${maks(a)}`).join(' ')}. Id baru = awalan + nomor berikutnya.`,
     S.konteks ? `Pengguna sedang membuka grup ${S.konteks}; elemen baru sebaiknya diberi "grup": "${S.konteks}".` : 'Pengguna tidak sedang membuka grup.',
-    pilih.length ? `Elemen yang sedang dipilih pengguna: ${pilih.join(', ')}.` : 'Tidak ada elemen yang dipilih.'].join('\n');
+    pilih.length ? `Elemen yang sedang dipilih pengguna: ${pilih.map(id => { const d = S.elems.get(id), g = S.grup.get(id); return g ? `${id} (grup ${g.nama || ''})`.replace(' )', ')') : d ? `${id} (${d.jenis}${d.nama ? ': ' + d.nama : ''})` : id; }).join(', ')}${S.sel.size > 30 ? ` dan ${S.sel.size - 30} lagi` : ''}.${S.muka ? ` Muka yang dipilih: ${namaMuka(S.muka.k)} dari ${S.muka.id}.` : ''}` : 'Tidak ada elemen yang dipilih.'].join('\n');
 }
 function instruksiClaude() {
   return `Kamu adalah asisten di dalam aplikasi RANCANG, aplikasi gambar bangunan ala SketchUp (model 3D, gambar kerja 2D, volume RAB). Pengguna seorang PPK di Indonesia. Jawab dalam Bahasa Indonesia yang ringkas dan jelas.
@@ -13626,6 +13735,7 @@ Kamu bisa membaca dan mengubah model memakai alat yang tersedia. Aturan:
 - Baca dulu data yang kamu butuhkan (daftar_elemen, ambil_elemen) sebelum mengubah elemen yang sudah ada. Mengubah = kirim data LENGKAP elemen itu.
 - Kirim perubahan yang saling terkait dalam SATU panggilan terapkan_perubahan (misalnya dinding beserta pintunya) supaya menjadi satu langkah Urungkan.
 - Bila ukuran penting tidak jelas, tanyakan dulu, jangan menebak. Bila pengguna melampirkan sketsa atau foto denah, pakai ukuran yang tertulis di gambar.
+- Pola kerja pengguna: TUNJUK DULU di kanvas, lalu perintah pendek. Kata "ini", "itu", "yang dipilih", "yang saya tunjuk", atau perintah tanpa id (mis. "geser 20 cm ke utara", "tinggikan jadi 2,4") SELALU mengacu ke "Elemen yang sedang dipilih pengguna" di bawah. Bila tidak ada yang dipilih atau pilihan tidak cocok dengan perintah, tanyakan benda mana yang dimaksud; jangan menebak elemen lain.
 - Setelah mengubah model, laporkan singkat apa yang dibuat atau diubah (id dan ukuran utama). Pengguna bisa membatalkan dengan Ctrl+Z.
 - Jangan menulis JSON panjang di jawaban; cukup ringkasan.
 

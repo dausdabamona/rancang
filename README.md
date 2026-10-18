@@ -27,12 +27,15 @@ Aplikasi berjalan **luring penuh**: Three.js, pustaka poligon, pembuat Excel, da
 2. Unduh `RANCANG.mcpb` dari Releases, lalu **klik dua kali**. Claude desktop membuka jendela pemasangan ekstensi; klik **Install**. (Atau: Claude desktop → Settings → Extensions → Install Extension… → pilih `RANCANG.mcpb`.)
 3. Di percakapan Claude, minta misalnya: *"Lihat proyek RANCANG saya dan buatkan dinding sekat di as 3 dengan pintu P2"*.
 
+Pola kerja yang disarankan: **tunjuk dulu di aplikasi, lalu perintah pendek** ("geser 20 cm ke utara", "tinggikan jadi 2,4"). Claude membaca pilihan Anda lewat `pilihan_pengguna`, jadi perintah pendek dengan acuan yang jelas jarang disalahpahami.
+
 Alat yang tersedia untuk Claude:
 
 | Alat | Fungsi |
 |---|---|
 | `panduan_data` | Panduan isian data setiap jenis elemen |
 | `info_proyek` | Nama berkas, jumlah elemen, jenis gambar yang tersedia |
+| `pilihan_pengguna` | Benda yang sedang dipilih pengguna di aplikasi, muka terpilih, grup yang dibuka. Acuan kata *ini / itu / yang dipilih* |
 | `daftar_elemen`, `ambil_elemen` | Membaca model |
 | `terapkan_perubahan` | Menambah, mengubah, menghapus elemen (diperiksa dulu, ditolak utuh bila ada yang salah) |
 | `ringkasan_ukuran`, `volume_rab` | Ukuran dan volume RAB |
