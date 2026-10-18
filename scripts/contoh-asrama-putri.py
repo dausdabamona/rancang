@@ -99,6 +99,7 @@ tipe_kusen('PJ2', 'jendela', 1, 'kaca', kolom=1, baris=1, buka='tetap')
 tipe_kusen('J1', 'jendela', 2, 'kaca', kolom=1, baris=1, buka='kupu')
 tipe_kusen('J3', 'jendela', 3, 'kaca', kolom=1, baris=1, buka='kupu')
 tipe_kusen('V1', 'jendela', 2, 'jalusi', kolom=1, baris=1, buka='tetap', boven=0)
+tipe_kusen('V2', 'jendela', 1, 'jalusi', kolom=1, baris=1, buka='tetap', boven=0, nama='Ventilasi V2 (KM 1,50)')
 tipe_kusen('PJ1', 'jendela', 1, 'kaca', kolom=1, baris=6, buka='tetap', boven=0, nama='Kaca mati tinggi PJ1 (6 kotak)')   # 110 × 580, 6 kotak kaca bersusun
 
 def bukaan(dinding, tipe, kode, x_abs, lebar, tinggi, ambang=0):
@@ -170,7 +171,7 @@ def sayap(kunci):
             tkm, tcr, wkm = (kx0 + kx1) / 2, (cx0 + cx1) / 2, kx1 - kx0
             bukaan(dB, 'pintu', 'P4', tkm - 0.35 - min(0.6, wkm / 2 - 0.5) * (1 if sisi == 'timur' else -1), 0.70, 2.10)   # pintu KM
             bukaan(dB, 'pintu', 'P4', tcr - 0.35, 0.70, 2.10)                                                           # pintu ceruk
-            bukaan(dA, 'jendela', 'V1', tkm - (0.80 if wkm >= 2 else 0.55), 1.60 if wkm >= 2 else 1.10, 0.45, 1.80)      # ventilasi KM
+            bukaan(dA, 'jendela', 'V1' if wkm >= 2 else 'V2', tkm - (0.80 if wkm >= 2 else 0.55), 1.60 if wkm >= 2 else 1.10, 0.45, 1.80)      # ventilasi KM
             bukaan(dA, 'pintu', 'P4', tcr - 0.35, 0.70, 2.10)                                                           # pintu ceruk ke tempat jemur
             # depan: PJ2 (pintu 70 + kaca mati 75) di sisi KM, J1 (2 × 75) di sisi lain bila bay ≥ 4,5 m
             if sisi == 'timur':
