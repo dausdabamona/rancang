@@ -5827,7 +5827,7 @@ const alatHapus = {
 
 // Alat Perpanjang/Pangkas (extend/trim) ujung papan lisplang: klik papan, lalu klik batasnya (papan lisplang lain atau dinding)
 const alatPerluas = {
-  petunjuk: '<b>Perpanjang/Pangkas:</b> 1) klik papan lisplang (dekat ujung yang diubah), 2) klik batasnya: papan lisplang lain atau dinding. Ujung papan otomatis diperpanjang atau dipangkas sampai bertemu batas. Esc membatalkan, Ctrl+Z mengembalikan.',
+  petunjuk: '<b>Perpanjang/Pangkas:</b> 1) klik papan lisplang (dekat ujung yang diubah) atau klik plafon, 2) klik batasnya: papan lisplang lain, dinding, atau plafon di depannya. Ujung papan atau sisi plafon yang menghadap batas otomatis diperpanjang atau dipangkas sampai bertemu. Esc membatalkan, Ctrl+Z mengembalikan.',
   vcb: 'Ukuran',
   pilih: null,
   sibuk() { return !!this.pilih; },
@@ -5846,9 +5846,69 @@ const alatPerluas = {
     return null;
   },
   move(e) { const h = hitObjek(e, null, true).find(x => x.object.userData.sisi || (/** @type {any} */ (ambil(x.object.userData.elemId)) || {}).jenis === 'dinding'); soroti(h ? h.object : null); },
+  // plafon yang bisa diperpanjang: elemen plafon (P) dan bidang 3D berperan plafon (H)
+  adaPlafon(id) { const d = /** @type {any} */ (ambil(id)); return !!d && (d.jenis === 'plafon' || (d.jenis === 'bidang' && d.peran === 'plafon')); },
+  // titik sudut plafon sebagai [{x,y,z}]
+  sudutPlafon(d) { return d.jenis === 'plafon' ? d.alas.map(q => ({x: q.x, y: q.y, z: d.z0 || 0})) : d.titik.map(q => ({x: q.x, y: q.y, z: q.z})); },
+  // ruas batas (x1,y1,x2,y2) dari benda yang diklik sebagai tujuan: dinding, plafon, bidang, atau plafon miring atap
+  ruasBatas(h) {
+    const u = h.object.userData, d = /** @type {any} */ (ambil(u.elemId));
+    if (!d) return null;
+    const cincin = pts => pts.map((q, i) => { const r = pts[(i + 1) % pts.length]; return [q[0], q[1], r[0], r[1]]; });
+    if (d.jenis === 'dinding') return {ruas: [[d.awal.x, d.awal.y, d.akhir.x, d.akhir.y]], nama: d.nama || u.elemId};
+    if (d.jenis === 'plafon') return {ruas: cincin(d.alas.map(q => [q.x, q.y])), nama: d.nama || u.elemId};
+    if (d.jenis === 'bidang') return {ruas: cincin(d.titik.map(q => [q.x, q.y])), nama: d.nama || u.elemId};
+    if (d.jenis === 'atap' && u.face === 'plafon-miring') return {ruas: susunTepiAtap(d).plafon.flatMap(pf => cincin(pf.atas.map(q => [q[0], q[1]]))), nama: 'plafon ' + (d.nama || u.elemId)};
+    return null;
+  },
+  // perpanjang/pangkas sisi plafon yang menghadap titik klik tujuan sampai ruas batas terdekat; ujung sisi meluncur sepanjang sisi di sebelahnya
+  perluasPlafon(id, klik2, batas) {
+    const d = /** @type {any} */ (ambil(id)), V = this.sudutPlafon(d), n = V.length;
+    const mid = i => { const a = V[i], b = V[(i + 1) % n]; return [(a.x + b.x) / 2, (a.y + b.y) / 2]; };
+    let i0 = 0, dm = Infinity;
+    for (let i = 0; i < n; i++) { const m = mid(i), dd = Math.hypot(m[0] - klik2.x, m[1] - klik2.y); if (dd < dm) { dm = dd; i0 = i; } }
+    const j0 = (i0 + 1) % n, m0 = mid(i0);
+    const jarakRuas = (r, px, py) => { const dx = r[2] - r[0], dy = r[3] - r[1], l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - r[0]) * dx + (py - r[1]) * dy) / l2)); return Math.hypot(px - (r[0] + t * dx), py - (r[1] + t * dy)); };
+    let rb = null, jb = Infinity;
+    for (const r of batas.ruas) { const dd = jarakRuas(r, m0[0], m0[1]); if (dd < jb) { jb = dd; rb = r; } }
+    if (!rb) return {galat: 'Batas tidak ditemukan.'};
+    const ux = rb[2] - rb[0], uy = rb[3] - rb[1];
+    const luncur = (k, dari) => {   // ujung k meluncur sepanjang sisi dari titik 'dari' ke k, melewati k
+      const A = V[k], B = V[dari], dx = A.x - B.x, dy = A.y - B.y, dz = A.z - B.z, den = dx * uy - dy * ux;
+      if (Math.abs(den) < 1e-6) return null;
+      const t = ((rb[0] - A.x) * uy - (rb[1] - A.y) * ux) / den;
+      return {t, x: A.x + t * dx, y: A.y + t * dy, z: A.z + t * dz, panjang: Math.abs(t) * Math.hypot(dx, dy, dz)};
+    };
+    const p1 = luncur(i0, (i0 - 1 + n) % n), p2 = luncur(j0, (j0 + 1) % n);
+    if (!p1 || !p2) return {galat: 'Sisi di samping tidak memotong batas (sejajar). Pilih batas lain.'};
+    if (Math.max(p1.panjang, p2.panjang) > 15) return {galat: 'Hasilnya terlalu jauh (lebih dari 15 m).'};
+    const b = salin(d), r2z = v => r2(v);
+    if (d.jenis === 'plafon') { b.alas = d.alas.map(q => ({...q})); b.alas[i0] = {x: r2z(p1.x), y: r2z(p1.y)}; b.alas[j0] = {x: r2z(p2.x), y: r2z(p2.y)}; }
+    else { b.titik = d.titik.map(q => ({...q})); b.titik[i0] = {x: r2z(p1.x), y: r2z(p1.y), z: r2z(p1.z)}; b.titik[j0] = {x: r2z(p2.x), y: r2z(p2.y), z: r2z(p2.z)}; }
+    if (!sah(b)) return {galat: 'Plafon menjadi tidak sah (bentuk berbalik). Pilih batas lain.'};
+    return {b, rata: (p1.t + p2.t) / 2 >= 0, geser: Math.max(p1.panjang, p2.panjang)};
+  },
   down(e) {
     // papan lisplang tipis: pakai hit toleran lalu ambil yang berupa papan (langkah 1) atau papan/dinding (langkah 2)
     const semua = hitObjek(e, null, true), cocok = x => x.object.userData.sisi || (/** @type {any} */ (ambil(x.object.userData.elemId)) || {}).jenis === 'dinding';
+    if (this.pilih && this.pilih.plafon) {
+      const h2 = semua.find(x => x.object.userData.elemId !== this.pilih.id && this.ruasBatas(x));
+      if (!h2) return toast('Langkah 2: klik plafon, bidang, atau dinding tujuan yang mau disentuh.');
+      const bt = this.ruasBatas(h2), hasil = this.perluasPlafon(this.pilih.id, {x: h2.point.x, y: h2.point.y}, bt);
+      if (hasil.galat) return toast(hasil.galat);
+      terapkan([{id: this.pilih.id, sesudah: hasil.b}]);
+      toast(`Plafon ${hasil.rata ? 'diperpanjang' : 'dipangkas'} sampai ${bt.nama} (${fmt(hasil.geser)} m). Ctrl+Z mengembalikan.`);
+      this.pilih = null; soroti(null);
+      return;
+    }
+    if (!this.pilih) {
+      const hp = semua.find(x => !x.object.userData.sisi && this.adaPlafon(x.object.userData.elemId));
+      if (hp && !semua.find(x => x.object.userData.sisi)) {
+        this.pilih = {id: hp.object.userData.elemId, plafon: true};
+        toast('Langkah 2: klik plafon (atau dinding) di depannya sebagai batas. Sisi plafon yang menghadap klik akan diperpanjang sampai menyentuh.');
+        return;
+      }
+    }
     const h = (this.pilih ? semua.find(cocok) : semua.find(x => x.object.userData.sisi)) || semua[0];
     if (!h) return;
     const u = h.object.userData;
