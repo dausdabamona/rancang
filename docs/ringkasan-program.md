@@ -1,6 +1,6 @@
 # RANCANG: Ringkasan Program dari Awal sampai Sekarang
 
-*Disusun 17 Oktober 2026, diperbarui 18 Oktober 2026 · posisi terakhir: rilis exe v0.31.1; PR #20 (v0.32.0) menunggu uji di artifact*
+*Disusun 17 Oktober 2026, diperbarui 18 Oktober 2026 · posisi terakhir: rilis exe v0.34.0 (Tahap A desain ulang)*
 
 RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk kebutuhan PPK Poltek KP Sorong. Bangunan digambar sebagai model 3D. Dari model yang sama aplikasi menghasilkan gambar kerja 2D dan volume RAB. Claude bisa membaca, menggambar, dan merevisi model itu bersama pengguna.
 
@@ -178,7 +178,7 @@ Sunting Alas ditempatkan di tahap 2 karena disebut langsung sebagai hambatan nya
 - Perbaikan kecil atas laporan uji: info kursor dipindah ke lapisan kanvas (gambar goyang), sorotan hanya muka di bawah kursor (grup besar berat), garis potong di atas pelat lantai + daftar Pilih, Extend/Trim = Shift+H (bentrok Tembus), Panel Claude menerima Ctrl+V tangkapan layar.
 
 **Desain ulang v0.34 (mock-up disetujui 18 Oktober 2026 malam, artifact *Desain Ulang RANCANG v0.34*).** Aturan pengguna: menu bisa dilipat agar ruang kerja luas; informatif tapi tidak berlebihan (tiga tingkat: selalu tampak → saat ada pilihan → hanya bila diminta); pintasan hanya untuk alat yang sering dipakai, mengikuti SketchUp/AutoCAD.
-- Tahap A (v0.34.0): peta pintasan baru, palet perintah Ctrl+K, menu alat tiga keadaan, panel jadi rel tab, mode fokus.
+- Tahap A (v0.34.0, dirilis): peta pintasan baru, palet perintah Ctrl+K, menu alat tiga keadaan, panel jadi rel tab, mode fokus.
 - Tahap B (berikutnya): panel bertab Properti · Objek (outliner) · Claude, kartu properti ringkas mengambang di mode fokus.
 - Tahap C: tab Claude di desktop lewat API key Anthropic (berbayar per pakai) di samping jalur MCP.
 
