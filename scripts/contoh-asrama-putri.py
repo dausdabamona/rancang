@@ -91,7 +91,8 @@ def tipe_kusen(kode, untuk, daun, isi, kolom=2, baris=1, buka='kiri', boven=0.45
     KUSEN[i] = {'kode': kode, 'untuk': untuk, 'nama': nama or ('Pintu ' if untuk == 'pintu' else 'Jendela ') + kode, 'profil': 0.06,
                 'daun': daun, 'isi': isi, 'kolom': kolom, 'baris': baris, 'buka': buka, 'boven': {'tinggi': boven, 'kolom': 2, 'baris': 1} if boven else None, 'catatan': ''}
 tipe_kusen('P1', 'pintu', 1, 'panil6', buka='kiri')
-tipe_kusen('P2', 'pintu', 2, 'panil6', buka='kiri', nama='Pintu P2 (60+90)')
+tipe_kusen('P2', 'pintu', 2, 'panil6', buka='kiri', nama='Pintu P2 dua daun')
+tipe_kusen('P2', 'jendela', 1, 'kaca', kolom=1, baris=1, buka='tetap', nama='Kaca mati samping pintu P2')   # jendela besar di kedua sisi pintu depan, satu unit kusen
 tipe_kusen('P4', 'pintu', 1, 'panil6', buka='kiri', boven=0)
 tipe_kusen('PJ2', 'pintu', 1, 'panil6', buka='kanan')
 tipe_kusen('PJ2', 'jendela', 1, 'kaca', kolom=1, baris=1, buka='tetap')
@@ -233,6 +234,8 @@ bukaan(dKM, 'pintu', 'P4', bx0 + 1.1, 0.70, 2.10)
 # entrance: pintu P2 di dinding timur, kaca tinggi PJ1 dan J3 di lantai 2
 yb = (by0 + by1) / 2
 tambah('B', {'jenis': 'bukaan', 'tipe': 'pintu', 'kode': 'P2', 'dinding': dT, 'jarak': r2(yb - by0 - 0.75), 'lebar': 1.50, 'tinggi': 2.10, 'ambang': 0})
+tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'P2', 'dinding': dT, 'jarak': r2(yb - by0 - 0.75 - 0.60), 'lebar': 0.60, 'tinggi': 2.10, 'ambang': 0})   # kaca samping kiri
+tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'P2', 'dinding': dT, 'jarak': r2(yb - by0 + 0.75), 'lebar': 0.60, 'tinggi': 2.10, 'ambang': 0})          # kaca samping kanan
 tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'PJ1', 'dinding': dT, 'jarak': r2(0.6), 'lebar': 1.10, 'tinggi': 5.80, 'ambang': 0.10})
 tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'PJ1', 'dinding': dW, 'jarak': r2(0.6), 'lebar': 1.10, 'tinggi': 5.80, 'ambang': 0.10})   # kaca tinggi yang sama di sisi lorong
 tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'J3', 'dinding': dW, 'jarak': r2(yb - by0 - 1.175), 'lebar': 2.35, 'tinggi': 1.20, 'ambang': Z2 + 0.90})
