@@ -252,7 +252,7 @@ for x0, x1, sisi in KAMAR:
     simbol('lemari', (x0 + x1) / 2, 2.45, 0)
     simbol('klosetJongkok', kx0 + 0.5, 0.6, 0)
     simbol('bakMandi', kx1 - 0.45, 0.5, 0)
-tambah('L', {'jenis': 'gambar2d', 'bentuk': 'legenda', 'lembar': 'denah', 'tempel': 'kertas', 'titik': [{'x': 300, 'y': 25}]})
+tambah('L', {'jenis': 'gambar2d', 'bentuk': 'legenda', 'lembar': 'denah', 'tempel': 'kertas', 'titik': [{'x': 22, 'y': 22}]})
 
 # ---------- garis potong & anotasi ----------
 tambah('X', {'jenis': 'potong', 'nama': 'A', 'awal': P(-3, 4.0), 'akhir': P(40, 4.0), 'pandang': -1})
