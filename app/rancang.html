@@ -576,7 +576,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 
 | Awalan | jenis | Isian wajib | Contoh |
 |---|---|---|---|
-| D | dinding | awal{x,y}, akhir{x,y} (as dinding), tebal, tinggi, z0 | `{"jenis":"dinding","nama":"Dinding depan","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"tebal":0.15,"tinggi":3.5,"z0":-0.11}` |
+| D | dinding | awal{x,y}, akhir{x,y} (as dinding), tebal, tinggi, z0. Opsional: profilAtas [[jarak dari awal (m), tinggi (m)], …] untuk tepi atas bertangga/miring (tinggi = titik tertinggi) | `{"jenis":"dinding","nama":"Dinding depan","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"tebal":0.15,"tinggi":3.5,"z0":-0.11}` |
 | B | bukaan | tipe 'pintu'/'jendela', dinding (id), jarak (dari ujung awal dinding ke tepi bukaan), lebar, tinggi, ambang (dari dasar dinding), kode | `{"jenis":"bukaan","tipe":"pintu","kode":"P1","dinding":"D5","jarak":1.2,"lebar":0.8,"tinggi":2.1,"ambang":0.11}` |
 | V | volume | alas [{x,y}…] (≥3 titik), z0, tinggi. Bentuk lain: `bentuk:'lingkaran'` + pusat, jari; `bentuk:'busur'` + awal, akhir, tonjolan | `{"jenis":"volume","nama":"Lantai Kamar 1","alas":[{"x":0,"y":0},{"x":3,"y":0},{"x":3,"y":4},{"x":0,"y":4}],"z0":-0.11,"tinggi":0.11,"lantai":"ruang","penutupLantai":"k40"}` |
 | C | kolom | tipe 'praktis'/'struktur', x, y (pusat), b (lebar X), h (lebar Y), tinggi, z0, tul{n,d,ulir}, sengkang{d,s}, fc, selimut | `{"jenis":"kolom","tipe":"praktis","x":0,"y":0,"b":0.15,"h":0.15,"tinggi":3.5,"z0":-0.11,"tul":{"n":4,"d":10,"ulir":false},"sengkang":{"d":8,"s":0.15},"fc":14.5,"selimut":0.02}` |
@@ -800,7 +800,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * D — dinding. `awal`/`akhir` adalah as dinding.
- * @typedef {DasarElemen & {jenis: 'dinding', awal: Titik2, akhir: Titik2, tebal: number, tinggi: number, z0?: number}} Dinding
+ * @typedef {DasarElemen & {jenis: 'dinding', awal: Titik2, akhir: Titik2, tebal: number, tinggi: number, z0?: number, profilAtas?: [number, number][]}} Dinding
  */
 
 /**
@@ -1092,7 +1092,9 @@ const titikSah = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
  */
 function sah(d) {
   if (!d || typeof d !== 'object') return false;
-  if (d.jenis === 'dinding') return titikSah(d.awal) && titikSah(d.akhir) && d.tebal > 0 && d.tinggi >= 0;
+  if (d.jenis === 'dinding') return titikSah(d.awal) && titikSah(d.akhir) && d.tebal > 0 && d.tinggi >= 0
+    && (d.profilAtas === undefined || (Array.isArray(d.profilAtas) && d.profilAtas.length >= 2 && d.profilAtas.length <= 16
+      && d.profilAtas.every((q, i) => Array.isArray(q) && Number.isFinite(q[0]) && Number.isFinite(q[1]) && q[1] >= 0 && (i === 0 || q[0] >= d.profilAtas[i - 1][0]))));
   if ((d.jenis === 'plafon' || d.jenis === 'volume') && d.lubang !== undefined && !(Array.isArray(d.lubang) && d.lubang.every(r => Array.isArray(r) && r.length >= 3 && r.every(titikSah)))) return false;
   if (d.jenis === 'plafon') return Array.isArray(d.alas) && d.alas.length >= 3 && d.alas.every(titikSah) && Number.isFinite(d.z0);
   if (d.jenis === 'volume' && d.bentuk === 'lingkaran') return titikSah(d.pusat) && d.jari > 0 && d.tinggi >= 0;
@@ -1779,7 +1781,8 @@ function ukur(d) {
   if (d.jenis === 'dinding') {
     const L = Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y), buk = d._buk || [];
     const lb = buk.reduce((s, b) => s + b.lebar * Math.min(b.tinggi, Math.max(0, h - (b.ambang || 0))), 0);
-    return {panjang: L, luasKotor: L * h, luasBukaan: lb, luasSisi: L * h - lb, volume: (L * h - lb) * d.tebal,
+    const kotor = profilDinding(d) ? luasProfil(d) : L * h;
+    return {panjang: L, luasKotor: kotor, luasBukaan: lb, luasSisi: kotor - lb, volume: (kotor - lb) * d.tebal,
       nPintu: buk.filter(b => b.tipe === 'pintu').length, nJendela: buk.filter(b => b.tipe !== 'pintu').length};
   }
   if (d.bentuk === 'lingkaran' || d.bentuk === 'busur') {
@@ -2040,6 +2043,23 @@ function dariDefinisi(def, inst, nid) {
 function infoDinding(w) {
   const L = Math.hypot(w.akhir.x - w.awal.x, w.akhir.y - w.awal.y) || 1e-6;
   return {L, ux: (w.akhir.x - w.awal.x) / L, uy: (w.akhir.y - w.awal.y) / L};
+}
+// Profil tepi atas dinding (opsional): [[jarak dari awal as (m), tinggi (m)], ...]. Tanpa profil = rata setinggi `tinggi`
+// (yang juga menjadi batas tertinggi profil). Di luar titik pertama/terakhir tinggi mengikuti titik itu.
+function profilDinding(d) { const p = d && d.profilAtas; return Array.isArray(p) && p.length >= 2 ? p : null; }
+function tinggiDi(d, u) {
+  const H = d.tinggi || 0, p = profilDinding(d);
+  if (!p) return H;
+  let h = p[p.length - 1][1];
+  if (u <= p[0][0]) h = p[0][1];
+  else for (let i = 0; i + 1 < p.length; i++) if (u <= p[i + 1][0]) { const [u1, h1] = p[i], [u2, h2] = p[i + 1]; h = u2 - u1 < 1e-9 ? h2 : h1 + (h2 - h1) * (u - u1) / (u2 - u1); break; }
+  return Math.min(H, Math.max(0, h));
+}
+function luasProfil(d) {
+  const {L} = infoDinding(d), us = [0, ...(profilDinding(d) || []).map(q => q[0]).filter(u => u > 1e-6 && u < L - 1e-6), L].sort((a, b) => a - b);
+  let A = 0;
+  for (let i = 0; i + 1 < us.length; i++) A += (tinggiDi(d, us[i]) + tinggiDi(d, us[i + 1])) / 2 * (us[i + 1] - us[i]);
+  return A;
 }
 function cekBukaan(b, idSendiri) {
   const w = S.elems.get(b.dinding);
@@ -2928,6 +2948,11 @@ function bangunDinding(g, id, d, mat, tepi, f, kunci) {
   const {L, ux, uy} = infoDinding(d), nx = -uy, ny = ux, t = d.tebal / 2, z0 = d.z0 || 0, H = Math.max(0, d.tinggi || 0);
   const ax = d.awal.x, ay = d.awal.y;
   const P = (u, n) => [ax + ux * u + nx * n, ay + uy * u + ny * n];
+  // tepi atas bertangga/miring (profilAtas): badan dinding dibangun dengan tinggi puncak berbeda di tiap titik
+  const prof = profilDinding(d), uDari = q => (q[0] - ax) * ux + (q[1] - ay) * uy, zAtasDi = u => z0 + tinggiDi(d, u);
+  const badan = (poly, zb, lewat) => (prof
+    ? prismaProfil(g, id, poly, z0 + zb, q => zAtasDi(uDari(q)), prof.map(r => r[0]), uDari, mat, lewat)
+    : prisma(g, id, poly, z0 + zb, H - zb, mat, tepi, 'atas', true, lewat));
   const {ujung: [JA, JB], celah} = sambunganDinding(d, kunci);
   // poligon potongan dari u1 sampai u2; null = ujung dinding beserta sambungannya
   const potong = (u1, u2) => {
@@ -2946,10 +2971,10 @@ function bangunDinding(g, id, d, mat, tepi, f, kunci) {
   const buk = (d._buk || []).map(b => ({...b, s: batas(b.jarak, ujungMin, ujungMaks), e: batas(b.jarak + b.lebar, ujungMin, ujungMaks)})).filter(b => b.e - b.s > 0.001).sort((a, b) => a.s - b.s);
   let u = null;
   for (const b of buk) {
-    if (u === null || b.s > u + 1e-6) { const k = potong(u, b.s); prisma(g, id, k.p, z0, H, mat, tepi, 'atas', true, k.lewat); }
+    if (u === null || b.s > u + 1e-6) { const k = potong(u, b.s); badan(k.p, 0, k.lewat); }
     const zb = batas(b.ambang || 0, 0, H), zt = batas((b.ambang || 0) + b.tinggi, 0, H);
     if (zb > 1e-6) prisma(g, id, potong(b.s, b.e).p, z0, zb, mat, tepi, 'bagian', true);
-    if (H - zt > 1e-6) prisma(g, id, potong(b.s, b.e).p, z0 + zt, H - zt, mat, tepi, 'atas', true);
+    if (H - zt > 1e-6) badan(potong(b.s, b.e).p, zt);
     u = Math.max(u ?? -Infinity, b.e);
     // daun pintu atau kaca jendela
     const pid = b._id, pintu = b.tipe === 'pintu', tp = tipeKusen(b);
@@ -2975,19 +3000,23 @@ function bangunDinding(g, id, d, mat, tepi, f, kunci) {
     lg.setAttribute('position', new THREE.Float32BufferAttribute([x1, y1, z0 + zb, x2, y2, z0 + zb, x2, y2, z0 + zb, x2, y2, z0 + zt, x2, y2, z0 + zt, x1, y1, z0 + zt, x1, y1, z0 + zt, x1, y1, z0 + zb], 3));
     g.add(new THREE.LineSegments(lg, matGaris(tepi)));
   }
-  { const k = potong(u, null); prisma(g, id, k.p, z0, H, mat, tepi, 'atas', true, k.lewat); }
+  { const k = potong(u, null); badan(k.p, 0, k.lewat); }
   // Garis tepi nyata
   const pos = [], Q = (uu, n, z) => { const [x, y] = P(uu, n); return [x, y, z]; };
   const ruas = (a, b) => pos.push(...a, ...b);
   const zA = z0 + H;
   for (const s of [-1, 1]) {
     const n = s * t, a = JA.u[s], b = JB.u[s];
-    for (const [p, q] of kurangiSelang(a, b, celah.atas[s])) ruas(Q(p, n, zA), Q(q, n, zA));
+    for (const [p, q] of kurangiSelang(a, b, celah.atas[s])) {
+      if (!prof) { ruas(Q(p, n, zA), Q(q, n, zA)); continue; }
+      const us = [p, ...prof.map(r => r[0]).filter(u => u > p + 1e-6 && u < q - 1e-6).sort((x, y) => x - y), q];
+      for (let i = 0; i + 1 < us.length; i++) ruas(Q(us[i], n, zAtasDi(us[i])), Q(us[i + 1], n, zAtasDi(us[i + 1])));
+    }
     // garis kaki: terputus di pintu dan di dinding yang menumbuk
     const lubang = buk.filter(x => (x.ambang || 0) <= 1e-6).map(x => [x.s, x.e]);
     for (const [p, q] of kurangiSelang(a, b, [...lubang, ...celah.bawah[s]])) ruas(Q(p, n, z0), Q(q, n, z0));
-    if (JA.v[s]) ruas(Q(a, n, z0), Q(a, n, zA));
-    if (JB.v[s]) ruas(Q(b, n, z0), Q(b, n, zA));
+    if (JA.v[s]) ruas(Q(a, n, z0), Q(a, n, zAtasDi(a)));
+    if (JB.v[s]) ruas(Q(b, n, z0), Q(b, n, zAtasDi(b)));
   }
   for (const [J, u0] of [[JA, 0], [JB, L]]) {
     const rantai = J.pusat ? [[J.u[-1], -t], [u0, 0], [J.u[1], t]] : [[J.u[-1], -t], [J.u[1], t]];
@@ -3045,6 +3074,54 @@ function prisma(g, id, p, z0, h, mat, tepi, wajahAtas, tanpaGaris, lewati, halus
   if (tanpaGaris) return;
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(garis, 3));
   g.add(new THREE.LineSegments(lg, matGaris(tepi)));
+}
+// Prisma dengan tinggi puncak berubah mengikuti fz([x, y]) (dinding bertepi atas bertangga/miring).
+// Sisi poligon disisipi titik di tiap patahan profil (breaks, dalam satuan u sepanjang as dinding).
+function prismaProfil(g, id, p, zBase, fz, breaks, uf, mat, lewati) {
+  const pts = [], lewat = [];
+  p.forEach((a, i) => {
+    const b = p[(i + 1) % p.length], ua = uf(a), ub = uf(b), lo = Math.min(ua, ub), hi = Math.max(ua, ub);
+    pts.push(a); lewat.push(!!(lewati && lewati.has(i)));
+    if (hi - lo < 1e-6) return;
+    for (const t of breaks.filter(u => u > lo + 1e-6 && u < hi - 1e-6).map(u => (u - ua) / (ub - ua)).sort((x, y) => x - y)) {
+      pts.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); lewat.push(!!(lewati && lewati.has(i)));
+    }
+  });
+  const zT = q => Math.max(zBase, fz(q)), n = pts.length;
+  if (pts.every(q => zT(q) - zBase < 1e-6)) return;
+  const bentuk = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+  const geoBawah = new THREE.ShapeGeometry(bentuk), pb = /** @type {any} */ (geoBawah.attributes.position), ib = /** @type {any} */ (geoBawah.index);
+  // permukaan atas: tiap segitiga dipotong di patahan profil supaya setiap potongan datar (z linear terhadap u)
+  const bt = [-Infinity, ...[...new Set(breaks)].sort((x, y) => x - y), Infinity], pos = [];
+  const klip = (poly, f) => {
+    const r = [];
+    poly.forEach((a, i) => { const c = poly[(i + 1) % poly.length], fa = f(a), fc = f(c); if (fa >= 0) r.push(a); if ((fa >= 0) !== (fc >= 0)) { const t = fa / (fa - fc); r.push([a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t]); } });
+    return r;
+  };
+  for (let k = 0; k < ib.count; k += 3) {
+    const tri = [0, 1, 2].map(j => [pb.getX(ib.getX(k + j)), pb.getY(ib.getX(k + j))]);
+    for (let m = 0; m + 1 < bt.length; m++) {
+      let poly = tri;
+      if (bt[m] > -Infinity) poly = klip(poly, q => uf(q) - bt[m]);
+      if (poly.length >= 3 && bt[m + 1] < Infinity) poly = klip(poly, q => bt[m + 1] - uf(q));
+      for (let j = 1; j + 1 < poly.length; j++) for (const q of [poly[0], poly[j], poly[j + 1]]) pos.push(q[0], q[1], zT(q));
+    }
+  }
+  const geoAtas = new THREE.BufferGeometry();
+  geoAtas.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geoAtas.computeVertexNormals();
+  const atas = new THREE.Mesh(geoAtas, mat); atas.userData = {elemId: id, face: 'atas'}; g.add(atas);
+  const bawah = new THREE.Mesh(geoBawah, mat); bawah.position.z = zBase; bawah.userData = {elemId: id, face: 'bawah'}; g.add(bawah);
+  for (let i = 0; i < n; i++) {
+    if (lewat[i]) continue;
+    const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % n], len = Math.hypot(bx - ax, by - ay) || 1;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute([ax, ay, zBase, bx, by, zBase, bx, by, zT([bx, by]), ax, ay, zT([ax, ay])], 3));
+    geo.setIndex([0, 1, 2, 0, 2, 3]); geo.computeVertexNormals();
+    const sisi = new THREE.Mesh(geo, mat);
+    sisi.userData = {elemId: id, face: 'sisi', edge: i, n: [(by - ay) / len, -(bx - ax) / len]};
+    g.add(sisi);
+  }
 }
 function lepas(id) {
   hapusCacheSnap(id);
@@ -8584,7 +8661,8 @@ function htmlElemen(id, d) {
     ${dinding ? medanAngka('p-panjang', 'Panjang as (m)', ukur(d).panjang) + medanAngka('p-tebal', 'Tebal (m)', d.tebal) : ''}
     ${d.bentuk === 'lingkaran' ? medanAngka('p-px', 'Pusat X (m)', d.pusat.x) + medanAngka('p-py', 'Pusat Y (m)', d.pusat.y) + medanAngka('p-jari', 'Jari-jari (m)', d.jari) : ''}
     ${d.bentuk === 'busur' ? medanAngka('p-tonjolan', 'Tonjolan busur (m)', d.tonjolan) : ''}
-    ${medanAngka('p-tinggi', 'Tinggi (m)', d.tinggi || 0)}
+    ${medanAngka('p-tinggi', dinding && profilDinding(d) ? 'Tinggi tertinggi (m)' : 'Tinggi (m)', d.tinggi || 0)}
+    ${dinding ? `<label for="p-profilAtas">Tepi atas bertangga</label><input id="p-profilAtas" class="teks" type="text" placeholder="jarak:tinggi; ..., mis. 0:2,2; 0,5:2,2; 1:1,6" value="${esc(profilDinding(d) ? d.profilAtas.map(q => `${fmt(q[0])}:${fmt(q[1])}`).join('; ') : '')}" ${dis()}>` : ''}
     ${medanAngka('p-z0', 'Elevasi dasar (m)', d.z0 || 0)}
     ${medanCatatan('p-catatan', d.catatan)}
   </div><p class="meta">Tombol panah menggeser 5 cm (Shift: 50 cm). Tembus (H) memudahkan memilih benda di dalam ruangan.</p></section>
@@ -9387,6 +9465,17 @@ function ubahMedan(e) {
   const b = salin(d);
   if (f === 'nama') b.nama = t.value.trim() || d.nama;
   else if (f === 'catatan') b.catatan = t.value;
+  else if (f === 'profilAtas') {
+    // "jarak:tinggi; jarak:tinggi; ..." diukur dari awal as dinding; kosong = tepi atas rata
+    const teks = t.value.trim();
+    if (!teks) delete b.profilAtas;
+    else {
+      const p = teks.split(/[;\n]+/).map(x => x.split(':').map(v => angka(v))).filter(q => q.length === 2);
+      if (p.length < 2 || p.some(q => !Number.isFinite(q[0]) || !(q[1] >= 0)) || p.some((q, i) => i && q[0] < p[i - 1][0])) return tolakAngka('Tulis jarak:tinggi, urut dari awal dinding, minimal dua titik. Contoh: 0:2,2; 0,5:2,2; 1:1,6.');
+      b.profilAtas = p.map(q => [r2(q[0]), r2(q[1])]);
+      b.tinggi = Math.max(...b.profilAtas.map(q => q[1]));
+    }
+  }
   else if (f === 'lantai') {
     if (!t.value) { delete b.lantai; delete b.penutupLantai; }
     else { b.lantai = t.value; if (!b.penutupLantai) b.penutupLantai = BAWAAN_LANTAI[t.value].penutup; }
@@ -10736,6 +10825,12 @@ function buatSVG(o) {
     const daftar = geos.filter(g => (g.tinggi || 0) > 0 && g.jenis !== 'slof' && g.jenis !== 'pondasi').map(g => {
       const p = poligon(g), us = p.map(([x, y]) => pr.u(x, y)), js = p.map(([x, y]) => pr.jauh(x, y));
       const it = {jenis: g.jenis, u0: Math.min(...us), u1: Math.max(...us), dekat: Math.min(...js), z0: g.z0 || 0, z1: (g.z0 || 0) + g.tinggi, buk: []};
+      if (g.jenis === 'dinding' && profilDinding(g)) {
+        // tepi atas bertangga/miring: poligon tampak mengikuti profil
+        const {L, ux, uy} = infoDinding(g), us = [0, ...profilDinding(g).map(q => q[0]).filter(u => u > 1e-6 && u < L - 1e-6), L].sort((a, b) => a - b);
+        it.prof = us.map(u => [pr.u(g.awal.x + ux * u, g.awal.y + uy * u), it.z0 + tinggiDi(g, u)]).sort((a, b) => a[0] - b[0]);
+        it.z1 = Math.max(...it.prof.map(q => q[1]));
+      }
       if (g.jenis === 'dinding' && g._buk) {
         const {ux, uy} = infoDinding(g);
         for (const b of g._buk) {
@@ -10803,7 +10898,8 @@ function buatSVG(o) {
           isi.push(`<polygon points="${d.poly.map(([u, z]) => `${n2(X(u))},${n2(Y(z))}`).join(' ')}" fill="${d.atap ? (jr[d.penutup] ? `url(#pola-${d.penutup})` : '#F4EEEA') : '#fff'}" stroke="#000" stroke-width="${d.atap ? 0.35 : 0.25}" stroke-linejoin="round"/>`);
           continue;
         }
-        isi.push(`<rect x="${n2(X(d.u0))}" y="${n2(Y(d.z1))}" width="${n2((d.u1 - d.u0) * s)}" height="${n2((d.z1 - d.z0) * s)}" fill="#fff" stroke="#000" stroke-width="0.35"/>`);
+        if (d.prof) isi.push(`<polygon points="${[[d.u0, d.z0], [d.u0, d.prof[0][1]], ...d.prof, [d.u1, d.prof[d.prof.length - 1][1]], [d.u1, d.z0]].map(([u, z]) => `${n2(X(u))},${n2(Y(z))}`).join(' ')}" fill="#fff" stroke="#000" stroke-width="0.35" stroke-linejoin="miter"/>`);
+        else isi.push(`<rect x="${n2(X(d.u0))}" y="${n2(Y(d.z1))}" width="${n2((d.u1 - d.u0) * s)}" height="${n2((d.z1 - d.z0) * s)}" fill="#fff" stroke="#000" stroke-width="0.35"/>`);
         for (const b of d.buk) {
           const bx = X(b.u0), by = Y(b.zt), bw = (b.u1 - b.u0) * s, bh = (b.zt - b.zb) * s;
           if (b.tp) {
