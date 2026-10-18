@@ -8622,7 +8622,7 @@ function butirPalet(teks) {
   if (!saring || saring === 'perintah') {
     const P = [
       ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
-      ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Simpan proyek (.json)', '', () => simpanProyek()],
+      ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
       ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
       ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
     ];
@@ -9616,7 +9616,7 @@ function htmlRingkasan() {
   ${htmlDaftarPotong()}
   ${htmlRekapBagian([...S.elems.keys()])}
   <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button><button class="tombol" type="button" data-aksi="ekspor-dae" title="Dibuka di SketchUp lewat File &gt; Import">Unduh model 3D untuk SketchUp (.dae)</button></div>
-  <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka.</p></section>
+  <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}${Object.keys(CONTOH_PROYEK).map(k => `<button class="tombol" type="button" data-aksi="buka-contoh" data-contoh="${k}">Contoh: ${esc(CONTOH_PROYEK[k].nama)}</button>`).join('')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka. Contoh dapat ditambahkan ke model sekarang atau menggantikannya.</p></section>
   ${komp ? `<section><h2>Komponen</h2><ul class="daftar-komp">${komp}</ul></section>` : ''}
   <section><h2>Pintasan</h2><dl class="pintasan">
     <dt><kbd>Spasi</kbd></dt><dd>Pilih</dd><dt><kbd>M</kbd></dt><dd>Pindah, Ctrl untuk menyalin</dd><dt><kbd>Q</kbd></dt><dd>Putar</dd>
@@ -9866,6 +9866,7 @@ panel.addEventListener('click', e => {
   else if (aksi === 'atap-pas' && id) pasAtap(id);
   else if (aksi === 'simpan-proyek') simpanProyek();
   else if (aksi === 'buka-proyek') bukaProyek();
+  else if (aksi === 'buka-contoh') bukaContoh(/** @type {HTMLElement} */ (e.target).dataset.contoh);
   else if (aksi === 'ekspor-rab') eksporRAB(S.sel.size ? [...S.sel] : [...S.elems.keys()]);
   else if (aksi === 'ekspor-dae') unduhDAE();
   else if (aksi === 'buat-kusen' && id) {
@@ -12373,6 +12374,30 @@ function muatProyek(p, cara) {
   S.sel = new Set(atas); segarPilihan();
   toast(`${p.el.length} elemen ditambahkan dan sudah terpilih. Tekan M untuk memindahkannya bila bertumpuk.`);
 }
+// Proyek contoh (v0.35): berkas JSON di folder contoh/ di samping halaman (artifact: berkas pendukung; desktop: build/renderer/contoh)
+const CONTOH_PROYEK = {'asrama-putri': {nama: 'Asrama Putri 2 lantai', ket: 'Renovasi Asrama Putri Poltek KP Sorong (2015): 2 × 8 kamar + KM, plat lantai, tangga, atap limas kayu'}};
+async function ambilContoh(kunci) {
+  const url = 'contoh/' + kunci + '.json';
+  let teks;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    teks = await r.text();
+  } catch (err) {
+    // Electron memuat halaman lewat file://; fetch ditolak, XMLHttpRequest masih boleh
+    try {
+      teks = await new Promise((ok, gagal) => { const x = new XMLHttpRequest(); x.open('GET', url); x.onload = () => (x.status === 0 || x.status === 200 ? ok(x.responseText) : gagal(new Error('HTTP ' + x.status))); x.onerror = () => gagal(new Error('tidak terbaca')); x.send(); });
+    } catch (err2) { throw new Error(`Berkas contoh ${url} tidak terbaca (${err2.message}).`); }
+  }
+  return bacaProyek(teks);
+}
+async function bukaContoh(kunci) {
+  const c = CONTOH_PROYEK[kunci];
+  if (!c) return toast('Contoh tidak dikenal.');
+  let p;
+  try { p = await ambilContoh(kunci); } catch (err) { return toast(err.message); }
+  tanyaMuat(p, 'Contoh ' + c.nama);
+}
 function bukaProyek() {
   const inp = document.createElement('input');
   inp.type = 'file'; inp.accept = '.json,application/json';
@@ -14204,6 +14229,8 @@ window.rancangUji = Object.freeze({
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
   // palet perintah: hasil pencarian untuk teks tertentu (jenis + teks), tanpa membuka dialog
   palet: teks => butirPalet(teks).map(b => b.jenis + ': ' + b.teks),
+  // proyek contoh: muat langsung (tanpa dialog) dengan cara 'ganti' atau 'tambah'; hasil: jumlah elemen sesudahnya
+  contoh: async (kunci, cara = 'tambah') => { const p = await ambilContoh(kunci); muatProyek(p, cara); return {elemen: S.elems.size, grup: S.grup.size, kusen: S.kusen.size, nama: S.setel.nama}; },
   // alat Tangga: dua klik di titik dunia (pangkal, arah); hasil: elemen tangga yang dibuat
   tangga: (a, b) => { setAlat('tangga'); alatTangga.a = {x: a.x, y: a.y, z: a.z || 0}; alatTangga.pasang({x: b.x, y: b.y}); const id = [...S.sel][0]; return {id, data: id ? ambil(id) : null, ukur: id ? strukturGeom(ambil(id)).ukur : null}; },
   // tata letak: ganti keadaan rail/panel/fokus lalu laporkan kelas body dan lebar panel

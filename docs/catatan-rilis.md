@@ -6,6 +6,7 @@ Alat untuk bangunan bertingkat (disiapkan untuk menggambar Asrama Putri dua lant
 - **Plat lantai beton** (jenis `plat`, awalan W): dari lantai biasa dengan tombol *Jadikan plat lantai beton* di panel Properti (tebal = tinggi volume, bawaan 12 cm), bisa berlubang (void tangga). Panel: elevasi permukaan atas, tebal, tulangan Ø dan jarak, Ukuran alas. RAB: beton, besi dua lapis dua arah, bekisting bawah + tepi; butir ST-030/ST-031 menampilkan luas plat dan jumlah tangga.
 - **Denah per level**: pemilih *Level* di bar Gambar 2D (tampil bila ada level di atas ±0,00): denah lantai 2 hanya menggambar benda yang terpotong bidang denah level itu, lantai/plat miliknya, dan tangga yang tiba di sana. MCP `gambar_2d` menerima `level` (elevasi dalam meter).
 - Panduan data bertambah baris Y (tangga) dan W (plat); id elemen `Y…`, `W…`.
+- **Proyek contoh Asrama Putri 2 lantai** (375 elemen: struktur lengkap, 16 kamar + KM, plat lantai berlubang, tangga, atap limas kayu, kusen bertipe) — buka lewat palet Ctrl+K *Buka contoh* atau panel Proyek → *Contoh*. Berkas `contoh/asrama-putri.json` ikut dipaketkan di desktop dan artifact; perintah *Buka proyek (.json)* juga tersedia di palet.
 
 ## Yang baru di 0.34.0
 

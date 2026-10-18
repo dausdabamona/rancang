@@ -323,6 +323,11 @@ async function ujiAsap() {
     catat('RAB plat lantai dan tangga', !!betonPlat && betonPlat.vol > 0 && !!betonTangga && betonTangga.vol > 0, {plat: betonPlat && betonPlat.vol, tangga: betonTangga && betonTangga.vol});
     const dl1 = await metode.gambar2D({jenis: 'denah', level: 0}), dl2 = await metode.gambar2D({jenis: 'denah', level: 4});
     catat('denah per level', dl1.svg.length > 1000 && dl2.svg.length > 500 && /NAIK/.test(dl1.svg) && dl1.svg !== dl2.svg, {l1: dl1.svg.length, l2: dl2.svg.length});
+    // v0.35: proyek contoh Asrama Putri terbaca dari build/renderer/contoh (file://) dan dimuat utuh
+    const ct = await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
+    catat('buka contoh Asrama Putri', ct && ct.elemen > 300 && ct.kusen >= 9 && /Asrama/.test(ct.nama), {elemen: ct.elemen, kusen: ct.kusen, proyek: ct.nama});
+    const dl3 = await metode.gambar2D({jenis: 'denah', level: 4});
+    catat('denah lantai 2 contoh', dl3.svg.length > 20000 && /TURUN/.test(dl3.svg), {panjang: dl3.svg.length});
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {

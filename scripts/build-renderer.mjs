@@ -59,6 +59,7 @@ function susun() {
   fs.mkdirSync(path.join(keluar, 'fonts'), {recursive: true});
   fs.writeFileSync(path.join(keluar, 'index.html'), html);
   fs.copyFileSync(path.join(akar, 'electron', 'renderer', 'claude-shim.js'), path.join(keluar, 'claude-shim.js'));
+  fs.cpSync(path.join(akar, 'app', 'contoh'), path.join(keluar, 'contoh'), {recursive: true});   // proyek contoh (Buka contoh)
   fs.copyFileSync(nm('three/build/three.min.js'), path.join(keluar, 'vendor', 'three.min.js'));
   fs.copyFileSync(nm('polygon-clipping/dist/polygon-clipping.umd.min.js'), path.join(keluar, 'vendor', 'polygon-clipping.umd.min.js'));
   fs.copyFileSync(nm('xlsx/dist/xlsx.full.min.js'), path.join(keluar, 'vendor', 'xlsx.full.min.js'));

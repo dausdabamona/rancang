@@ -148,6 +148,13 @@ Setiap perubahan dari luar membawa `diubahOleh` dan `diubahPada`. Lewat MCP, sat
   - Kuda-kuda **rangka batang sejajar** digambar manual: 6 kuda-kuda, 58 batang per kuda-kuda. Balok atas dan bawah sejajar mengunci pada dinding, sesuai koreksi pengguna.
   - Gunung-gunung dan dinding angin-angin, 58 jalusi ventilasi.
   - **Kanopi kayu parkiran:** atap spandek 10°, tiang 12/12 di atas umpak, dengan posisi tiang yang disunting langsung oleh pengguna.
+- **Asrama Putri Poltek KP Sorong** (renovasi 2015, PDF CV. Awal Rahmat Konsultan; v0.35, proyek contoh `app/contoh/asrama-putri.json`, dibangkitkan `scripts/contoh-asrama-putri.py`), 375 elemen:
+  - As 1–10 (350·350·450·450·450·300·450·450·450 = 37,00 m) × A–D (200·424·189); 2 lantai × 8 kamar tidur dengan KM/WC 2,00 m dan ceruk; selasar tembus 3,00 m; teras depan 1,89 m; tempat jemur belakang 3,00 m (lt.1) / balkon 1,25 m (lt.2).
+  - Struktur: foot plat R1 170×170 (kolom 35/35, 12Ø16) dan R2 125×125 (kolom 30/30, 8Ø16); sloof SL1 25/40, SL2 20/30; balok lantai BL1 30/60, BL2 20/30 (puncak +4,00); ring balk RB1 20/30, RB2 15/20, RB3 25/35 (puncak +7,75); plat lantai 12 cm Ø10-120 K-250 dengan void tangga.
+  - Tangga beton lurus 22 × 18/26 di blok ruang tamu timur (eksisting, disederhanakan), railing kiri.
+  - Plafon tripleks 4 mm rangka kayu +3,50 dan +7,35; atap limas 35° seng multiroof, kuda-kuda kayu besi 5/10 jarak 3,30 m, overstek 1,20 m, lisplang papan, spandek menjorok 20 cm; atap limas tersendiri di blok tangga.
+  - Kusen: P1 80, P2 60+90, P4 70 (KM, tanpa bovenlicht), PJ2 = pintu 70 + kaca mati 75 (bovenlicht 45), J1 2×75, J3 3×75, V1 2×75×45 (ambang 1,80), PJ1 kaca tinggi 5,80 di blok tangga.
+  - Dibuka di aplikasi lewat palet Ctrl+K → *Buka contoh: Asrama Putri 2 lantai* atau panel Proyek → *Contoh*. Pemilih *Level* di Gambar 2D memberi denah lantai 1 (NAIK) dan lantai 2 (TURUN).
 
 ---
 
