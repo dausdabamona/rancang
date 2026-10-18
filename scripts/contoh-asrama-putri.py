@@ -242,6 +242,18 @@ for x in (bx0, (bx0 + bx1) / 2, bx1):
 tambah('A', {'jenis': 'atap', 'nama': 'Atap blok tangga', 'bentuk': 'limas', 'x0': bx0, 'y0': YD, 'x1': bx1, 'y1': by1, 'z0': Z_RB + 0.6, 'kemiringan': 40, 'overstek': 0.8,
              'arah': 'x', 'penutup': 'spandek', 'rangka': 'kayu', 'jarakKuda': 3.0, 'tebal': 0.1, 'lisplang': 'papan'}, G_BLOK)
 
+# ---------- simbol perabot & sanitair di denah ----------
+def simbol(nama, x, y, rot=0):
+    tambah('L', {'jenis': 'gambar2d', 'bentuk': 'simbol', 'simbol': nama, 'lembar': 'denah', 'tempel': 'gambar', 'titik': [{'x': r2(x), 'y': r2(y), 'z': 0}], 'rotasi': rot})
+for x0, x1, sisi in KAMAR:
+    kx0, kx1 = (x1 - 2.0, x1) if sisi == 'timur' else (x0, x0 + 2.0)
+    simbol('kasur1', x0 + 0.75 if sisi == 'timur' else x1 - 0.75, 5.1, 0)       # tempat tidur di sudut depan, jauh dari KM
+    simbol('kasur1', x1 - 0.75 if sisi == 'timur' else x0 + 0.75, 5.1, 0)
+    simbol('lemari', (x0 + x1) / 2, 2.45, 0)
+    simbol('klosetJongkok', kx0 + 0.5, 0.6, 0)
+    simbol('bakMandi', kx1 - 0.45, 0.5, 0)
+tambah('L', {'jenis': 'gambar2d', 'bentuk': 'legenda', 'lembar': 'denah', 'tempel': 'kertas', 'titik': [{'x': 300, 'y': 25}]})
+
 # ---------- garis potong & anotasi ----------
 tambah('X', {'jenis': 'potong', 'nama': 'A', 'awal': P(-3, 4.0), 'akhir': P(40, 4.0), 'pandang': -1})
 tambah('X', {'jenis': 'potong', 'nama': 'B', 'awal': P(9.25, -4.5), 'akhir': P(9.25, 11.5), 'pandang': 1})
