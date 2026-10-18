@@ -378,7 +378,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'), rangka ('hollow'/'kayu'). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
 | X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya) | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
 | N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik, ujung, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah' | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
-| Q | bantu | awal{x,y}, akhir{x,y} (garis tak terbatas di denah melalui dua titik), nama. Acuan snap saja: tidak masuk RAB, volume, atau gambar | `{"jenis":"bantu","nama":"Bantu 1","awal":{"x":0,"y":2},"akhir":{"x":1,"y":2}}` |
+| Q | bantu | awal{x,y,z?}, akhir{x,y,z?} (garis tak terbatas melalui dua titik; bila kedua titik punya z = garis bertinggi/miring; tinggi di titik lain = interpolasi sepanjang garis di denah), nama. Acuan snap saja: tidak masuk RAB, volume, atau gambar | `{"jenis":"bantu","nama":"Bantu 1","awal":{"x":0,"y":2},"akhir":{"x":1,"y":2}}` |
 | M | level | nama, z (elevasi dalam meter). Pindah dan Push/Pull menempel ke elevasinya; tidak masuk RAB | `{"jenis":"level","nama":"Lantai 2","z":3.2}` |
 | L | gambar2d | Benda gambar 2D di Ruang Lembar: bentuk ('garis','polyline','persegi','lingkaran','busur','teks','arsir'), lembar (mis. 'denah', 'potongan:X3', 'sampul'), tempel ('gambar' = titik dunia {x,y,z} meter; 'kertas' = titik {x,y} mm kertas), titik (garis 2 titik; persegi 2 sudut; lingkaran pusat + titik tepi; busur awal, akhir, titik pada busur), gaya {tebal mm, garis 'penuh'/'putus'/'as'/'titik', warna 'hitam'/'abu'/'merah'/'biru'}. Teks: teks, ukuran (mm). Arsir: pola ('beton','bata','tanah','pasir','kayu','keramik'). Polyline: tutup. Simbol perabot (`bentuk:'simbol'`, hanya denah/denah atap/denah pondasi, tempel 'gambar', titik = pusat): simbol ('kasur1','kasur2','lemari','mejaMakan','mejaKerja','sofa','klosetDuduk','klosetJongkok','wastafel','shower','bakMandi','kitchenSet','pohon'), rotasi (0/90/180/270). Legenda otomatis: `bentuk:'legenda'`, tempel 'kertas', titik = sudut kiri atas (mm). Di lembar detail, benda di dalam petak Detail bebas memakai `tempel:'petak'`, `petak` = id detail (E…), titik mm dari pojok kiri atas petak | `{"jenis":"gambar2d","bentuk":"teks","lembar":"denah","tempel":"kertas","titik":[{"x":30,"y":180}],"teks":"Catatan: semua ukuran dalam meter","ukuran":2.5,"gaya":{"warna":"hitam"}}` |
 | E | detail | Detail di lembar detail ('det:1', 'det:2', …): template ('pondasiBatuKali','footplat','umpak','kudaKuda','sambunganKayu','bebas'), sumber (id elemen: pondasi untuk tiga template pertama, atap berangka kayu untuk kuda-kuda dan sambungan), lembar, skala (5, 10, 20, 25, 50, 75, 100), judul (opsional). sambunganKayu wajib `sambungan`: 'tumpuan','puncak','makelar','sokong','perpanjangan' | `{"jenis":"detail","template":"sambunganKayu","sumber":"A2","sambungan":"tumpuan","lembar":"det:2","skala":10}` |
@@ -611,7 +611,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * C — kolom. `b` lebar arah X, `h` arah Y, `tinggi` panjang kolom.
- * @typedef {DasarElemen & {jenis: 'kolom', tipe?: 'praktis' | 'struktur', x: number, y: number, b: number, h: number, tinggi: number,
+ * @typedef {DasarElemen & {jenis: 'kolom', tipe?: 'praktis' | 'struktur', x: number, y: number, b: number, h: number, tinggi: number, ikutBantu?: string,
  *   tul: Tulangan, sengkang: Sengkang, fc: number, selimut?: number, z0?: number}} Kolom
  */
 
@@ -691,8 +691,9 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  */
 
 /**
- * Q — garis bantu: garis tak terbatas di bidang denah melalui `awal` dan `akhir`; acuan snap, bukan benda fisik (tidak masuk RAB).
- * @typedef {DasarElemen & {jenis: 'bantu', awal: Titik2, akhir: Titik2}} Bantu
+ * Q — garis bantu: garis tak terbatas melalui `awal` dan `akhir`; acuan snap, bukan benda fisik (tidak masuk RAB).
+ * Tanpa `z`: garis datar di denah, berlaku di semua ketinggian. Dengan `z` di kedua titik: garis bertinggi (boleh miring); tinggi di titik lain = interpolasi menurut jarak sepanjang garis di denah.
+ * @typedef {DasarElemen & {jenis: 'bantu', awal: Titik2 & {z?: number}, akhir: Titik2 & {z?: number}}} Bantu
  */
 
 /**
@@ -890,7 +891,8 @@ function sah(d) {
   if (d.jenis === 'batang') return titikSah3(d.awal) && titikSah3(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y, d.akhir.z - d.awal.z) > 0.005 && d.b > 0 && d.h > 0 && !!PERAN_BATANG[d.peran];
   if (d.jenis === 'atap') return ['x0', 'y0', 'x1', 'y1'].every(k => Number.isFinite(d[k])) && Math.abs(d.x1 - d.x0) > 0.05 && Math.abs(d.y1 - d.y0) > 0.05 && !!BENTUK_ATAP[d.bentuk];
   if (d.jenis === 'potong') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.1 && (d.pandang === 1 || d.pandang === -1) && typeof d.nama === 'string' && !!d.nama;
-  if (d.jenis === 'bantu') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.02;
+  if (d.jenis === 'bantu') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.02
+    && ((d.awal.z === undefined && d.akhir.z === undefined) || (Number.isFinite(d.awal.z) && Number.isFinite(d.akhir.z)));
   if (d.jenis === 'level') return Number.isFinite(d.z) && typeof d.nama === 'string' && d.nama.length > 0;
   if (d.jenis === 'gambar2d') return typeof d.lembar === 'string' && !!d.lembar && Array.isArray(d.titik) && d.titik.length >= 1 && d.titik.every(titikSah)
     && (d.tempel === 'gambar' || d.tempel === 'kertas' || (d.tempel === 'petak' && typeof d.petak === 'string')) && ['garis', 'polyline', 'persegi', 'lingkaran', 'busur', 'teks', 'arsir', 'rujukan', 'simbol', 'legenda'].includes(d.bentuk)
@@ -1584,6 +1586,7 @@ function ukur(d) {
 function transformasi(d, f, dz) {
   const b = salin(d);
   if (b.jenis === 'bukaan') return b; // posisinya relatif terhadap dinding
+  if (b.jenis === 'bantu') { const m = q => ({...f(q), ...(Number.isFinite(q.z) ? {z: r2(q.z + dz)} : {})}); const dd = /** @type {any} */ (d); b.awal = m(dd.awal); b.akhir = m(dd.akhir); return b; }
   if (Number.isFinite(d.x) && Number.isFinite(d.y) && (d.jenis === 'kolom' || d.jenis === 'pondasi')) {
     const p = f({x: d.x, y: d.y}), o = f({x: 0, y: 0}), ex = f({x: 1, y: 0});
     b.x = p.x; b.y = p.y;
@@ -1884,6 +1887,7 @@ function geser(d, dx, dy, dz = 0) {
   if (b.jenis === 'bidang') { b.titik = b.titik.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy), z: r2(q.z + dz)})); if (b.dinding) b.dinding = {x0: r2(b.dinding.x0 + dx), y0: r2(b.dinding.y0 + dy), x1: r2(b.dinding.x1 + dx), y1: r2(b.dinding.y1 + dy)}; return b; }
   if (b.jenis === 'batang') { const m = q => ({x: r2(q.x + dx), y: r2(q.y + dy), z: r2(q.z + dz)}); b.awal = m(b.awal); b.akhir = m(b.akhir); return b; }
   if (b.jenis === 'sapuan') { b.lintasan = b.lintasan.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy), z: r2(q.z + dz)})); return b; }
+  if (b.jenis === 'bantu') { const m = q => ({x: r2(q.x + dx), y: r2(q.y + dy), ...(Number.isFinite(q.z) ? {z: r2(q.z + dz)} : {})}); b.awal = m(b.awal); b.akhir = m(b.akhir); return b; }
   if (dz && b.jenis !== 'potong') b.z0 = r2((b.z0 || 0) + dz);
   if (b.jenis === 'atap') { b.x0 = r2(b.x0 + dx); b.x1 = r2(b.x1 + dx); b.y0 = r2(b.y0 + dy); b.y1 = r2(b.y1 + dy); return b; }
   if (Number.isFinite(b.x) && Number.isFinite(b.y)) { b.x = r2(b.x + dx); b.y = r2(b.y + dy); return b; }
@@ -3264,7 +3268,7 @@ function hapusCacheSnap(id) { SNAP.cache.delete(id); SNAP.kotak.delete(id); if (
 function potonganBantu() {
   if (SNAP.pot) return SNAP.pot;
   const g = [];
-  for (const [id, d] of S.elems) if (d.jenis === 'bantu' && sah(d) && !S.sembunyi.has(id)) g.push([id, /** @type {any} */ (d).awal, infoDinding(/** @type {any} */ (d))]);
+  for (const [id, d] of S.elems) if (d.jenis === 'bantu' && sah(d) && !bantuBertinggi(d) && !S.sembunyi.has(id)) g.push([id, /** @type {any} */ (d).awal, infoDinding(/** @type {any} */ (d))]);
   const hasil = [];
   for (let i = 0; i < g.length; i++) for (let j = i + 1; j < g.length; j++) {
     const [id, A, a] = g[i], [, B, b] = g[j], den = a.ux * b.uy - a.uy * b.ux;
@@ -3275,12 +3279,28 @@ function potonganBantu() {
   return (SNAP.pot = hasil);
 }
 /** Gunakan titik pada garis bantu ini sebagai acuan tanpa uji keterlihatan (garis bantu selalu tampak). */
+const BATAS_BANTU_3D = 60; // garis bantu bertinggi digambar ±60 m (kemiringan besar bisa membuat tingginya melonjak jauh)
+const bantuBertinggi = d => !!d && d.jenis === 'bantu' && Number.isFinite(d.awal.z) && Number.isFinite(d.akhir.z);
+/** Tinggi garis bantu bertinggi di atas titik denah (x, y), diproyeksikan ke arah garis; null bila garisnya datar. */
+function zBantuDi(d, x, y) {
+  if (!bantuBertinggi(d)) return null;
+  const dx = d.akhir.x - d.awal.x, dy = d.akhir.y - d.awal.y, L = Math.hypot(dx, dy);
+  if (L < 1e-9) return null;
+  const s = ((x - d.awal.x) * dx + (y - d.awal.y) * dy) / L;
+  return d.awal.z + (d.akhir.z - d.awal.z) / L * s;
+}
 const adalahBantu = id => !!id && id[0] === 'Q' && S.elems.get(id)?.jenis === 'bantu';
 function cacheSnap(id, d) {
   let c = SNAP.cache.get(id);
   if (c) return c;
   if (d && d.jenis === 'bantu' && sah(d)) {
     const {ux, uy} = infoDinding(d);
+    if (bantuBertinggi(d)) {
+      const P = t => [d.awal.x + ux * t, d.awal.y + uy * t, zBantuDi(d, d.awal.x + ux * t, d.awal.y + uy * t)];
+      c = {titik: [[d.awal.x, d.awal.y, d.awal.z, 'ujung', false], [d.akhir.x, d.akhir.y, d.akhir.z, 'ujung', false]], rusuk: [[P(-BATAS_BANTU_3D), P(BATAS_BANTU_3D)]]};
+      SNAP.cache.set(id, c);
+      return c;
+    }
     c = {titik: [[d.awal.x, d.awal.y, 0, 'ujung', false], [d.akhir.x, d.akhir.y, 0, 'ujung', false]], rusuk: [[[d.awal.x - ux * BATAS_BANTU, d.awal.y - uy * BATAS_BANTU, 0], [d.awal.x + ux * BATAS_BANTU, d.awal.y + uy * BATAS_BANTU, 0]]]};
     SNAP.cache.set(id, c);
     return c;
@@ -3442,7 +3462,8 @@ function titikSnap(e, kecuali, opsi = {}) {
     if (dd < R) calonUjung.push({dd, kz: _titikKotak.z, px, py, x: q.x, y: q.y, z: 0, jenis: 'ujung', id: q.id});
   }
   let best = pilihTerlihat(calonUjung) || pilihTerlihat(calonTengah);
-  if (best) return {x: r2(best.x), y: r2(best.y), z: r2(adalahBantu(best.id) ? zBantu : best.z), jenis: best.jenis, id: best.id, ...(adalahBantu(best.id) ? {bantu: true} : {})};
+  const bantuDatar = id => adalahBantu(id) && !bantuBertinggi(S.elems.get(id)); // garis bertinggi memberi titik 3D sebenarnya
+  if (best) return {x: r2(best.x), y: r2(best.y), z: r2(bantuDatar(best.id) ? zBantu : best.z), jenis: best.jenis, id: best.id, ...(bantuDatar(best.id) ? {bantu: true} : {})};
   // 3. pada tepi (seperti "On Edge" SketchUp): titik terdekat pada rusuk, dalam 10 px
   if (pakaiTepi) {
     arahkan(e);
@@ -3473,7 +3494,7 @@ function titikSnap(e, kecuali, opsi = {}) {
       }
     }
     best = pilihTerlihat(calonTepi);
-    if (best) return {x: r2(best.x), y: r2(best.y), z: r2(adalahBantu(best.id) ? zBantu : best.z), jenis: 'tepi', id: best.id, arah: best.arah, ...(adalahBantu(best.id) ? {bantu: true} : {})};
+    if (best) return {x: r2(best.x), y: r2(best.y), z: r2(bantuDatar(best.id) ? zBantu : best.z), jenis: 'tepi', id: best.id, arah: best.arah, ...(bantuDatar(best.id) ? {bantu: true} : {})};
   }
   // 4. pada muka benda (membawa normal muka untuk kunci "pada bidang")
   if (opsi.bidang) {
@@ -3756,9 +3777,43 @@ function serentakKe(daftar) {
   toast(`${tambahan.length + 1} objek diubah${lewat ? `, ${lewat} dilewati karena hasilnya tidak sah` : ''}. Ctrl+Z membatalkan semuanya.`);
   return [...daftar, ...tambahan];
 }
+/* ===== KOLOM MENGIKUTI GARIS BANTU ===== */
+// Kolom dengan `ikutBantu: 'Q#'` selalu berpuncak tepat pada garis bantu bertinggi itu: tinggi = tinggi garis di atas as kolom − z0.
+// Dihitung ulang di titik tunggal ini (dalam langkah Undo yang sama) setiap kolom atau garisnya berubah, sehingga
+// geometri, RAB, dan ekspor tetap membaca `tinggi` biasa dan tidak perlu tahu soal garis bantu.
+/**
+ * @param {Perubahan[]} daftar
+ * @returns {Perubahan[]}
+ */
+function selarasIkut(daftar) {
+  const dalam = new Map(daftar.map(x => [x.id, x]));
+  /** @type {(id: string) => any} */
+  const terkini = id => (dalam.has(id) ? dalam.get(id).sesudah : ambil(id));
+  const bantuBerubah = new Set(daftar.filter(x => /** @type {any} */ (x.sesudah || ambil(x.id) || {}).jenis === 'bantu').map(x => x.id));
+  const calon = new Set(daftar.filter(x => /** @type {any} */ (x.sesudah) && /** @type {any} */ (x.sesudah).jenis === 'kolom' && /** @type {any} */ (x.sesudah).ikutBantu).map(x => x.id));
+  if (bantuBerubah.size) for (const [id, d] of S.elems) if (d.jenis === 'kolom' && bantuBerubah.has(/** @type {any} */ (d).ikutBantu)) calon.add(id);
+  if (!calon.size) return daftar;
+  const hasil = [...daftar], rendah = [];
+  for (const id of calon) {
+    const kol = /** @type {any} */ (terkini(id));
+    if (!kol || kol.jenis !== 'kolom') continue;
+    const g = terkini(kol.ikutBantu), b = salin(kol);
+    if (!g || !bantuBertinggi(g)) delete b.ikutBantu; // garisnya hilang atau tak bertinggi lagi: lepas ikatan, tinggi tetap
+    else {
+      const t = r2(zBantuDi(g, b.x, b.y) - (b.z0 || 0));
+      if (t < 0.05) rendah.push(b.nama || id); else b.tinggi = t;
+    }
+    if (JSON.stringify(b) === JSON.stringify(kol)) continue;
+    const i = hasil.findIndex(x => x.id === id);
+    if (i >= 0) hasil[i] = {id, sesudah: b}; else hasil.push({id, sesudah: b});
+  }
+  if (rendah.length) toast(`Garis bantu lebih rendah dari dasar tiang (${rendah.join(', ')}). Tingginya tidak diubah.`);
+  return hasil;
+}
 function terapkan(daftar, catat = true) {
   if (!S.bisaUbah) { toast('Akun ini hanya bisa melihat.'); return; }
   if (S.serentak) daftar = serentakKe(daftar);
+  if (catat) daftar = selarasIkut(daftar);
   const entri = daftar.map(({id, sesudah}) => ({id, sebelum: ambil(id) ? salin(ambil(id)) : null, sesudah: sesudah ? salin(sesudah) : null}));
   let struktur = false;
   for (const {id, sesudah} of entri) {
@@ -5106,16 +5161,17 @@ function tambahLevel() {
 }
 // Alat Garis bantu: klik titik yang dilalui garis, lalu arah (sudut) atau, bila titik pertama di tepi, jarak sejajar.
 const alatBantu = {
-  A: null, ref: null, mode: 'sudut', deg: null, jarak: null,
+  A: null, ref: null, mode: 'sudut', deg: null, jarak: null, B: null,
   get vcb() { return this.mode === 'sejajar' ? 'Jarak' : 'Sudut'; },
   get petunjuk() {
     const j = '<b>Garis bantu:</b> ';
-    if (!this.A) return j + 'klik titik yang dilalui garis bantu (kotak hijau = ujung atau perpotongan garis bantu, belah ketupat merah = pada tepi). Klik pada tepi benda atau garis bantu lain untuk membuat garis bantu sejajar dengan jarak tertentu.';
+    if (!this.A) return j + 'klik titik yang dilalui garis bantu (kotak hijau = ujung atau perpotongan garis bantu, belah ketupat merah = pada tepi). Klik pada tepi benda atau garis bantu lain untuk membuat garis bantu sejajar dengan jarak tertentu. Klik ujung yang tingginya di atas lantai (mis. puncak tiang) untuk garis bantu bertinggi.';
+    if (this.mode === 'tinggi') return j + 'klik ujung kedua (mis. puncak tiang lain); garis bantu bertinggi dibuat melalui kedua titik itu, boleh miring. Esc membatalkan.';
     if (this.mode === 'sejajar') return j + 'gerakkan ke sisi yang diinginkan lalu klik, atau ketik jarak lalu Enter (minus = sisi seberang). Tab: garis melalui titik itu dengan sudut tertentu.';
     return j + 'gerakkan untuk menentukan arah lalu klik; sudut menempel tiap 15°, Shift = sudut bebas, panah → / ← = sejajar sumbu X / Y. Atau ketik sudut lalu Enter (0° = sejajar sumbu merah).' + (this.ref ? ' Tab: sejajar dengan jarak tertentu.' : '');
   },
   sibuk() { return !!this.A; },
-  batal() { this.A = this.ref = this.deg = this.jarak = null; this.mode = 'sudut'; reset(); setVcb(''); S.label = []; lepasKunci(); },
+  batal() { this.A = this.ref = this.deg = this.jarak = this.B = null; this.mode = 'sudut'; reset(); setVcb(''); S.label = []; lepasKunci(); },
   ganti() {
     if (!this.A || !this.ref) return;
     this.mode = this.mode === 'sejajar' ? 'sudut' : 'sejajar';
@@ -5134,6 +5190,15 @@ const alatBantu = {
   },
   move(e) {
     if (!this.A) { S.snap = titikSnap(e, null, {atas: true, tengah: true, tepi: true}); minta(); return; }
+    if (this.mode === 'tinggi') {
+      // titik kedua harus ujung benda (punya tinggi); bukan titik garis bantu lain
+      const s = titikSnap(e, null, {atas: true, tengah: true, tepi: false});
+      S.snap = s;
+      const ok = s && (s.jenis === 'ujung' || s.jenis === 'tengah') && !s.bantu && Math.hypot(s.x - this.A.x, s.y - this.A.y) > 0.02;
+      this.B = ok ? {x: s.x, y: s.y, z: s.z} : null;
+      this.gambar();
+      return;
+    }
     const q = this.tunjuk(e);
     if (!q) return;
     S.snap = q.snap;
@@ -5167,6 +5232,16 @@ const alatBantu = {
     return [{x: r2(A.x), y: r2(A.y)}, {x: r2(A.x + ux), y: r2(A.y + uy)}];
   },
   gambar() {
+    if (this.mode === 'tinggi') {
+      bersihPratinjau();
+      if (!this.B) { S.label = []; minta(); return; }
+      const A = this.A, B = this.B, L = Math.hypot(B.x - A.x, B.y - A.y), k = (B.z - A.z) / L, ux = (B.x - A.x) / L, uy = (B.y - A.y) / L;
+      const P = t => [A.x + ux * t, A.y + uy * t, r2(A.z + k * t)];
+      garisPutus([P(-BATAS_BANTU_3D), P(BATAS_BANTU_3D)], WARNA_BANTU);
+      S.label = [{x: (A.x + B.x) / 2, y: (A.y + B.y) / 2, z: (A.z + B.z) / 2 + 0.15, t: `Garis bantu bertinggi · ${k >= 0 ? 'naik' : 'turun'} ${fmt(Math.abs(k), 3)} m/m`}];
+      minta();
+      return;
+    }
     const g = this.titikGaris();
     bersihPratinjau();
     if (!g) { S.label = []; minta(); return; }
@@ -5185,6 +5260,12 @@ const alatBantu = {
   down(e) {
     if (this.A) { this.move(e); return this.buat(); }
     const s0 = /** @type {any} */ (titikSnap(e, null, {atas: true, tengah: true, tepi: true}));
+    if (s0 && s0.jenis === 'ujung' && !s0.bantu && s0.z > 0.01) {
+      // ujung yang tingginya di atas lantai: garis bantu bertinggi, titik kedua juga ujung benda
+      this.A = {x: s0.x, y: s0.y, z: s0.z}; this.ref = null; this.mode = 'tinggi'; this.deg = this.jarak = this.B = null;
+      tulisPetunjuk(); minta();
+      return;
+    }
     /** @type {any} */
     let p = s0 && s0.jenis !== 'grid' && s0.jenis !== 'bidang' ? s0 : null;
     if (!p) {
@@ -5199,6 +5280,15 @@ const alatBantu = {
     $('#vcb-label').textContent = labelVcb(); tulisPetunjuk(); minta();
   },
   buat() {
+    if (this.mode === 'tinggi') {
+      if (!this.B) return toast('Klik ujung benda lain (mis. puncak tiang kedua) yang tidak sejajar tegak dengan titik pertama.');
+      const A = this.A, B = this.B, id = idBaru('Q'), k = (B.z - A.z) / Math.hypot(B.x - A.x, B.y - A.y);
+      this.batal();
+      terapkan([{id, sesudah: {jenis: 'bantu', nama: 'Bantu ' + id.slice(1), awal: {x: A.x, y: A.y, z: A.z}, akhir: {x: B.x, y: B.y, z: B.z}, catatan: ''}}]);
+      tulisPetunjuk();
+      toast(`${id} dibuat: garis bantu bertinggi, ${k >= 0 ? 'naik' : 'turun'} ${fmt(Math.abs(k), 3)} m/m. Pilih tiang lalu atur "Tinggi mengikuti garis bantu" di panel.`);
+      return;
+    }
     const g = this.titikGaris();
     if (!g) return toast(this.mode === 'sejajar' ? 'Gerakkan kursor ke sisi yang diinginkan dulu, atau ketik jaraknya.' : 'Titik kedua terlalu dekat dengan titik pertama. Klik titik yang lebih jauh.');
     if (this.mode === 'sejajar' && Math.abs(this.jarak) < 0.005) return toast('Jarak sejajar terlalu kecil; garis bantu akan berimpit dengan acuannya.');
@@ -5210,6 +5300,7 @@ const alatBantu = {
   },
   ketik(v) {
     if (!this.A) return toast('Klik titik yang dilalui garis bantu dulu, lalu ketik sudut atau jaraknya.');
+    if (this.mode === 'tinggi') return toast('Garis bantu bertinggi dibuat dengan mengklik dua ujung. Untuk mengetik tinggi, pakai panel garis bantu.');
     const n = angka(v);
     if (!Number.isFinite(n)) return toast(this.mode === 'sejajar' ? `Tulis jarak dalam ${namaSatuan()}, misalnya ${cth(2.5)}.` : 'Tulis sudut dalam derajat, misalnya 0, 90, atau 45.');
     if (this.mode === 'sejajar') {
@@ -6030,10 +6121,11 @@ function bangunPenanda(g, id, d, f) {
     tangkap(A, B, 0.25);
   } else if (d.jenis === 'bantu') {
     // garis tak terbatas: putus-putus sepanjang ±BATAS_BANTU m dari titik awal, tanda silang di dua titik definisi
-    const {ux, uy} = infoDinding(d), z = 0.03;
-    for (let t = -BATAS_BANTU; t < BATAS_BANTU; t += 0.8) ruas([d.awal.x + ux * t, d.awal.y + uy * t, z], [d.awal.x + ux * (t + 0.5), d.awal.y + uy * (t + 0.5), z]);
-    for (const P of [d.awal, d.akhir]) { ruas([P.x - 0.12, P.y, z], [P.x + 0.12, P.y, z]); ruas([P.x, P.y - 0.12, z], [P.x, P.y + 0.12, z]); }
-    tangkap([d.awal.x - ux * BATAS_BANTU, d.awal.y - uy * BATAS_BANTU, z], [d.awal.x + ux * BATAS_BANTU, d.awal.y + uy * BATAS_BANTU, z], 0.12);
+    const {ux, uy} = infoDinding(d), tinggi = bantuBertinggi(d), z = 0.03, bt = tinggi ? BATAS_BANTU_3D : BATAS_BANTU;
+    const zt = t => (tinggi ? zBantuDi(d, d.awal.x + ux * t, d.awal.y + uy * t) : z);
+    for (let t = -bt; t < bt; t += 0.8) ruas([d.awal.x + ux * t, d.awal.y + uy * t, zt(t)], [d.awal.x + ux * (t + 0.5), d.awal.y + uy * (t + 0.5), zt(t + 0.5)]);
+    for (const P of [d.awal, d.akhir]) { const pz = tinggi ? P.z : z; ruas([P.x - 0.12, P.y, pz], [P.x + 0.12, P.y, pz]); ruas([P.x, P.y - 0.12, pz], [P.x, P.y + 0.12, pz]); ruas([P.x, P.y, pz - 0.12], [P.x, P.y, pz + 0.12]); }
+    tangkap([d.awal.x - ux * bt, d.awal.y - uy * bt, zt(-bt)], [d.awal.x + ux * bt, d.awal.y + uy * bt, zt(bt)], 0.12);
   } else {
     const a = [d.titik.x, d.titik.y, zDari(d.titik)];
     const b = d.ujung ? [d.ujung.x, d.ujung.y, zDari(d.ujung)] : null;
@@ -6068,7 +6160,7 @@ function labelPenanda() {
     if (!NONFISIK.has(d.jenis) || S.sembunyi.has(id) || !sah(d)) continue;
     const kls = S.kilat.has(id) ? ' kilat' : dipilihEl(id) ? ' pilih' : '';
     if (d.jenis === 'level') continue;
-    if (d.jenis === 'bantu') { r.push({x: d.awal.x, y: d.awal.y, z: 0.03, t: d.nama || id, k: 'anot' + kls}); continue; }
+    if (d.jenis === 'bantu') { r.push({x: d.awal.x, y: d.awal.y, z: bantuBertinggi(d) ? d.awal.z + 0.1 : 0.03, t: d.nama || id, k: 'anot' + kls}); continue; }
     if (d.jenis === 'potong') {
       const {ux, uy, vx, vy} = arahPandang(d);
       for (const [P, sg] of [[d.awal, -1], [d.akhir, 1]]) r.push({x: P.x + ux * 0.6 * sg + vx * 1.15, y: P.y + uy * 0.6 * sg + vy * 1.15, z: 0.03, t: d.nama, k: 'potong' + kls});
@@ -6207,8 +6299,10 @@ function htmlBantu(id, d) {
     ${medanAngka('bn-x', 'Dilalui titik X (m)', d.awal.x)}
     ${medanAngka('bn-y', 'Dilalui titik Y (m)', d.awal.y)}
     ${medanAngka('bn-sudut', 'Sudut (°, 0 = sejajar sumbu X)', r2(sudutBantu(d)))}
+    ${medanTeks('bn-z1', 'Tinggi di titik awal (m)', bantuBertinggi(d) ? fmt(d.awal.z) : '')}
+    ${medanTeks('bn-z2', 'Tinggi di titik akhir (m)', bantuBertinggi(d) ? fmt(d.akhir.z) : '')}
     ${medanCatatan('bn-catatan', d.catatan)}
-  </div><p class="meta">Garis bantu tak terbatas dan hanya acuan: tidak masuk RAB maupun gambar. Alat lain menempel ke titik definisi, perpotongan dua garis bantu, dan sepanjang garis. Pindah (M) menggeser, Putar (U) memutar, Cermin (I) mencerminkannya.</p></section>
+  </div><p class="meta">Kosongkan kedua tinggi untuk garis datar di semua ketinggian; isi keduanya untuk garis bertinggi (boleh miring), dipakai kolom lewat "Tinggi mengikuti garis bantu". Garis bantu tak terbatas dan hanya acuan: tidak masuk RAB maupun gambar. Alat lain menempel ke titik definisi, perpotongan dua garis bantu, dan sepanjang garis. Pindah (M) menggeser, Putar (U) memutar, Cermin (I) mencerminkannya.</p></section>
   ${metaUbah(d)}
   <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
@@ -6216,16 +6310,25 @@ function ubahBantu(id, d, f, t) {
   const b = salin(d);
   if (f === 'nama') b.nama = t.value.trim() || d.nama;
   else if (f === 'catatan') b.catatan = t.value;
-  else {
+  else if (f === 'z1' || f === 'z2') {
+    const a1 = String(panel.querySelector('#bn-z1').value).trim(), a2 = String(panel.querySelector('#bn-z2').value).trim();
+    if (a1 === '' && a2 === '') { delete b.awal.z; delete b.akhir.z; }
+    else {
+      const z1 = angka(a1), z2 = angka(a2);
+      if (!Number.isFinite(z1) || !Number.isFinite(z2)) return tolakAngka('Isi tinggi di kedua titik, atau kosongkan keduanya untuk garis datar.');
+      b.awal.z = r2(z1); b.akhir.z = r2(z2);
+    }
+  } else {
     const v = angka(t.value);
     if (!Number.isFinite(v)) return tolakAngka('Isi angka yang sesuai.');
+    const dz = q => (Number.isFinite(q.z) ? {z: q.z} : {});
     if (f === 'x' || f === 'y') {
       const dx = f === 'x' ? r2(v) - d.awal.x : 0, dy = f === 'y' ? r2(v) - d.awal.y : 0;
-      b.awal = {x: r2(d.awal.x + dx), y: r2(d.awal.y + dy)};
-      b.akhir = {x: r2(d.akhir.x + dx), y: r2(d.akhir.y + dy)};
+      b.awal = {x: r2(d.awal.x + dx), y: r2(d.awal.y + dy), ...dz(d.awal)};
+      b.akhir = {x: r2(d.akhir.x + dx), y: r2(d.akhir.y + dy), ...dz(d.akhir)};
     } else if (f === 'sudut') {
-      const rad = v * Math.PI / 180;
-      b.akhir = {x: r2(d.awal.x + Math.cos(rad)), y: r2(d.awal.y + Math.sin(rad))};
+      const rad = v * Math.PI / 180, L = Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y);
+      b.akhir = {x: r2(d.awal.x + Math.cos(rad)), y: r2(d.awal.y + Math.sin(rad)), ...(bantuBertinggi(d) ? {z: r2(d.awal.z + (d.akhir.z - d.awal.z) / L)} : {})};
     }
   }
   terapkan([{id, sesudah: b}]);
@@ -7825,6 +7928,17 @@ function htmlRekap(r) {
     if (r[k] > 1e-9) h += baris2(label, r[k], k === 'bekisting' ? 'm²' : 'm³');
   return h ? `<dl class="ukur">${h}</dl><p class="meta">Besi termasuk sisa potong dan lewatan ${fmt(S.setel.faktorBesi ?? 5, 0)}%.</p>` : '';
 }
+function htmlIkutBantu(d) {
+  const garis = /** @type {[string, any][]} */ ([...S.elems].filter(([, g]) => bantuBertinggi(g) && sah(g)));
+  const sekarang = d.ikutBantu || '';
+  const opsi = garis.map(([gid, g]) => {
+    const k = (g.akhir.z - g.awal.z) / Math.hypot(g.akhir.x - g.awal.x, g.akhir.y - g.awal.y);
+    return `<option value="${esc(gid)}"${gid === sekarang ? ' selected' : ''}>${esc(gid)} · ${esc(g.nama || gid)} (${k >= 0 ? 'naik' : 'turun'} ${fmt(Math.abs(k), 3)} m/m)</option>`;
+  });
+  if (sekarang && !garis.some(([gid]) => gid === sekarang)) opsi.push(`<option value="${esc(sekarang)}" selected>${esc(sekarang)} (tidak ditemukan)</option>`);
+  return `<label for="bk-ikut">Tinggi mengikuti garis bantu</label><select id="bk-ikut" ${dis()}><option value=""${sekarang ? '' : ' selected'}>Tidak (tinggi manual)</option>${opsi.join('')}</select>
+    <p class="meta penuh">${garis.length ? 'Puncak kolom tepat di garis bantu itu, diukur di atas as kolom. Ikut berubah bila garis atau kolom digeser. Mengetik tinggi manual melepas ikatan.' : 'Belum ada garis bantu bertinggi. Buat dengan alat Garis bantu (V): klik dua puncak tiang, atau isi tinggi di panel garis bantu.'}</p>`;
+}
 function htmlStruktur(id, d) {
   const g = strukturGeom(d), u = g.ukur, baris2 = (label, nilai, satuan) => `<dt>${label}</dt><dd>${fmt(nilai)}<small>${satuan}</small></dd>`;
   const tulTeks = t => `${t.n}${labelBesi(t.d, t.ulir)}`, skTeks = s => `Ø${s.d}-${Math.round(s.s * 1000)}`;
@@ -7848,6 +7962,7 @@ function htmlStruktur(id, d) {
   <section><h2>Properti</h2><div class="medan">
     ${medanTeks('z-nama', 'Nama', d.nama)}
     ${SPEC[kunciSpec(d)].map(s => medanSpec(id, d, s)).join('')}
+    ${d.jenis === 'kolom' ? htmlIkutBantu(d) : ''}
     ${medanCatatan('z-catatan', d.catatan)}
   </div></section>
   <section><h2>Ukuran elemen ini</h2><dl class="ukur">${ukurHtml}</dl>
@@ -8253,7 +8368,7 @@ function ubahMedan(e) {
   if (!S.sel.size) return;
   const id = [...S.sel][0], d = ambil(id);
   if (!d) return;
-  if (awal === 'bn' && d.jenis === 'bantu') return ubahBantu(id, d, f, t);
+  if (awal === 'bn' && kodeOf(id) === 'Q') return ubahBantu(id, d, f, t);
   if ((awal === 'x' && d.jenis === 'potong') || (awal === 'n' && d.jenis === 'anotasi')) return ubahPenanda(id, d, awal, f, t);
   if ((awal === 'h' && d.jenis === 'bidang') || (awal === 'j' && d.jenis === 'batang')) return ubahBidangBatang(id, d, awal, f, t);
   if (awal === 'u' && d.jenis === 'sapuan') return ubahSapuan(id, d, f, t);
@@ -8269,6 +8384,12 @@ function ubahMedan(e) {
   if (awal === 'g') {
     const b = salin(d);
     if (f === 'nama') b.nama = t.value.trim() || d.nama; else b.catatan = t.value;
+    terapkan([{id, sesudah: b}]);
+    return;
+  }
+  if (awal === 'bk' && kodeOf(id) === 'C') {
+    const b = salin(d);
+    if (t.value) b.ikutBantu = t.value; else delete b.ikutBantu;
     terapkan([{id, sesudah: b}]);
     return;
   }
@@ -8290,6 +8411,7 @@ function ubahMedan(e) {
         if (!ok) return tolakAngka(jenis === 'bulat' ? 'Isi bilangan bulat, misalnya 4.' : 'Isi angka yang sesuai.');
         v = jenis === 'bulat' ? v : r2(v);
       }
+      if (jalur === 'tinggi' && d.jenis === 'kolom') delete b.ikutBantu; // tinggi diketik = lepas dari garis bantu
       aturJalur(b, jalur, v);
       // ganti tipe kolom: ukuran, pembesian, dan mutu ikut bawaan tipe baru
       if (jalur === 'tipe' && d.jenis === 'kolom' && v !== d.tipe) {
