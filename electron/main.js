@@ -307,6 +307,11 @@ async function ujiAsap() {
     catat('buat atap berplafon miring PVC', ra && ra.ok, {r: ra});
     const rab2 = await metode.rab({});
     const baris = rab2.flatMap(dv => dv.baris), pvc = baris.find(b => b.kode === 'PL-007'), hollow = baris.find(b => b.kode === 'PL-012'), lama = baris.find(b => b.kode === 'PL-004');
+    // v0.34: palet perintah mengenali alat, singkatan AutoCAD, elemen, dan lembar; tata letak ringkas/rel/fokus
+    const pal1 = await halaman(`window.rancangUji.palet('tr')`), pal2 = await halaman(`window.rancangUji.palet('plaf')`), pal3 = await halaman(`window.rancangUji.palet('elemen D1')`);
+    catat('palet perintah', pal1[0] && /Perpanjang/.test(pal1[0]) && pal2.some(x => x === 'Alat: Plafon') && pal2.some(x => /Elemen: Plafon P1/.test(x)) && pal3.some(x => /Elemen: Dinding D1/.test(x)), {pal1: pal1.slice(0, 2), pal2: pal2.slice(0, 4), pal3: pal3.slice(0, 2)});
+    const tt1 = await halaman(`window.rancangUji.tata('ringkas', false)`), tt2 = await halaman(`window.rancangUji.tata(undefined, undefined, true)`), tt3 = await halaman(`window.rancangUji.tata(undefined, undefined, false)`);
+    catat('tata letak ringkas, rel panel, mode fokus', /rail-ringkas/.test(tt1.kelas) && /panel-tutup/.test(tt1.kelas) && tt1.relTampak && tt1.panelW === '44px' && /fokus/.test(tt2.kelas) && !/fokus/.test(tt3.kelas) && /rail-ringkas/.test(tt3.kelas), {tt1, tt2, tt3});
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {

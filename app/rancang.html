@@ -471,7 +471,31 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
 .pratinjau-2d{background:var(--rc-paper);border:0}
 /* menu dan panel bisa dilipat (v0.31.1) */
 body.rail-tutup .rail,body.panel-tutup #panel,body.panel-tutup #panel-claude{display:none}
-body.panel-tutup{--rc-panel-w:0px}
+/* panel dilipat menjadi rel tab tegak (v0.34); rail ringkas: satu kolom tanpa nama kelompok, hanya alat sering dipakai */
+body.panel-tutup{--rc-panel-w:44px}
+.panel-rel{grid-area:panel;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;border-left:1px solid var(--color-divider)}
+.panel-rel button{width:34px;min-height:84px;border:0;border-radius:var(--radius-md);background:transparent;color:var(--rc-muted);font:500 12px var(--font);writing-mode:vertical-rl;transform:rotate(180deg);cursor:pointer}
+.panel-rel button:hover{background:var(--color-surface);color:var(--color-text)}
+body.rail-ringkas .rail-grid{grid-template-columns:var(--rc-rail-btn)}
+body.rail-ringkas .rail-grup>.kicker{display:none}
+body.rail-ringkas .rail .alat.jarang{display:none}
+body.rail-ringkas .rail-grup.lipat>.rail-grid{display:grid}
+body:not(.rail-ringkas) .rail-lain-grup{display:none}
+body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
+/* palet perintah Ctrl+K (v0.34) */
+.palet{position:fixed;inset:0;z-index:40;background:rgba(32,30,29,.28);display:flex;justify-content:center;align-items:flex-start;padding-top:min(12vh,96px)}
+.palet[hidden]{display:none}
+.palet-kotak{width:min(600px,calc(100% - 32px));background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:0 18px 50px rgba(0,0,0,.25);overflow:hidden;font-size:14px}
+.palet-kepala{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--color-divider)}
+.palet-kepala input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:500 16px var(--font);color:var(--color-text)}
+.palet-daftar{list-style:none;margin:0;padding:6px;max-height:min(52vh,440px);overflow:auto}
+.palet-daftar li{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:var(--radius-md);cursor:pointer}
+.palet-daftar li.aktif{background:var(--color-accent-100);color:var(--color-accent-800)}
+.palet-daftar .jenis{width:68px;flex:none;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--rc-muted)}
+.palet-daftar .ket{margin-left:auto;font-size:12px;color:var(--rc-muted);white-space:nowrap}
+.palet-kaki{display:flex;gap:14px;padding:8px 16px;border-top:1px solid var(--color-divider);font-size:12px;color:var(--rc-muted)}
+.palet-kosong{padding:18px 16px;color:var(--rc-muted)}
+.sr-hanya{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #btn-rail[aria-pressed="true"],#btn-sisi[aria-pressed="true"]{background:transparent;color:inherit}
 .rail-grup.lipat>.rail-grid{display:none}
 .rail-grup>.kicker{cursor:pointer;display:flex;align-items:center;gap:4px;user-select:none}
@@ -501,6 +525,8 @@ body.panel-tutup{--rc-panel-w:0px}
   <div class="kelompok" role="toolbar" aria-label="Tata letak">
     <button class="alat" id="btn-rail" aria-pressed="true" title="Tampilkan atau sembunyikan menu alat (Ctrl+B)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M9 4v16"/></svg><span class="teks">Menu</span></button>
     <button class="alat" id="btn-sisi" aria-pressed="true" title="Tampilkan atau sembunyikan panel properti (Ctrl+J)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M15 4v16"/></svg><span class="teks">Properti</span></button>
+    <button class="alat" id="btn-fokus" aria-pressed="false" title="Mode fokus: menu ringkas dan panel jadi rel (Ctrl+Shift+F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span class="teks">Fokus</span></button>
+    <button class="alat" id="btn-palet" title="Palet perintah: cari alat, elemen, lembar, perintah (Ctrl+K)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg><span class="teks">Cari</span></button>
   </div>
   <span class="status" id="status" data-s="muat" role="status">Memuat…</span>
 </header>
@@ -512,32 +538,33 @@ body.panel-tutup{--rc-panel-w:0px}
   <div class="rail-grup"><span class="kicker">Gambar</span><div class="rail-grid">
     <button class="alat has-mode" data-alat="persegi" aria-pressed="false" title="Persegi (R), Lingkaran (C), Busur (A); Tab mengganti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="6" width="16" height="12"/></svg><span class="teks">Persegi</span><kbd>R</kbd></button>
     <button class="alat" data-alat="dinding" aria-pressed="false" title="Dinding (L)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 19V8h9v11M13 12h7v7"/></svg><span class="teks">Dinding</span><kbd>L</kbd></button>
-    <button class="alat" data-alat="potong" aria-pressed="false" title="Garis potong (X)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2v3M12 8v3M12 14v3M12 20v2" /><path d="M12 4h6M15 1.5l3 2.5-3 2.5M12 20h6M15 17.5l3 2.5-3 2.5"/></svg><span class="teks">Potong</span><kbd>X</kbd></button>
-    <button class="alat has-mode" data-alat="anotasi" aria-pressed="false" title="Anotasi (N), Tab teks/label/ukuran/peil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20l7-7M4 20l1-4M4 20l4-1"/><path d="M12 6h9M12 10h7M14 14h7"/></svg><span class="teks">Anotasi</span><kbd>N</kbd></button>
-    <button class="alat" data-alat="bantu" aria-pressed="false" title="Garis bantu (V): garis acuan tak terbatas; klik titik lalu arah, atau klik tepi lalu jarak sejajar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 21 5" stroke-dasharray="3 2.4"/><circle cx="8" cy="15.5" r="1.6"/></svg><span class="teks">Garis bantu</span><kbd>V</kbd></button>
-    <button class="alat" data-alat="bidang3d" aria-pressed="false" title="Bidang 3D (B): klik sudut-sudut bukaan untuk menutupnya dengan bidang dinding"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 18L9 5l11 4-4 11z"/><circle cx="4" cy="18" r="1.4" fill="currentColor"/><circle cx="9" cy="5" r="1.4" fill="currentColor"/></svg><span class="teks">Bidang 3D</span><kbd>B</kbd></button>
+    <button class="alat" data-alat="potong" aria-pressed="false" title="Garis potong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2v3M12 8v3M12 14v3M12 20v2" /><path d="M12 4h6M15 1.5l3 2.5-3 2.5M12 20h6M15 17.5l3 2.5-3 2.5"/></svg><span class="teks">Potong</span></button>
+    <button class="alat has-mode" data-alat="anotasi" aria-pressed="false" title="Anotasi, Tab teks/label/ukuran/peil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20l7-7M4 20l1-4M4 20l4-1"/><path d="M12 6h9M12 10h7M14 14h7"/></svg><span class="teks">Anotasi</span></button>
+    <button class="alat" data-alat="bantu" aria-pressed="false" title="Garis bantu (T): garis acuan tak terbatas; klik titik lalu arah, atau klik tepi lalu jarak sejajar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 21 5" stroke-dasharray="3 2.4"/><circle cx="8" cy="15.5" r="1.6"/></svg><span class="teks">Garis bantu</span><kbd>T</kbd></button>
+    <button class="alat" data-alat="bidang3d" aria-pressed="false" title="Bidang 3D: klik sudut-sudut bukaan untuk menutupnya dengan bidang dinding"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 18L9 5l11 4-4 11z"/><circle cx="4" cy="18" r="1.4" fill="currentColor"/><circle cx="9" cy="5" r="1.4" fill="currentColor"/></svg><span class="teks">Bidang 3D</span></button>
   </div></div>
   <div class="rail-grup"><span class="kicker">Bangunan</span><div class="rail-grid">
-    <button class="alat" data-alat="pintu" aria-pressed="false" title="Pintu (D)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 21V3h10v18M3 21h18"/><circle cx="13.5" cy="12" r="1" fill="currentColor"/></svg><span class="teks">Pintu</span><kbd>D</kbd></button>
-    <button class="alat" data-alat="jendela" aria-pressed="false" title="Jendela (W)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14"/><path d="M12 5v14M4 12h16"/></svg><span class="teks">Jendela</span><kbd>W</kbd></button>
-    <button class="alat has-mode" data-alat="sanitair" aria-pressed="false" title="Sanitair (Z): kloset jongkok/duduk, bak mandi, kran, wastafel, shower, floor drain, ember; Tab mengganti benda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h8v6H6zM4 9h16c0 5-3 8-8 8s-8-3-8-8zM9 17l-1 4h8l-1-4"/></svg><span class="teks">Sanitair</span><kbd>Z</kbd></button>
-    <button class="alat has-mode" data-alat="atap" aria-pressed="false" title="Atap (T), Tab mengganti bentuk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 12L12 4l10 8M5 10v10h14V10"/></svg><span class="teks">Atap</span><kbd>T</kbd></button>
-    <button class="alat" data-alat="plafon" aria-pressed="false" title="Plafon (Y): klik dinding atau lantai sebuah ruang"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 5h18M5 5v14h14V5"/><path d="M8 9h8M8 13h8" stroke-dasharray="2 2"/></svg><span class="teks">Plafon</span><kbd>Y</kbd></button>
-    <button class="alat has-mode" data-alat="sapuan" aria-pressed="false" title="Sapuan / Follow Me (J): profil disapukan sepanjang lintasan; Tab mengganti profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 18c3-8 7-10 16-10"/><path d="M3 15h4v5H3z"/></svg><span class="teks">Sapuan</span><kbd>J</kbd></button>
+    <button class="alat" data-alat="pintu" aria-pressed="false" title="Pintu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 21V3h10v18M3 21h18"/><circle cx="13.5" cy="12" r="1" fill="currentColor"/></svg><span class="teks">Pintu</span></button>
+    <button class="alat" data-alat="jendela" aria-pressed="false" title="Jendela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14"/><path d="M12 5v14M4 12h16"/></svg><span class="teks">Jendela</span></button>
+    <button class="alat has-mode" data-alat="sanitair" aria-pressed="false" title="Sanitair: kloset jongkok/duduk, bak mandi, kran, wastafel, shower, floor drain, ember; Tab mengganti benda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h8v6H6zM4 9h16c0 5-3 8-8 8s-8-3-8-8zM9 17l-1 4h8l-1-4"/></svg><span class="teks">Sanitair</span></button>
+    <button class="alat has-mode" data-alat="atap" aria-pressed="false" title="Atap, Tab mengganti bentuk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 12L12 4l10 8M5 10v10h14V10"/></svg><span class="teks">Atap</span></button>
+    <button class="alat" data-alat="plafon" aria-pressed="false" title="Plafon: klik dinding atau lantai sebuah ruang"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 5h18M5 5v14h14V5"/><path d="M8 9h8M8 13h8" stroke-dasharray="2 2"/></svg><span class="teks">Plafon</span></button>
+    <button class="alat has-mode" data-alat="sapuan" aria-pressed="false" title="Sapuan / Follow Me: profil disapukan sepanjang lintasan; Tab mengganti profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 18c3-8 7-10 16-10"/><path d="M3 15h4v5H3z"/></svg><span class="teks">Sapuan</span></button>
   </div></div>
   <div class="rail-grup"><span class="kicker">Struktur</span><div class="rail-grid">
-    <button class="alat has-mode" data-alat="kolom" aria-pressed="false" title="Kolom (K), Tab praktis/struktur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="3" width="6" height="18"/><path d="M9 7h6M9 12h6M9 17h6"/></svg><span class="teks">Kolom</span><kbd>K</kbd></button>
-    <button class="alat has-mode" data-alat="slof" aria-pressed="false" title="Slof (S), Tab: ring balk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="10" width="18" height="5"/><path d="M7 10v5M12 10v5M17 10v5"/></svg><span class="teks">Slof</span><kbd>S</kbd></button>
-    <button class="alat has-mode" data-alat="pondasi" aria-pressed="false" title="Pondasi (F), Tab batu kali/foot plat/umpak"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4h6v6l4 9H5l4-9z"/></svg><span class="teks">Pondasi</span><kbd>F</kbd></button>
+    <button class="alat has-mode" data-alat="kolom" aria-pressed="false" title="Kolom, Tab praktis/struktur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="9" y="3" width="6" height="18"/><path d="M9 7h6M9 12h6M9 17h6"/></svg><span class="teks">Kolom</span></button>
+    <button class="alat has-mode" data-alat="slof" aria-pressed="false" title="Slof, Tab: ring balk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="10" width="18" height="5"/><path d="M7 10v5M12 10v5M17 10v5"/></svg><span class="teks">Slof</span></button>
+    <button class="alat has-mode" data-alat="pondasi" aria-pressed="false" title="Pondasi, Tab batu kali/foot plat/umpak"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M9 4h6v6l4 9H5l4-9z"/></svg><span class="teks">Pondasi</span></button>
   </div></div>
   <div class="rail-grup"><span class="kicker">Ubah</span><div class="rail-grid">
-    <button class="alat has-mode" data-alat="dorong" aria-pressed="false" title="Push/Pull (P), Offset (Q); Tab mengganti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 15l8 4 8-4-8-4z"/><path d="M12 11V3M9 6l3-3 3 3"/></svg><span class="teks">Push/Pull</span><kbd>P</kbd></button>
+    <button class="alat has-mode" data-alat="dorong" aria-pressed="false" title="Push/Pull (P), Offset (F); Tab mengganti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 15l8 4 8-4-8-4z"/><path d="M12 11V3M9 6l3-3 3 3"/></svg><span class="teks">Push/Pull</span><kbd>P</kbd></button>
     <button class="alat" data-alat="pindah" aria-pressed="false" title="Pindah (M), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span class="teks">Pindah</span><kbd>M</kbd></button>
-    <button class="alat" data-alat="putar" aria-pressed="false" title="Putar (U), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/><circle cx="12" cy="12" r="1.2"/></svg><span class="teks">Putar</span><kbd>U</kbd></button>
-    <button class="alat" data-alat="cermin" aria-pressed="false" title="Cermin (I): klik dua titik garis cermin; tekan Ctrl untuk Cermin + Salin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2.4 2.4"/><path d="M9.5 7 3.5 17h6z"/><path d="M14.5 7l6 10h-6z"/></svg><span class="teks">Cermin</span><kbd>I</kbd></button>
+    <button class="alat" data-alat="putar" aria-pressed="false" title="Putar (Q), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/><circle cx="12" cy="12" r="1.2"/></svg><span class="teks">Putar</span><kbd>Q</kbd></button>
+    <button class="alat" data-alat="cermin" aria-pressed="false" title="Cermin: klik dua titik garis cermin; tekan Ctrl untuk Cermin + Salin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2.4 2.4"/><path d="M9.5 7 3.5 17h6z"/><path d="M14.5 7l6 10h-6z"/></svg><span class="teks">Cermin</span></button>
     <button class="alat" data-alat="hapus" aria-pressed="false" title="Hapus (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 20h12M5 15l9-10 6 6-9 9H8z"/></svg><span class="teks">Hapus</span><kbd>E</kbd></button>
-    <button class="alat" data-alat="perluas" aria-pressed="false" title="Perpanjang/Pangkas lisplang dan plafon (Shift+H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h10M10 8l4 4-4 4M19 5v14"/></svg><span class="teks">Extend/Trim</span><kbd>⇧H</kbd></button>
+    <button class="alat" data-alat="perluas" aria-pressed="false" title="Perpanjang/Pangkas lisplang dan plafon (Shift+H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h10M10 8l4 4-4 4M19 5v14"/></svg><span class="teks">Extend/Trim</span></button>
   </div></div>
+  <div class="rail-grup rail-lain-grup"><div class="rail-grid"><button class="alat" id="rail-lain" type="button" title="Alat lainnya (Ctrl+K)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></svg><span class="teks">Alat lain</span></button></div></div>
   <div class="rail-grup"><span class="kicker">Lihat</span><div class="rail-grid">
     <button class="alat" data-alat="orbit" aria-pressed="false" title="Orbit (O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M17 6.5l2 1.8-2.6.8"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg><span class="teks">Orbit</span><kbd>O</kbd></button>
   </div></div>
@@ -641,7 +668,20 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
       <span class="spasi"></span><button class="tombol bahaya kecil" type="button" id="cl-stop" hidden>Stop</button><button class="tombol utama kecil" type="button" id="cl-kirim">Kirim</button></div>
   </div>
 </aside>
+<nav id="panel-rel" class="panel-rel" aria-label="Panel (dilipat)" hidden>
+  <button type="button" id="rel-properti" title="Buka panel Properti (Ctrl+J)">Properti</button>
+  <button type="button" id="rel-claude" title="Buka panel Claude" hidden>Claude</button>
+</nav>
 
+<div class="palet" id="palet" hidden role="dialog" aria-modal="true" aria-label="Palet perintah">
+  <div class="palet-kotak">
+    <div class="palet-kepala"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg>
+      <label for="palet-input" class="sr-hanya">Ketik nama alat, elemen, lembar, atau perintah</label>
+      <input id="palet-input" type="text" autocomplete="off" spellcheck="false" placeholder="Ketik: alat, elemen, lembar, perintah… (TR, EX, MI, RO juga dikenali)"><kbd>Esc</kbd></div>
+    <ul class="palet-daftar" id="palet-daftar" role="listbox"></ul>
+    <div class="palet-kaki"><span><kbd>↑↓</kbd> pilih</span><span><kbd>Enter</kbd> jalankan</span><span>Awali dengan <b>alat</b>, <b>elemen</b>, <b>lembar</b>, atau <b>claude</b> untuk menyaring</span></div>
+  </div>
+</div>
 <footer class="bawah">
   <div class="petunjuk" id="petunjuk"></div>
   <div class="vcb">
@@ -3630,7 +3670,7 @@ function titikTengah(g) {
 // rusuk [[a, b], …] untuk snap "pada tepi", dan kotak pembatas mesh (THREE.Box3) untuk menyaring sinar.
 const SNAP = {cache: new Map(), kotak: new Map()};
 function hapusCacheSnap(id) { SNAP.cache.delete(id); SNAP.kotak.delete(id); if (SNAP.proy) SNAP.proy.delete(id); if (id[0] === 'Q') SNAP.pot = null; }
-// Garis bantu (Q): dua titik definisi sebagai ujung dan satu rusuk panjang (±BATAS_BANTU m) untuk snap pada tepi.
+// Garis bantu (T): dua titik definisi sebagai ujung dan satu rusuk panjang (±BATAS_BANTU m) untuk snap pada tepi.
 // Perpotongan antar garis bantu dihitung sekali (SNAP.pot) dan dibuang setiap ada garis bantu berubah.
 function potonganBantu() {
   if (SNAP.pot) return SNAP.pot;
@@ -5564,7 +5604,7 @@ const alatPutar = {
 };
 
 /* ===== GARIS BANTU DAN LEVEL ===== */
-// Garis bantu (Q): garis tak terbatas di denah, acuan snap. Level (M): elevasi bernama, acuan snap tinggi.
+// Garis bantu (T): garis tak terbatas di denah, acuan snap. Level (M): elevasi bernama, acuan snap tinggi.
 // Keduanya non-fisik (tidak masuk RAB). Snap titik dan tepi garis bantu ada di bagian SNAP.
 /**
  * Level terdekat dengan elevasi z dalam toleransi (bawaan ±8 px di layar), atau null.
@@ -6865,7 +6905,7 @@ function htmlBantu(id, d) {
     ${medanTeks('bn-z1', 'Tinggi di titik awal (m)', bantuBertinggi(d) ? fmt(d.awal.z) : '')}
     ${medanTeks('bn-z2', 'Tinggi di titik akhir (m)', bantuBertinggi(d) ? fmt(d.akhir.z) : '')}
     ${medanCatatan('bn-catatan', d.catatan)}
-  </div><p class="meta">Kosongkan kedua tinggi untuk garis datar di semua ketinggian; isi keduanya untuk garis bertinggi (boleh miring), dipakai kolom lewat "Tinggi mengikuti garis bantu". Garis bantu tak terbatas dan hanya acuan: tidak masuk RAB maupun gambar. Alat lain menempel ke titik definisi, perpotongan dua garis bantu, dan sepanjang garis. Pindah (M) menggeser, Putar (U) memutar, Cermin (I) mencerminkannya.</p></section>
+  </div><p class="meta">Kosongkan kedua tinggi untuk garis datar di semua ketinggian; isi keduanya untuk garis bertinggi (boleh miring), dipakai kolom lewat "Tinggi mengikuti garis bantu". Garis bantu tak terbatas dan hanya acuan: tidak masuk RAB maupun gambar. Alat lain menempel ke titik definisi, perpotongan dua garis bantu, dan sepanjang garis. Pindah (M) menggeser, Putar (Q) memutar, Cermin mencerminkannya.</p></section>
   ${metaUbah(d)}
   <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
@@ -8404,6 +8444,85 @@ const UBAH = new Set(['sanitair', 'bidang3d', 'sapuan', 'persegi', 'lingkaran', 
 const alat = () => ALAT[S.tool];
 function batalAlat() { const a = alat(); if (a.batal) a.batal(); else reset(); lepasKunci(); }
 const NAMA_SUMBU = {x: 'sumbu X (merah)', y: 'sumbu Y (hijau)', z: 'sumbu Z (biru)'};
+/* ===== Palet perintah Ctrl+K (v0.34) ===== */
+// Satu tempat mencari semua: alat (termasuk yang tidak punya huruf pintasan), elemen menurut nama/id, lembar 2D, potongan,
+// perintah tampilan, dan Claude. Singkatan AutoCAD (TR, EX, MI, RO, CO, OF, SEC, DIM) dipetakan ke alat RANCANG.
+const NAMA_ALAT = {pilih: 'Pilih', persegi: 'Persegi', lingkaran: 'Lingkaran', busur: 'Busur', offset: 'Offset', dinding: 'Dinding', pintu: 'Pintu', jendela: 'Jendela',
+  atap: 'Atap', plafon: 'Plafon', kolom: 'Kolom', slof: 'Slof', ringbalk: 'Ring balk', pondasi: 'Pondasi', potong: 'Garis potong', anotasi: 'Anotasi', dorong: 'Push/Pull',
+  pindah: 'Pindah', putar: 'Putar', cermin: 'Cermin', hapus: 'Hapus', bantu: 'Garis bantu', sapuan: 'Sapuan (Follow Me)', bidang3d: 'Bidang 3D', sanitair: 'Sanitair',
+  perluas: 'Perpanjang/Pangkas (Extend/Trim)', orbit: 'Orbit'};
+const ALIAS_PALET = {tr: 'perluas', ex: 'perluas', mi: 'cermin', ro: 'putar', co: 'pindah', cp: 'pindah', of: 'offset', o: 'offset', m: 'pindah', l: 'dinding', rec: 'persegi',
+  c: 'lingkaran', a: 'busur', e: 'hapus', sec: 'potong', dim: 'anotasi', pl: 'plafon', col: 'kolom', w: 'dinding', dr: 'pintu', win: 'jendela', rf: 'atap'};
+const PETA_PINTASAN = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', l: 'dinding', p: 'dorong', f: 'offset', m: 'pindah', q: 'putar', e: 'hapus', o: 'orbit', t: 'bantu'};
+const PALET = {aktif: 0, butir: []};
+function butirPalet(teks) {
+  let q = teks.trim().toLowerCase(), saring = null;
+  const m = /^(alat|elemen|lembar|claude|perintah)\s*(.*)$/.exec(q);
+  if (m) { saring = m[1]; q = m[2]; }
+  const cocok = (...kata) => !q || kata.some(k => k && String(k).toLowerCase().includes(q));
+  const hasil = [];
+  const alias = ALIAS_PALET[q];
+  if (!saring || saring === 'alat') {
+    for (const nama of Object.keys(ALAT)) {
+      if (!NAMA_ALAT[nama]) continue;
+      const kunciPintas = Object.entries(PETA_PINTASAN).find(([, v]) => v === nama);
+      if (alias === nama || cocok(NAMA_ALAT[nama], nama)) hasil.push({jenis: 'Alat', teks: NAMA_ALAT[nama], ket: alias === nama ? `singkatan ${q.toUpperCase()}` : kunciPintas ? `tombol ${kunciPintas[0] === ' ' ? 'Spasi' : kunciPintas[0].toUpperCase()}` : '', skor: alias === nama ? 0 : 1, jalankan: () => setAlat(nama)});
+    }
+  }
+  if (!saring || saring === 'perintah') {
+    const P = [
+      ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
+      ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Simpan proyek (.json)', '', () => simpanProyek()],
+      ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
+      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
+    ];
+    for (const [teks, ket, f] of P) if ((alias === 'zoom' && teks === 'Zoom semua') || cocok(teks)) hasil.push({jenis: 'Perintah', teks, ket, skor: 2, jalankan: f});
+    for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && cocok('potongan ' + d.nama, id)) hasil.push({jenis: 'Potongan', teks: `Potongan ${d.nama}–${d.nama}`, ket: 'irisan 3D', skor: 2, jalankan: () => lihatPotongan(id)});
+  }
+  if (!saring || saring === 'lembar') {
+    try { for (const l of daftarLembar()) if (cocok(l.nama, l.kode, l.jenis)) hasil.push({jenis: 'Lembar', teks: l.nama, ket: l.kode || 'buka 2D', skor: 3, jalankan: () => buka2D(l.jenis)}); } catch (_) { /* lembar belum siap */ }
+  }
+  if ((!saring && q.length >= 2) || saring === 'elemen') {
+    let n = 0;
+    for (const [id, d] of S.elems) {
+      if (n >= 40) break;
+      if (!cocok(d.nama, id, namaJenis(d))) continue;
+      n++; hasil.push({jenis: 'Elemen', teks: `${namaJenis(d)} ${id}${d.nama ? ' · ' + d.nama : ''}`, ket: 'pilih dan zoom', skor: 4, jalankan: () => { S.sel = new Set([id]); segarPilihan(); zoomPilihan(); }});
+    }
+    for (const [id, g] of S.grup) if (cocok(g.nama, id)) hasil.push({jenis: 'Grup', teks: `Grup ${g.nama || id}`, ket: id, skor: 4, jalankan: () => { S.sel = new Set([id]); segarPilihan(); zoomPilihan(); }});
+  }
+  if (CLAUDE.sample && (saring === 'claude' || (!saring && q.length >= 4))) hasil.push({jenis: 'Claude', teks: `Tanya Claude: "${q}"`, ket: 'kirim ke panel Claude', skor: 5, jalankan: () => { bukaClaude(true); const inp = /** @type {HTMLTextAreaElement} */ ($('#cl-input')); inp.value = q; inp.focus(); }});
+  hasil.sort((a, b) => a.skor - b.skor || (a.teks.toLowerCase().startsWith(q) ? -1 : 0) - (b.teks.toLowerCase().startsWith(q) ? -1 : 0));
+  return hasil.slice(0, 14);
+}
+function gambarPalet() {
+  const ul = $('#palet-daftar'), q = /** @type {HTMLInputElement} */ ($('#palet-input')).value;
+  PALET.butir = butirPalet(q);
+  PALET.aktif = Math.max(0, Math.min(PALET.aktif, PALET.butir.length - 1));
+  ul.innerHTML = PALET.butir.length
+    ? PALET.butir.map((b, i) => `<li role="option" data-i="${i}" class="${i === PALET.aktif ? 'aktif' : ''}" aria-selected="${i === PALET.aktif}"><span class="jenis">${esc(b.jenis)}</span><span>${esc(b.teks)}</span>${b.ket ? `<span class="ket">${esc(b.ket)}</span>` : ''}</li>`).join('')
+    : `<li class="palet-kosong">Tidak ada yang cocok dengan "${esc(q)}".</li>`;
+  const el = ul.querySelector('li.aktif'); if (el) el.scrollIntoView({block: 'nearest'});
+}
+function bukaPalet(awal = '') {
+  const w = $('#palet'), inp = /** @type {HTMLInputElement} */ ($('#palet-input'));
+  w.hidden = false; inp.value = awal; PALET.aktif = 0; gambarPalet(); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+}
+function tutupPalet() { $('#palet').hidden = true; canvas.focus({preventScroll: true}); }
+function jalankanPalet(i) { const b = PALET.butir[i]; if (!b) return; tutupPalet(); try { b.jalankan(); } catch (err) { toast('Perintah gagal: ' + (err && err.message || err)); } }
+$('#palet-input').addEventListener('input', () => { PALET.aktif = 0; gambarPalet(); });
+$('#palet-input').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'ArrowDown') { e.preventDefault(); PALET.aktif = Math.min(PALET.aktif + 1, PALET.butir.length - 1); gambarPalet(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); PALET.aktif = Math.max(PALET.aktif - 1, 0); gambarPalet(); }
+  else if (e.key === 'Enter') { e.preventDefault(); jalankanPalet(PALET.aktif); }
+  else if (e.key === 'Escape') { e.preventDefault(); tutupPalet(); }
+});
+$('#palet-daftar').addEventListener('click', e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('li[data-i]')); if (li) jalankanPalet(+li.dataset.i); });
+$('#palet-daftar').addEventListener('mousemove', e => { const li = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('li[data-i]')); if (li && +li.dataset.i !== PALET.aktif) { PALET.aktif = +li.dataset.i; gambarPalet(); } });
+$('#palet').addEventListener('click', e => { if (e.target === $('#palet')) tutupPalet(); });
+$('#btn-palet').addEventListener('click', () => bukaPalet());
+
 // Tombol mode di bilah petunjuk (mis. mode alat Plafon): klik mengganti mode tanpa mengambil fokus dari kanvas
 $('#petunjuk').addEventListener('click', e => {
   const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-mode-plafon]'));
@@ -8636,6 +8755,8 @@ window.addEventListener('keydown', e => {
   if (e.key in PANAH && (S.tool === 'dinding' || S.tool === 'pindah' || S.tool === 'potong' || S.tool === 'busur' || S.tool === 'cermin' || (S.tool === 'bantu' && alatBantu.mode === 'sudut'))) { e.preventDefault(); if (!e.repeat) aturKunci(PANAH[e.key]); return; }
   if (ctrl && k === 'b') { e.preventDefault(); $('#btn-rail').click(); return; }
   if (ctrl && k === 'j') { e.preventDefault(); $('#btn-sisi').click(); return; }
+  if (ctrl && k === 'k') { e.preventDefault(); bukaPalet(); return; }
+  if (ctrl && e.shiftKey && k === 'f') { e.preventDefault(); aturFokus(); return; }
   if (ctrl && k === 's') { e.preventDefault(); simpanProyek(); return; }
   if (ctrl && k === 'o') { e.preventDefault(); if (S.bisaUbah) bukaProyek(); return; }
   if (ctrl && k === 'z' && !e.shiftKey) { e.preventDefault(); urungkan(); return; }
@@ -8658,11 +8779,12 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') { tekanEsc(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { if (S.muka) { e.preventDefault(); hapusMuka(); } else if (S.sel.size) { e.preventDefault(); hapusPilihan(); } return; }
   if (e.shiftKey && k === 'z') { zoomSemua(); return; }
-  if (k === 'g' && !e.shiftKey) { if (S.bisaUbah) jadikanKomponen(); return; }
+  if (k === 'z' && !ctrl && !e.shiftKey) { zoomSemua(); return; }
   if (k === 'h' && !e.shiftKey) { aturTembus(); return; }
   if (k === 'h' && e.shiftKey) { e.preventDefault(); setAlat('perluas'); return; } // H sudah dipakai Tembus pandang
-  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', y: 'plafon', k: 'kolom', z: 'sanitair', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', v: 'bantu', e: 'hapus', o: 'orbit'};
-  if (peta[k] && !e.shiftKey) { e.preventDefault(); setAlat(peta[k]); }
+  // Pintasan hanya untuk alat yang sering dipakai, mengikuti kebiasaan SketchUp/AutoCAD (keputusan 18 Okt 2026, v0.34).
+  // Alat lain lewat bilah alat atau palet perintah Ctrl+K (singkatan AutoCAD dikenali di sana: TR, EX, MI, RO, CO, OF, SEC, DIM).
+  if (PETA_PINTASAN[k] && !e.shiftKey) { e.preventDefault(); setAlat(PETA_PINTASAN[k]); }
 });
 document.querySelectorAll('[data-alat]').forEach(b => b.addEventListener('click', () => setAlat(b.dataset.alat)));
 $('#btn-urung').addEventListener('click', urungkan);
@@ -9044,7 +9166,7 @@ function htmlIkutBantu(d) {
   });
   if (sekarang && !garis.some(([gid]) => gid === sekarang)) opsi.push(`<option value="${esc(sekarang)}" selected>${esc(sekarang)} (tidak ditemukan)</option>`);
   return `<label for="bk-ikut">Tinggi mengikuti garis bantu</label><select id="bk-ikut" ${dis()}><option value=""${sekarang ? '' : ' selected'}>Tidak (tinggi manual)</option>${opsi.join('')}</select>
-    <p class="meta penuh">${garis.length ? 'Puncak kolom tepat di garis bantu itu, diukur di atas as kolom. Ikut berubah bila garis atau kolom digeser. Mengetik tinggi manual melepas ikatan.' : 'Belum ada garis bantu bertinggi. Buat dengan alat Garis bantu (V): klik dua puncak tiang, atau isi tinggi di panel garis bantu.'}</p>`;
+    <p class="meta penuh">${garis.length ? 'Puncak kolom tepat di garis bantu itu, diukur di atas as kolom. Ikut berubah bila garis atau kolom digeser. Mengetik tinggi manual melepas ikatan.' : 'Belum ada garis bantu bertinggi. Buat dengan alat Garis bantu (T): klik dua puncak tiang, atau isi tinggi di panel garis bantu.'}</p>`;
 }
 function htmlStruktur(id, d) {
   const g = strukturGeom(d), u = g.ukur, baris2 = (label, nilai, satuan) => `<dt>${label}</dt><dd>${fmt(nilai)}<small>${satuan}</small></dd>`;
@@ -9265,7 +9387,7 @@ function htmlBanyak() {
   return `<section><h2>Pilihan</h2><p class="judul">${S.sel.size} objek terpilih</p></section>
   <section><h2>Ukuran pilihan</h2>${htmlTotal()}</section>
   ${htmlRekapBagian([...S.sel])}
-  <div class="aksi-panel"><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB pilihan (.xlsx)</button>${tombolPlafon()}${S.edit ? '' : tombol('buat-grup', 'Buat grup (Ctrl+G)', 'utama') + tombol('jadikan-komponen', 'Jadikan komponen (G)')}${tombol('hapus-sel', 'Hapus semua', 'bahaya')}</div>`;
+  <div class="aksi-panel"><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB pilihan (.xlsx)</button>${tombolPlafon()}${S.edit ? '' : tombol('buat-grup', 'Buat grup (Ctrl+G)', 'utama') + tombol('jadikan-komponen', 'Jadikan komponen')}${tombol('hapus-sel', 'Hapus semua', 'bahaya')}</div>`;
 }
 function htmlLevel() {
   const lv = daftarLevel(), nBantu = [...S.elems.values()].filter(d => d.jenis === 'bantu').length;
@@ -9273,7 +9395,7 @@ function htmlLevel() {
   return `<section><h2>Garis bantu dan level</h2>
   ${lv.length ? `<p class="meta">Nama dan elevasi (m) tiap level. Pindah dan Push/Pull menempel ke elevasi level.</p>${baris}` : '<p class="meta">Belum ada level. Level = elevasi bernama (Lantai 1, Lantai 2, puncak dinding…) sebagai acuan tinggi.</p>'}
   <div class="aksi-panel">${tombol('tambah-level', 'Tambah level')}${nBantu && S.bisaUbah ? tombol('hapus-bantu-semua', `Hapus ${nBantu} garis bantu`, 'bahaya') : ''}</div>
-  <p class="meta">${nBantu} garis bantu. Gambar dengan alat Garis bantu (V).</p></section>`;
+  <p class="meta">${nBantu} garis bantu. Gambar dengan alat Garis bantu (T).</p></section>`;
 }
 // Daftar garis potong di panel ringkasan: penandanya tipis di lantai dan sulit diklik, jadi bisa dipilih dari sini
 function htmlDaftarPotong() {
@@ -9305,14 +9427,14 @@ function htmlRingkasan() {
   <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka.</p></section>
   ${komp ? `<section><h2>Komponen</h2><ul class="daftar-komp">${komp}</ul></section>` : ''}
   <section><h2>Pintasan</h2><dl class="pintasan">
-    <dt><kbd>Spasi</kbd></dt><dd>Pilih</dd><dt><kbd>R</kbd></dt><dd>Persegi</dd><dt><kbd>C</kbd></dt><dd>Lingkaran</dd><dt><kbd>A</kbd></dt><dd>Busur</dd><dt><kbd>Q</kbd></dt><dd>Offset</dd><dt><kbd>L</kbd></dt><dd>Dinding</dd>
-    <dt><kbd>D</kbd></dt><dd>Pintu</dd><dt><kbd>W</kbd></dt><dd>Jendela</dd><dt><kbd>T</kbd></dt><dd>Atap, Tab mengganti bentuk</dd><dt><kbd>Y</kbd></dt><dd>Plafon</dd>
-    <dt><kbd>K</kbd></dt><dd>Kolom, Tab praktis/struktur</dd><dt><kbd>S</kbd></dt><dd>Slof, Tab ring balk</dd><dt><kbd>F</kbd></dt><dd>Pondasi, Tab mengganti jenis</dd>
-    <dt><kbd>X</kbd></dt><dd>Garis potong</dd><dt><kbd>H</kbd></dt><dd>Tembus pandang</dd><dt><kbd>← → ↑ ↓</kbd></dt><dd>Geser pilihan 5 cm, Shift 50 cm</dd><dt><kbd>N</kbd></dt><dd>Anotasi, Tab mengganti jenis</dd>
-    <dt><kbd>Enter</kbd></dt><dd>Pasang otomatis dari pilihan</dd>
-    <dt><kbd>P</kbd></dt><dd>Push/Pull</dd><dt><kbd>M</kbd></dt><dd>Pindah, Ctrl untuk menyalin</dd><dt><kbd>E</kbd></dt><dd>Hapus</dd>
-    <dt><kbd>O</kbd></dt><dd>Orbit</dd><dt><kbd>Ctrl+G</kbd></dt><dd>Buat grup</dd><dt><kbd>G</kbd></dt><dd>Jadikan komponen</dd>
-    <dt><kbd>Shift+Z</kbd></dt><dd>Tampilkan semua</dd><dt><kbd>Ctrl+Z</kbd></dt><dd>Urungkan</dd><dt><kbd>Esc</kbd></dt><dd>Batalkan atau keluar grup</dd>
+    <dt><kbd>Spasi</kbd></dt><dd>Pilih</dd><dt><kbd>M</kbd></dt><dd>Pindah, Ctrl untuk menyalin</dd><dt><kbd>Q</kbd></dt><dd>Putar</dd>
+    <dt><kbd>R</kbd></dt><dd>Persegi, Tab: lingkaran, busur</dd><dt><kbd>L</kbd></dt><dd>Dinding</dd><dt><kbd>C</kbd> <kbd>A</kbd></dt><dd>Lingkaran, Busur</dd>
+    <dt><kbd>P</kbd></dt><dd>Push/Pull</dd><dt><kbd>F</kbd></dt><dd>Offset</dd><dt><kbd>E</kbd></dt><dd>Hapus</dd><dt><kbd>T</kbd></dt><dd>Garis bantu (meteran)</dd>
+    <dt><kbd>O</kbd></dt><dd>Orbit</dd><dt><kbd>Z</kbd></dt><dd>Zoom semua</dd><dt><kbd>H</kbd></dt><dd>Tembus pandang</dd><dt><kbd>Shift+H</kbd></dt><dd>Perpanjang/Pangkas</dd>
+    <dt><kbd>Ctrl+K</kbd></dt><dd>Palet perintah: semua alat, elemen, lembar, singkatan AutoCAD (TR, EX, MI, RO, CO, OF, SEC, DIM)</dd>
+    <dt><kbd>Ctrl+G</kbd></dt><dd>Buat grup</dd><dt><kbd>Ctrl+B</kbd> <kbd>Ctrl+J</kbd></dt><dd>Lipat menu alat / panel</dd><dt><kbd>Ctrl+Shift+F</kbd></dt><dd>Mode fokus</dd>
+    <dt><kbd>← → ↑ ↓</kbd></dt><dd>Geser pilihan 5 cm, Shift 50 cm</dd><dt><kbd>Enter</kbd></dt><dd>Pasang otomatis dari pilihan</dd>
+    <dt><kbd>Ctrl+Z</kbd></dt><dd>Urungkan</dd><dt><kbd>Esc</kbd></dt><dd>Batalkan atau keluar grup</dd>
   </dl></section>`;
 }
 /**
@@ -9453,19 +9575,47 @@ panel.addEventListener('toggle', e => {
   if (sum) { if (e.target.open) PANEL_TUTUP.delete(sum.textContent); else PANEL_TUTUP.add(sum.textContent); }
 }, true);
 /* Lipat menu alat, grup alat, dan panel properti; pilihan diingat per peramban */
-const TATA = {rail: true, sisi: true, grup: []};
+// rail: 'penuh' (dua kolom + nama kelompok) | 'ringkas' (satu kolom, hanya alat sering dipakai) | 'tutup'; sisi: panel kanan terbuka atau menjadi rel tab (v0.34)
+const TATA = {rail: 'penuh', sisi: true, grup: [], fokus: false, sebelumFokus: null};
 try { Object.assign(TATA, JSON.parse(localStorage.getItem('rancang-tata') || '{}')); } catch (_) {}
+if (/** @type {any} */ (TATA.rail) === true) TATA.rail = 'penuh'; else if (/** @type {any} */ (TATA.rail) === false) TATA.rail = 'tutup';
+// alat yang tetap tampil saat rail ringkas: yang sering dipakai; sisanya lewat tombol "Alat lain" (palet)
+const ALAT_SERING = new Set(['pilih', 'persegi', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'dorong', 'pindah', 'putar', 'hapus', 'bantu', 'orbit']);
 function terapkanTata(simpan) {
-  document.body.classList.toggle('rail-tutup', !TATA.rail);
+  document.body.classList.toggle('rail-tutup', TATA.rail === 'tutup');
+  document.body.classList.toggle('rail-ringkas', TATA.rail === 'ringkas');
   document.body.classList.toggle('panel-tutup', !TATA.sisi);
-  $('#btn-rail').setAttribute('aria-pressed', String(TATA.rail));
+  document.body.classList.toggle('fokus', !!TATA.fokus);
+  $('#btn-rail').setAttribute('aria-pressed', String(TATA.rail !== 'tutup'));
+  $('#btn-rail').title = {penuh: 'Menu alat penuh. Klik: ringkas (Ctrl+B)', ringkas: 'Menu alat ringkas. Klik: sembunyikan (Ctrl+B)', tutup: 'Menu alat tersembunyi. Klik: tampilkan (Ctrl+B)'}[TATA.rail];
   $('#btn-sisi').setAttribute('aria-pressed', String(TATA.sisi));
-  document.querySelectorAll('.rail-grup').forEach(g => g.classList.toggle('lipat', TATA.grup.includes(g.querySelector('.kicker').textContent)));
+  $('#btn-fokus').setAttribute('aria-pressed', String(!!TATA.fokus));
+  document.querySelectorAll('.rail .alat[data-alat]').forEach(b => { b.classList.toggle('jarang', !ALAT_SERING.has(/** @type {HTMLElement} */ (b).dataset.alat)); });
+  const rel = $('#panel-rel'); if (rel) { rel.hidden = TATA.sisi; $('#rel-claude').hidden = $('#btn-claude').hidden; }
+  document.querySelectorAll('.rail-grup').forEach(g => { const k = g.querySelector('.kicker'); if (k) g.classList.toggle('lipat', TATA.grup.includes(k.textContent)); });
   if (simpan) { try { localStorage.setItem('rancang-tata', JSON.stringify(TATA)); } catch (_) {} }
   window.dispatchEvent(new Event('resize'));
 }
-$('#btn-rail').addEventListener('click', () => { TATA.rail = !TATA.rail; terapkanTata(true); });
+$('#btn-rail').addEventListener('click', () => { TATA.rail = {penuh: 'ringkas', ringkas: 'tutup', tutup: 'penuh'}[TATA.rail] || 'penuh'; terapkanTata(true); });
 $('#btn-sisi').addEventListener('click', () => { TATA.sisi = !TATA.sisi; terapkanTata(true); });
+// Mode fokus (Ctrl+Shift+F): rail ringkas + panel menjadi rel; keluar mengembalikan keadaan sebelumnya
+function aturFokus(v) {
+  const nyala = v === undefined ? !TATA.fokus : v;
+  if (nyala === !!TATA.fokus) return;
+  if (nyala) { TATA.sebelumFokus = {rail: TATA.rail, sisi: TATA.sisi}; TATA.rail = 'ringkas'; TATA.sisi = false; }
+  else { const b = TATA.sebelumFokus || {rail: 'penuh', sisi: true}; TATA.rail = b.rail; TATA.sisi = b.sisi; TATA.sebelumFokus = null; }
+  TATA.fokus = nyala; terapkanTata(true);
+  toast(nyala ? 'Mode fokus: menu ringkas, panel jadi rel di kanan. Ctrl+Shift+F untuk kembali.' : 'Mode fokus mati.');
+}
+$('#btn-fokus').addEventListener('click', () => aturFokus());
+$('#panel-rel').addEventListener('click', e => {
+  const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('button'));
+  if (!b) return;
+  TATA.sisi = true; if (TATA.fokus) { TATA.fokus = false; TATA.sebelumFokus = null; }
+  terapkanTata(true);
+  if (b.id === 'rel-claude') bukaClaude(true); else if (CLAUDE.terbuka) bukaClaude(false);
+});
+$('#rail-lain').addEventListener('click', () => bukaPalet('alat '));
 document.querySelectorAll('.rail-grup > .kicker').forEach(k => k.addEventListener('click', () => {
   const n = k.textContent, i = TATA.grup.indexOf(n);
   if (i >= 0) TATA.grup.splice(i, 1); else TATA.grup.push(n);
@@ -10844,7 +10994,7 @@ function buatSVG(o) {
   } else if (o.jenis === 'plafon') {
     // rencana plafon: batas tiap plafon, rangka utama (tebal), rangka anak (tipis), penggantung (titik), dan keterangan bahan
     const plaf = geos.filter(g => g.jenis === 'plafon');
-    if (!plaf.length) info = 'Belum ada plafon untuk dibuat rencana rangkanya. Pasang plafon dengan alat Plafon (Y).';
+    if (!plaf.length) info = 'Belum ada plafon untuk dibuat rencana rangkanya. Pasang plafon dengan alat Plafon.';
     else {
       const dindingP = geos.filter(g => g.jenis === 'dinding').map(g => poligon(g));
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -11014,7 +11164,7 @@ function buatSVG(o) {
     }
   } else if (o.jenis.startsWith('potongan:')) {
     const pt = S.elems.get(o.jenis.slice(9));
-    if (!pt || pt.jenis !== 'potong' || !sah(pt)) info = 'Garis potong tidak ditemukan. Buat dulu dengan alat Potong (X).';
+    if (!pt || pt.jenis !== 'potong' || !sah(pt)) info = 'Garis potong tidak ditemukan. Buat dulu dengan alat Garis potong.';
     else {
       const {vx, vy} = arahPandang(pt), px0 = pt.awal.x, py0 = pt.awal.y;
       const Hh = (x, y) => (x - px0) * vy - (y - py0) * vx;   // ke kanan pengamat
@@ -13810,6 +13960,10 @@ window.rancangAPI = Object.freeze({
 // Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
 window.rancangUji = Object.freeze({
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
+  // palet perintah: hasil pencarian untuk teks tertentu (jenis + teks), tanpa membuka dialog
+  palet: teks => butirPalet(teks).map(b => b.jenis + ': ' + b.teks),
+  // tata letak: ganti keadaan rail/panel/fokus lalu laporkan kelas body dan lebar panel
+  tata: (rail, sisi, fokus) => { if (rail) TATA.rail = rail; if (sisi !== undefined) TATA.sisi = sisi; if (fokus !== undefined) aturFokus(fokus); else terapkanTata(false); return {kelas: document.body.className, panelW: getComputedStyle(document.body).getPropertyValue('--rc-panel-w').trim(), relTampak: !$('#panel-rel').hidden}; },
   // isi satu medan panel Properti lalu picu 'change' seperti pengguna menekan Enter; hasil: elemen terpilih sesudahnya
   isiMedan: (idMedan, nilai) => {
     const el = /** @type {HTMLInputElement | null} */ (panel.querySelector('#' + idMedan));
@@ -13892,7 +14046,7 @@ const ALAT_CLAUDE = [
       const hasil = [...S.elems].filter(([id, d]) => id[0] !== '_' && (!j || d.jenis === j) && (!c || String(d.nama || '').toLowerCase().includes(c))).map(([id, d]) => ringkasEl(id, d));
       return {total: hasil.length, elemen: hasil.slice(0, n), grup: [...S.grup].map(([id, g]) => ({id, nama: g.nama, induk: g.induk || null}))};
     }},
-  {name: 'ambil_elemen', description: 'Data lengkap elemen, grup (G), komponen (K), atau tipe kusen (T) berdasarkan id. Pakai sebelum mengubah elemen yang sudah ada.',
+  {name: 'ambil_elemen', description: 'Data lengkap elemen, grup (G), komponen, atau tipe kusen (T) berdasarkan id. Pakai sebelum mengubah elemen yang sudah ada.',
     inputSchema: {type: 'object', properties: {ids: {type: 'array', items: {type: 'string'}}}, required: ['ids']},
     execute(inp) {
       const ids = (Array.isArray(inp.ids) ? inp.ids : [inp.ids]).map(String).slice(0, 60);
@@ -14037,7 +14191,7 @@ function sapaClaude() {
   CLAUDE.bolehAlat = !!(lim && lim.tools); CLAUDE.bolehGambar = !!(lim && lim.images); CLAUDE.maksGambar = lim && lim.images ? lim.images.maxCount : 0;
   $('#cl-lampir').hidden = !CLAUDE.bolehGambar;
   if (lim && lim.images) $('#cl-berkas').accept = lim.images.mediaTypes.join(',');
-  $('#btn-claude').hidden = false;
+  $('#btn-claude').hidden = false; terapkanTata(false);
   segarTombolClaude(); sapaClaude();
   if (!CLAUDE.bolehAlat) gelembung('sistem', 'Di tampilan ini Claude hanya bisa menjawab; mengubah model belum tersedia.');
 })();
