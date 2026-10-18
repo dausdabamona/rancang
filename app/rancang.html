@@ -7441,7 +7441,7 @@ function susunTepiAtap(d) {
   const atur = kunci => {
     const o = (d.lisplangSisi || {})[kunci] || {}, bahan = o.bahan || bahanAtap;
     if (o.pasang === false || bahan === 'tanpa' || !UKURAN_LISPLANG[bahan]) return null;
-    return {bahan, tebal: o.tebal > 0 ? o.tebal : UKURAN_LISPLANG[bahan][0], tinggi: o.tinggi > 0 ? o.tinggi : tinggiAuto(bahan), mundur: o.mundur >= 0 ? o.mundur : (kayu ? K.lisMundur : 0),
+    return {bahan, tebal: o.tebal > 0 ? o.tebal : UKURAN_LISPLANG[bahan][0], tinggi: o.tinggi > 0 ? o.tinggi : tinggiAuto(bahan), mundur: o.mundur >= 0 ? o.mundur : SUSUN_KAYU.lisMundur, // bawaan 20 cm untuk semua rangka: seng menjorok di luar papan (v0.34.1)
       // perpanjang (+) / pangkas (-) ujung papan sepanjang sisinya (m)
       awal: Number.isFinite(o.awal) ? batas(o.awal, -5, 5) : 0, akhir: Number.isFinite(o.akhir) ? batas(o.akhir, -5, 5) : 0};
   };
@@ -7964,8 +7964,36 @@ const alatPlafon = {
       if (su.muka.length) return su.muka.map(m => m.dalam || m.t);
       return atapGeom(d).permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
     }
-    if (d.jenis === 'bidang' && d.peran === 'atap') return [d.titik.map(ke3)];
+    if (d.jenis === 'bidang' && d.peran === 'atap') return [this.mundurKeLisplang(d.titik.map(ke3), d)];
     return null;
+  },
+  // Bidang atap bebas: tepi yang berpapan lisplang (bidang H peran lisplang yang sejajar dan menempel) dimundurkan sampai
+  // sisi dalam papan, supaya plafon miring hasil pecah atap juga berhenti di lisplang, bukan di ujung seng.
+  mundurKeLisplang(t, diri) {
+    const N = t.length, dd = new Array(N).fill(0);
+    const papan = [...S.elems.values()].filter(x => x !== diri && x.jenis === 'bidang' && x.peran === 'lisplang' && Array.isArray(x.titik) && x.titik.length >= 2);
+    if (!papan.length) return t;
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], len = v => Math.hypot(v[0], v[1], v[2]);
+    for (let i = 0; i < N; i++) {
+      const A = t[i], B = t[(i + 1) % N], e = sub(B, A), L = len(e);
+      if (L < 1e-6) continue;
+      const u = e.map(v => v / L), M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2];
+      let terdekat = null;
+      for (const pp of papan) {
+        const P = ke3(pp.titik[0]), Q = ke3(pp.titik[1]), f = sub(Q, P), Lf = len(f);
+        if (Lf < 1e-6) continue;
+        const w = f.map(v => v / Lf), silang = Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]);
+        if (silang > 0.08) continue; // tidak sejajar
+        const PM = sub(M, P), sepanjang = PM[0] * w[0] + PM[1] * w[1] + PM[2] * w[2];
+        if (sepanjang < -0.5 || sepanjang > Lf + 0.5) continue;
+        const kaki = [P[0] + w[0] * sepanjang, P[1] + w[1] * sepanjang, P[2] + w[2] * sepanjang], jarak = len(sub(M, kaki));
+        if (jarak > 0.45) continue;
+        const total = jarak + (pp.tebal > 0 ? pp.tebal : 0.025);
+        if (!terdekat || total < terdekat) terdekat = total;
+      }
+      if (terdekat) dd[i] = terdekat;
+    }
+    return dd.some(v => v > 0) ? mundurMukaArr(t, dd) : t;
   },
   semuaBidangAtap() {
     const o = [];

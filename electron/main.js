@@ -318,7 +318,18 @@ async function ujiAsap() {
     const pm = await halaman(`window.rancangUji.plafonMiring('A2')`);
     const ys = pm.flat().map(q => q.y), yMin = Math.min(...ys), yMax = Math.max(...ys);
     // tepi seng di y = -0,6 dan 4,6; sisi dalam lisplang mundur (0,20 + 0,025) × cos 30° ≈ 0,195 m ke dalam
+    // bawaan mundur 20 cm juga berlaku pada rangka baja ringan (A1 dibuat tanpa lisplang eksplisit → papan)
+    const pmb = await halaman(`window.rancangUji.plafonMiring('A1')`);
+    const ysb = pmb.flat().map(q => q.y), yMinB = Math.min(...ysb);
+    catat('plafon miring baja ringan juga mundur dari seng', pmb.length >= 2 && yMinB > -0.6 + 0.15, {yMinB});
     catat('plafon miring berhenti di lisplang', pm.length >= 2 && yMin > -0.6 + 0.15 && yMin < -0.6 + 0.25 && yMax < 4.6 - 0.15 && yMax > 4.6 - 0.25, {yMin, yMax, bidang: pm.length});
+    // atap yang sudah dipecah: bidang penutup (H) pun mundur ke sisi dalam papan lisplang (H peran lisplang) saat jadi plafon miring
+    const pc = await metode.pecahAtap({id: 'A2'});
+    catat('pecah atap A2', pc && pc.ok, {r: pc});
+    const idH = Object.entries((await halaman('window.rancangAPI.model()')).elemen).filter(([, x]) => x.jenis === 'bidang' && x.peran === 'atap').map(([id]) => id);
+    const pmh = await halaman(`window.rancangUji.plafonMiring(${JSON.stringify(idH[0])})`);
+    const ysh = pmh.flat().map(q => q.y), yMinH = Math.min(...ysh), yMaxH = Math.max(...ysh);
+    catat('plafon miring dari atap terpecah berhenti di lisplang', pmh.length >= 1 && (yMinH > -0.6 + 0.15 || yMaxH < 4.6 - 0.15), {yMinH, yMaxH, bidangAtap: idH.length});
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {
