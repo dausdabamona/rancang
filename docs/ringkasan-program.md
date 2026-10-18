@@ -64,6 +64,8 @@ RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk kebutuhan PPK Poltek 
 | v0.28.0–v0.28.1 | **Pecah atap** jadi bidang (H) dan batang (J) yang bisa diedit satu per satu tanpa mengubah RAB; pilih/buang satu muka volume; as untuk tiang di luar dinding; kuda-kuda manual tampil di potongan |
 | v0.28.2–v0.28.5 | Kusen tanpa daun, Push/Pull ujung dinding untuk panjang, edit di dalam grup, Push/Pull bidang menebalkan |
 | v0.29.0 | **Sapuan** (Follow Me yang tetap bisa diedit): talang, lisplang, list plafon, plint, pipa, parit U |
+| v0.30.0 | Garis bantu (juga miring) dan Level; kolom mengikuti garis bantu |
+| v0.31.0 | **Antarmuka Broadsheet** (bilah alat kiri 6 kelompok, panel lipat, font Source Serif 4, tema terang/gelap/otomatis); tombol **Plafon** terpisah dari Atap (tombol Y; Tab: per ruang, gabungan, miring mengikuti atap) |
 | v0.29.1 | Pindah memakai titik acuan pada benda dan menempel ke bidang benda lain |
 | *artifact v65–v67* | *Push/Pull untuk benda pejal, Push/Pull menempel ke titik benda lain, alat Bidang 3D (B), snap mengutamakan titik terdekat kamera. Masih diuji, belum masuk exe.* |
 

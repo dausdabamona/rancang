@@ -7350,12 +7350,73 @@ function bangunPlafon(g, id, d, f) {
   if (pos.length) { const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.add(new THREE.LineSegments(lg, matGaris(campur(w, T.edge, 0.35)))); }
 }
 const alatPlafon = {
-  hover: null,
-  petunjuk: '<b>Plafon:</b> klik dinding atau lantai sebuah ruang untuk memasang plafon di sisi dalam dinding, setinggi puncak dinding. Pilih ruang atau grup lalu Enter untuk semua pilihan. Tombol Y.',
-  vcb: 'Elevasi',
+  hover: null, hoverMiring: null,
+  mode: 'datar',   // 'datar' | 'miring' (mengikuti bidang atap, mis. untuk teras)
+  gabung: false,   // datar: false = satu plafon per ruang, true = beberapa ruang digabung jadi satu plafon
+  kumpul: [],      // batas ruang yang dikumpulkan (mode gabung)
+  turun: 0.2,      // jarak plafon miring di bawah penutup atap (m): tebal rangka + penutup
+  get petunjuk() {
+    return this.mode === 'miring'
+      ? `<b>Plafon miring:</b> klik atap (atau bidang atap) untuk memasang plafon yang mengikuti kemiringannya, mis. di teras. Klik dinding atau lantai ruang untuk plafon miring di dalam ruang itu. Ketik angka lalu Enter untuk jarak di bawah penutup atap (sekarang ${fmt(this.turun)} m). Tab: plafon datar.`
+      : this.gabung
+        ? `<b>Plafon gabungan:</b> klik dinding atau lantai beberapa ruang untuk dikumpulkan (${this.kumpul.length} ruang), lalu Enter agar semuanya jadi satu plafon (selubung persegi panjang semua ruang). Klik ruang yang sama lagi untuk melepas. Tab: plafon miring.`
+        : '<b>Plafon per ruang:</b> klik dinding atau lantai sebuah ruang untuk memasang plafon di sisi dalam dinding, setinggi puncak dinding. Pilih beberapa ruang lalu Enter: tiap ruang mendapat plafon sendiri. Tab: plafon gabungan.';
+  },
+  get vcb() { return this.mode === 'miring' ? 'Jarak ke atap' : 'Elevasi'; },
+  get namaMode() { return this.mode === 'miring' ? 'Plafon miring: mengikuti bidang atap' : this.gabung ? 'Plafon gabungan: beberapa ruang jadi satu' : 'Plafon per ruang'; },
+  ketik(v) {
+    if (this.mode !== 'miring') return toast('Elevasi plafon datar mengikuti puncak dinding. Ubah lewat panel Properti.');
+    const n = Number(v);
+    if (!(n >= 0 && n <= 2)) return toast('Jarak ke atap harus antara 0 dan 2 m.');
+    this.turun = r2(n); tulisPetunjuk(); toast(`Plafon miring dipasang ${fmt(this.turun)} m di bawah penutup atap.`);
+  },
   sibuk() { return false; },
-  batal() { this.hover = null; reset(); },
-  ganti() { toast('Plafon tidak punya ragam bentuk. Tekan T untuk atap.'); },
+  batal() { this.hover = null; this.hoverMiring = null; this.kumpul = []; reset(); },
+  // urutan Tab: per ruang → gabungan → miring → per ruang
+  ganti() {
+    if (this.mode === 'miring') { this.mode = 'datar'; this.gabung = false; }
+    else if (!this.gabung) this.gabung = true;
+    else { this.mode = 'miring'; this.gabung = false; }
+    this.batal(); tulisPetunjuk(); $('#vcb-label').textContent = labelVcb(); toast(this.namaMode);
+  },
+  sama(a, b) { return Math.abs(a.x0 - b.x0) + Math.abs(a.y0 - b.y0) + Math.abs(a.x1 - b.x1) + Math.abs(a.y1 - b.y1) < 0.02; },
+  gabungBatas(daftar) { return {x0: Math.min(...daftar.map(b => b.x0)), y0: Math.min(...daftar.map(b => b.y0)), x1: Math.max(...daftar.map(b => b.x1)), y1: Math.max(...daftar.map(b => b.y1))}; },
+  // bidang penutup atap (titik 3D) dari satu elemen atap atau bidang atap bebas
+  bidangAtapDari(d) {
+    if (d.jenis === 'atap') return d.bentuk === 'datar' ? [] : atapGeom(d).permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
+    if (d.jenis === 'bidang' && d.peran === 'atap') return [d.titik.map(ke3)];
+    return null;
+  },
+  semuaBidangAtap() {
+    const o = [];
+    for (const d of S.elems.values()) { const b = this.bidangAtapDari(d); if (b) o.push(...b); }
+    return o;
+  },
+  // plafon miring (daftar bidang peran 'plafon') untuk elemen yang ditunjuk
+  miringDari(id) {
+    const d = S.elems.get(id);
+    if (!d) return null;
+    let bidang = this.bidangAtapDari(d), wil = null;
+    if (!bidang) {
+      const r = this.dataDari(batasRuang(id));
+      if (!r) return null;
+      wil = r.alas.map(q => [q.x, q.y]); bidang = this.semuaBidangAtap();
+    }
+    const hasil = [];
+    for (const t of bidang) {
+      const n = normalMuka(t);
+      if (n.z < 0.2) continue; // terlalu curam atau tegak: bukan bidang plafon
+      let cincin = [t.map(q => [q[0], q[1]])];
+      if (wil) { try { cincin = polygonClipping.intersection([[...cincin[0], cincin[0][0]]], [[...wil, wil[0]]]).map(pl => pl[0].slice(0, -1)); } catch { cincin = []; } }
+      for (const c of cincin) {
+        if (c.length < 3 || Math.abs(luas2D(c)) < 0.05) continue;
+        let titik = c.map(([x, y]) => ({x: r2(x), y: r2(y), z: r2(zBidang(t, n, x, y) - this.turun)}));
+        if (normalNewell(titik.map(ke3))[2] < 0) titik = titik.reverse();
+        hasil.push({jenis: 'bidang', peran: 'plafon', titik, tebal: 0.006, bahan: 'grc', catatan: ''});
+      }
+    }
+    return hasil.length ? hasil : null;
+  },
   dataDari(bt) {
     if (!bt) return null;
     let t = 0;
@@ -7367,8 +7428,15 @@ const alatPlafon = {
   },
   move(e) {
     const h = pilihObjek(e), id = h && h.object.userData.elemId;
-    this.hover = id && S.elems.has(id) ? this.dataDari(batasRuang(id)) : null;
     bersihPratinjau(); S.label = [];
+    if (this.mode === 'miring') {
+      this.hover = null; this.hoverMiring = id && S.elems.has(id) ? this.miringDari(id) : null;
+      for (const b of this.hoverMiring || []) garisPratinjau(b.titik.map(ke3), T.accent, true);
+      if (this.hoverMiring) { const b0 = this.hoverMiring[0].titik; S.label = [{x: b0[0].x, y: b0[0].y, z: b0[0].z, t: `plafon miring · ${this.hoverMiring.length} bidang · −${fmt(this.turun)} m dari atap`}]; }
+      minta(); return;
+    }
+    this.hover = id && S.elems.has(id) ? this.dataDari(batasRuang(id)) : null;
+    if (this.gabung) for (const bt of this.kumpul) { const dk = this.dataDari(bt); if (dk) garisPratinjau(dk.alas.map(q => [q.x, q.y, dk.z0]), T.claude, true); }
     if (this.hover) {
       const p = this.hover.alas.map(q => [q.x, q.y, this.hover.z0]);
       garisPratinjau(p, T.accent, true); wajahPratinjau(p.map(([x, y]) => [x, y]), this.hover.z0);
@@ -7377,20 +7445,46 @@ const alatPlafon = {
     minta();
   },
   down(e) {
-    if (!this.hover) this.move(e);
+    if (!this.hover && !this.hoverMiring) this.move(e);
+    if (this.mode === 'miring') {
+      if (!this.hoverMiring) return toast('Arahkan ke atap, atau ke dinding atau lantai ruang di bawah atap.');
+      return this.buatMiring(this.hoverMiring);
+    }
     if (!this.hover) return toast('Arahkan ke dinding atau lantai sebuah ruang.');
+    if (this.gabung) {
+      const id = pilihObjek(e).object.userData.elemId, bt = batasRuang(id), i = this.kumpul.findIndex(k => this.sama(k, bt));
+      if (i >= 0) this.kumpul.splice(i, 1); else this.kumpul.push(bt);
+      tulisPetunjuk(); this.move(e); return;
+    }
     this.buat([this.hover]);
   },
   dariPilihan() {
-    const bt = batasDari([...S.sel]), d = this.dataDari(bt);
-    if (!d) return toast('Pilih dinding atau grup ruang dulu, lalu tekan Enter.');
-    this.buat([d]);
+    if (this.mode === 'miring') {
+      const semua = [...S.sel].flatMap(i => this.miringDari(i) || []);
+      return semua.length ? this.buatMiring(semua) : toast('Pilih atap atau ruang di bawah atap dulu, lalu tekan Enter.');
+    }
+    if (this.gabung && this.kumpul.length) { const d = this.dataDari(this.gabungBatas(this.kumpul)); return d ? this.buat([d]) : toast('Gabungan ruang terlalu kecil.'); }
+    const ids = [...S.sel];
+    if (this.gabung) { const d = this.dataDari(batasDari(ids)); return d ? this.buat([d]) : toast('Pilih dinding atau grup ruang dulu, lalu tekan Enter.'); }
+    // per ruang: tiap ruang (grup dinding terhubung) mendapat plafon sendiri
+    const bts = [];
+    for (const i of ids) { const bt = batasRuang(i); if (bt && !bts.some(k => this.sama(k, bt))) bts.push(bt); }
+    const daftar = bts.map(bt => this.dataDari(bt)).filter(Boolean);
+    if (!daftar.length) return toast('Pilih dinding atau grup ruang dulu, lalu tekan Enter.');
+    this.buat(daftar);
+  },
+  buatMiring(daftar) {
+    const nid = pemberiId(), tulis = daftar.map((d, i) => ({id: nid('H'), sesudah: denganKonteks({...d, nama: `Plafon miring ${i + 1}`})}));
+    terapkan(tulis);
+    const luas = daftar.reduce((a, d) => a + Math.abs(luas2D(d.titik.map(q => [q.x, q.y]))) / Math.max(0.2, normalMuka(d.titik.map(ke3)).z), 0);
+    toast(`Plafon miring dipasang: ${daftar.length} bidang, ${fmt(luas)} m² (${fmt(this.turun)} m di bawah atap).`);
+    this.batal();
   },
   buat(daftar) {
     const nid = pemberiId(), tulis = daftar.map(d => { const id = nid('P'); return {id, sesudah: denganKonteks({...d, nama: 'Plafon ' + id.replace('_', '')})}; });
     terapkan(tulis);
-    const u = ukurPlafon(daftar[0]);
-    toast(`Plafon ${BAHAN_PLAFON.grc} dipasang: ${fmt(u.luasPlafon)} m² pada +${fmt(daftar[0].z0)} m.`);
+    const luas = daftar.reduce((a, d) => a + ukurPlafon(d).luasPlafon, 0);
+    toast(daftar.length > 1 ? `${daftar.length} plafon dipasang, total ${fmt(luas)} m².` : `Plafon ${BAHAN_PLAFON.grc} dipasang: ${fmt(luas)} m² pada +${fmt(daftar[0].z0)} m.`);
     this.batal();
   }
 };
@@ -7768,7 +7862,7 @@ window.addEventListener('keydown', e => {
     else return;
     tulisPetunjuk(); if (S.eTerakhir && alat().move) alat().move(S.eTerakhir); return;
   }
-  if (e.key === 'Tab' && (S.tool === 'atap' || S.tool === 'kolom' || S.tool === 'pondasi' || S.tool === 'anotasi' || S.tool === 'slof' || S.tool === 'ringbalk' || S.tool === 'persegi' || S.tool === 'lingkaran' || S.tool === 'busur' || S.tool === 'dorong' || S.tool === 'offset' || S.tool === 'sapuan' || (S.tool === 'bantu' && alatBantu.sibuk()))) { e.preventDefault(); alat().ganti(); return; }
+  if (e.key === 'Tab' && (S.tool === 'atap' || S.tool === 'plafon' || S.tool === 'kolom' || S.tool === 'pondasi' || S.tool === 'anotasi' || S.tool === 'slof' || S.tool === 'ringbalk' || S.tool === 'persegi' || S.tool === 'lingkaran' || S.tool === 'busur' || S.tool === 'dorong' || S.tool === 'offset' || S.tool === 'sapuan' || (S.tool === 'bantu' && alatBantu.sibuk()))) { e.preventDefault(); alat().ganti(); return; }
   if (e.key === 'Enter' && S.tool === 'sapuan' && alatSapuan.sibuk()) { e.preventDefault(); alatSapuan.selesai(false); return; }
   if (e.key === 'Enter' && S.tool === 'bidang3d' && alatBidang3D.sibuk()) { e.preventDefault(); alatBidang3D.selesai(); return; }
   if (e.key === 'Enter' && alat().dariPilihan && !(alat().sibuk && alat().sibuk())) { e.preventDefault(); alat().dariPilihan(); return; }
