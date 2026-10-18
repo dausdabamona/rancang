@@ -67,7 +67,7 @@ RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk kebutuhan PPK Poltek 
 | v0.30.0 | Garis bantu (juga miring) dan Level; kolom mengikuti garis bantu |
 | v0.31.0 | **Antarmuka Broadsheet** (bilah alat kiri 6 kelompok, panel lipat, font Source Serif 4, tema terang/gelap/otomatis); tombol **Plafon** terpisah dari Atap (tombol Y; Tab: per ruang, gabungan, miring mengikuti atap) |
 | v0.31.1 | Menu alat, tiap grup alat, dan panel properti bisa dilipat agar kanvas lebih luas (tombol Menu/Properti, Ctrl+B, Ctrl+J; pilihan diingat) |
-| v0.32.0 (cabang menu-potongan) | Menu Potongan A–A/B–B di bar tampilan (irisan 3D + 2D); plafon: tombol Pecah per ruang / Gabungkan, bahan tripleks 4 dan 6 mm (RAB PL-005, PL-006); rangka plafon kayu / hollow galvalum / baja ringan digambar 3D, lembar 2D "Rencana plafon dan rangka", RAB PL-011..PL-016 |
+| v0.32.0 (cabang menu-potongan) | Menu Potongan A–A/B–B di bar tampilan (irisan 3D + 2D); plafon: tombol Pecah per ruang / Gabungkan, bahan tripleks 4 dan 6 mm (RAB PL-005, PL-006); rangka plafon kayu / hollow galvalum / baja ringan digambar 3D, lembar 2D "Rencana plafon dan rangka", RAB PL-011..PL-016; lis plafon kayu / gypsum / PVC digambar di 3D dan lembar rencana plafon, RAB PL-021..PL-023 |
 | v0.29.1 | Pindah memakai titik acuan pada benda dan menempel ke bidang benda lain |
 | *artifact v65–v67* | *Push/Pull untuk benda pejal, Push/Pull menempel ke titik benda lain, alat Bidang 3D (B), snap mengutamakan titik terdekat kamera. Masih diuji, belum masuk exe.* |
 
