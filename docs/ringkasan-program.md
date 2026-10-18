@@ -70,6 +70,10 @@ RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk kebutuhan PPK Poltek 
 | v0.30 | Push/Pull benda pejal dan menempel ke titik benda lain; alat Bidang 3D; **cache snap** per elemen (sebelumnya semua geometri dihitung ulang tiap gerak kursor, ±28 ms di model 592 elemen); snap mengabaikan titik yang tertutup benda lain |
 | v0.31–v0.31.1 | Antarmuka Broadsheet, Plafon terpisah (miring, per ruang, gabungan); menu alat dan panel properti bisa dilipat |
 | v0.32.0 (PR #20, cabang `menu-potongan`, menunggu uji pengguna) | Menu Potongan A–A/B–B di bar tampilan; plafon: Pecah per ruang / Gabungkan, bahan tripleks dan PVC, rangka dan lis plafon digambar 3D + lembar "Rencana plafon dan rangka" + RAB; ukuran gording/bubungan/klos dapat dipilih; Pustaka Sanitair (alat Z); skor kayu antar tiang kuda-kuda; lisplang diperpanjang/dipangkas per sisi; dinding bertepi atas bertangga/miring (`profilAtas`); **alat Perpanjang/Pangkas (Shift+H)**: ujung papan lisplang dan sisi plafon sampai batas benda lain; bahan dinding (bata, tripleks, GRC, gypsum) dengan rangka |
+| v0.33.0 | Tahap 1 interaksi: sorotan kursor, bilah bawah menyebut sasaran, `pilihan_pengguna`, Ukuran alas di Properti, Shift+H Perpanjang, pengaturan plafon miring disatukan |
+| v0.34.0 | Tahap A desain ulang: pintasan ala SketchUp/AutoCAD, palet Ctrl+K, menu tiga keadaan, rel panel, mode fokus |
+| v0.34.1 (PR #24) | Plafon miring berhenti di lisplang; `mundurSeng` (jarak spandek menjorok, bawaan 20 cm) di Properti |
+| v0.35.0 | **Bangunan bertingkat**: alat Tangga (Y), plat lantai beton (W) dengan void, denah per level (`level` di gambar 2D dan MCP), RAB tangga dan plat |
 
 ---
 
@@ -114,7 +118,8 @@ Satu elemen = satu dokumen dengan id tetap. Satuan meter. X ke timur, Y ke utara
 | R | Ring balk | X | Garis potong |
 | F | Pondasi (batu kali, foot plat, umpak) | N | Anotasi |
 | G | Grup | K / I | Definisi komponen / salinannya |
-| T | Tipe kusen | | |
+| T | Tipe kusen | Y | Tangga beton lurus |
+| W | Plat lantai beton | | |
 
 Setiap perubahan dari luar membawa `diubahOleh` dan `diubahPada`. Lewat MCP, satu panggilan `terapkan_perubahan` sama dengan satu langkah Undo.
 
@@ -181,6 +186,8 @@ Sunting Alas ditempatkan di tahap 2 karena disebut langsung sebagai hambatan nya
 - Tahap A (v0.34.0): peta pintasan baru, palet perintah Ctrl+K, menu alat tiga keadaan, panel jadi rel tab, mode fokus.
 - Tahap B (berikutnya): panel bertab Properti · Objek (outliner) · Claude, kartu properti ringkas mengambang di mode fokus.
 - Tahap C: tab Claude di desktop lewat API key Anthropic (berbayar per pakai) di samping jalur MCP.
+
+**Bangunan bertingkat (v0.35.0, 18 Oktober 2026).** Untuk menggambar Asrama Putri 2 lantai (PDF gambar kerja, 37,0 × 8,75 m, lantai 2 di +4,00) diputuskan tiga alat dibuat dulu, baru modelnya: (1) **Tangga** beton lurus parametrik — dua klik, jumlah anak dari tinggi level, panel Properti, denah NAIK/TURUN, RAB; (2) **Plat lantai beton** (W) dengan lubang void, dikonversi dari lantai biasa, masuk RAB beton/besi/bekisting; (3) **Denah per level** — pemilih Level di bar Gambar 2D dan parameter `level` di MCP `gambar_2d`. Tangga bordes/putar belum ada: digambar sebagai dua tangga lurus + plat bordes.
 
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).

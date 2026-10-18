@@ -312,6 +312,17 @@ async function ujiAsap() {
     catat('palet perintah', pal1[0] && /Perpanjang/.test(pal1[0]) && pal2.some(x => x === 'Alat: Plafon') && pal2.some(x => /Elemen: Plafon P1/.test(x)) && pal3.some(x => /Elemen: Dinding D1/.test(x)), {pal1: pal1.slice(0, 2), pal2: pal2.slice(0, 4), pal3: pal3.slice(0, 2)});
     const tt1 = await halaman(`window.rancangUji.tata('ringkas', false)`), tt2 = await halaman(`window.rancangUji.tata(undefined, undefined, true)`), tt3 = await halaman(`window.rancangUji.tata(undefined, undefined, false)`);
     catat('tata letak ringkas, rel panel, mode fokus', /rail-ringkas/.test(tt1.kelas) && /panel-tutup/.test(tt1.kelas) && tt1.relTampak && tt1.panelW === '44px' && /fokus/.test(tt2.kelas) && !/fokus/.test(tt3.kelas) && /rail-ringkas/.test(tt3.kelas), {tt1, tt2, tt3});
+    // v0.35: alat Tangga dua klik (pangkal di lantai 1, naik ke level +4,00 → 22 anak, optrede ≈18 cm); plat lantai beton masuk RAB; denah per level
+    const rl = await metode.terapkan({perubahan: [{id: 'M1', data: {jenis: 'level', nama: 'Lantai 2', z: 4}}, {id: 'W1', data: {jenis: 'plat', alas: [{x: 0, y: 0}, {x: 4, y: 0}, {x: 4, y: 3}, {x: 0, y: 3}], z0: 3.88, tebal: 0.12}}]});
+    catat('buat level dan plat lantai', rl && rl.ok, {r: rl});
+    const tg = await halaman(`window.rancangUji.tangga({x: 6, y: 0, z: 0}, {x: 6, y: 5})`);
+    catat('alat Tangga dua klik', !!tg.id && tg.data.jenis === 'tangga' && tg.data.jumlahAnak === 23 && tg.data.tinggi === 4 && tg.data.arah === 90 && tg.ukur.volume > 0, {id: tg.id, n: tg.data && tg.data.jumlahAnak, arah: tg.data && tg.data.arah, ukur: tg.ukur});
+    const tg2 = await halaman(`window.rancangUji.isiMedan('tg-jumlahAnak', '22')`);
+    catat('panel Tangga: jumlah anak diubah', tg2.data && tg2.data.jumlahAnak === 22, {n: tg2.data && tg2.data.jumlahAnak});
+    const rab3 = await metode.rab({}), baris3 = rab3.flatMap(dv => dv.baris), betonPlat = baris3.find(b => b.kode === 'ST-030'), betonTangga = baris3.find(b => b.kode === 'ST-031');
+    catat('RAB plat lantai dan tangga', !!betonPlat && betonPlat.vol > 0 && !!betonTangga && betonTangga.vol > 0, {plat: betonPlat && betonPlat.vol, tangga: betonTangga && betonTangga.vol});
+    const dl1 = await metode.gambar2D({jenis: 'denah', level: 0}), dl2 = await metode.gambar2D({jenis: 'denah', level: 4});
+    catat('denah per level', dl1.svg.length > 1000 && dl2.svg.length > 500 && /NAIK/.test(dl1.svg) && dl1.svg !== dl2.svg, {l1: dl1.svg.length, l2: dl2.svg.length});
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {
