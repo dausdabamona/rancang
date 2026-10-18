@@ -17,9 +17,12 @@ Z2, Z_RB = 4.0, 7.75                                                    # lantai
 TEBAL = 0.15
 TB_BLOK = (28.0, 37.0, YD, 10.83)                                       # blok tangga/ruang tamu (x0, x1, y0, y1)
 
-# kamar: (x0, x1, sisi KM 'barat'/'timur'); bay 20,5–23,5 = selasar tembus
+# kamar: (x0, x1, sisi KM 'barat'/'timur'); 9 kamar sesuai label denah asli — bay 20,5–23,5 (300) kamar kecil dengan KM 1,50 (dimensi 150|150)
 KAMAR = [(0, 3.5, 'timur'), (3.5, 7.0, 'barat'), (7.0, 11.5, 'timur'), (11.5, 16.0, 'timur'), (16.0, 20.5, 'timur'),
-         (23.5, 28.0, 'timur'), (28.0, 32.5, 'timur'), (32.5, 37.0, 'timur')]
+         (20.5, 23.5, 'timur'), (23.5, 28.0, 'timur'), (28.0, 32.5, 'timur'), (32.5, 37.0, 'timur')]
+def batas_km(x0, x1, sisi):
+    w = 1.5 if x1 - x0 <= 3.0 else 2.0
+    return (x1 - w, x1) if sisi == 'timur' else (x0, x0 + w)
 
 n = {}
 def idb(aw):
@@ -136,28 +139,24 @@ def dinding(a, b, z0, tinggi, g, tebal=TEBAL, nama=None, bahan=None):
 
 def lantai_tipikal(z0, g, h_balok_ac, h_balok_b, h_sekat, lantai_no):
     """Dinding + bukaan satu lantai. h_* = TINGGI dinding (bukan elevasi puncak): sampai bawah balok lantai (lt.1) atau bawah ring balk (lt.2)."""
-    # dinding memanjang A (belakang KM/ceruk), B (KM–kamar), C (depan kamar) — selasar 20,5–23,5 tembus (tanpa dinding A dan C)
+    # dinding memanjang A (belakang KM/ceruk), B (KM–kamar), C (depan kamar), menerus 0–37
     for y, h, nama in ((YA, h_balok_ac, 'Dinding belakang'), (YB, h_balok_b, 'Dinding KM–kamar'), (YC, h_balok_ac, 'Dinding depan')):
-        if y == YB:
-            dinding((0, y), (37.0, y), z0, h, g, nama=f'{nama} lt.{lantai_no}')
-        else:
-            dinding((0, y), (20.5, y), z0, h, g, nama=f'{nama} barat lt.{lantai_no}')
-            dinding((23.5, y), (37.0, y), z0, h, g, nama=f'{nama} timur lt.{lantai_no}')
+        dinding((0, y), (37.0, y), z0, h, g, nama=f'{nama} lt.{lantai_no}')
     # dinding melintang di tiap as (A–C)
     for x in XS:
         dinding((x, YA), (x, YC), z0, h_balok_ac, g, nama=f'Dinding as x={x:g} lt.{lantai_no}')
     # sekat KM (A–B) dan bukaan tiap kamar
     for x0, x1, sisi in KAMAR:
-        kx0, kx1 = (x1 - 2.0, x1) if sisi == 'timur' else (x0, x0 + 2.0)          # KM 2,00 lebar
+        kx0, kx1 = batas_km(x0, x1, sisi)          # KM 2,00 lebar (1,50 di bay 300)
         cx0, cx1 = (x0, kx0) if sisi == 'timur' else (kx1, x1)                    # ceruk (sisa bay) di belakang kamar
         xsekat = kx0 if sisi == 'timur' else kx1
         dinding((xsekat, YA), (xsekat, YB), z0, h_sekat, g, tebal=0.10, nama=f'Sekat KM lt.{lantai_no}')
         # bukaan: cari dinding yang memuat x
         dB = dind_memuat(YB, x0, x1); dA = dind_memuat(YA, x0, x1); dC = dind_memuat(YC, x0, x1)
         tengah_km, tengah_ceruk = (kx0 + kx1) / 2, (cx0 + cx1) / 2
-        bukaan(dB, 'pintu', 'P4', tengah_km - 0.35 - 0.6 * (1 if sisi == 'timur' else -1), 0.70, 2.10)    # pintu KM, digeser dari tengah
+        bukaan(dB, 'pintu', 'P4', tengah_km - 0.35 - min(0.6, (kx1 - kx0) / 2 - 0.5) * (1 if sisi == 'timur' else -1), 0.70, 2.10)    # pintu KM, digeser dari tengah
         bukaan(dB, 'pintu', 'P4', tengah_ceruk - 0.35, 0.70, 2.10)                                        # pintu ceruk/gudang kecil
-        bukaan(dA, 'jendela', 'V1', tengah_km - 0.80, 1.60, 0.45, 1.80)                                   # ventilasi KM
+        bukaan(dA, 'jendela', 'V1', tengah_km - (0.80 if kx1 - kx0 >= 2.0 else 0.55), 1.60 if kx1 - kx0 >= 2.0 else 1.10, 0.45, 1.80)                                   # ventilasi KM
         if cx1 - cx0 >= 2.0: bukaan(dA, 'jendela', 'J1', tengah_ceruk - 0.80, 1.60, 1.20, 0.90)           # jendela ceruk ke belakang (ceruk 1,5 m tanpa jendela)
         # depan: PJ2 = pintu 70 + kaca mati 75 (pintu di dekat tengah), J1 di sisi lain
         # PJ2 (pintu 70 + kaca mati 75) di sisi KM, J1 (2 × 75) di sisi lain bila bay cukup lebar (≥ 4,5 m)
@@ -191,14 +190,13 @@ def lantai(nama, alas, z0, tinggi, jenis, penutup, g, lubang=None):
     return tambah('V', d, g)
 
 for i, (x0, x1, sisi) in enumerate(KAMAR, 1):
-    kx0, kx1 = (x1 - 2.0, x1) if sisi == 'timur' else (x0, x0 + 2.0)
+    kx0, kx1 = batas_km(x0, x1, sisi)
     lantai(f'Lantai Kamar {i}', [(x0, YB), (x1, YB), (x1, YC), (x0, YC)], -0.10, 0.10, 'ruang', 'k40', G_L1)
     lantai(f'Lantai KM {i}', [(kx0, YA), (kx1, YA), (kx1, YB), (kx0, YB)], -0.12, 0.10, 'km', 'k20', G_L1)
     cx0, cx1 = (x0, kx0) if sisi == 'timur' else (kx1, x1)
     lantai(f'Lantai ceruk {i}', [(cx0, YA), (cx1, YA), (cx1, YB), (cx0, YB)], -0.10, 0.10, 'ruang', 'k40', G_L1)
-lantai('Lantai selasar', [(20.5, YA), (23.5, YA), (23.5, YC), (20.5, YC)], -0.10, 0.10, 'ruang', 'k40', G_L1)
 lantai('Lantai teras depan', [(-0.2, YC), (37.2, YC), (37.2, YD + 0.3), (-0.2, YD + 0.3)], -0.12, 0.10, 'teras', 'k30', G_L1)
-lantai('Tempat jemur belakang', [(-0.2, -3.0), (37.2, -3.0), (37.2, YA), (-0.2, YA)], -0.15, 0.10, 'teras', 'plester', G_L1)
+lantai('Tempat jemur belakang', [(-2.0, -3.0), (37.2, -3.0), (37.2, YA), (-2.0, YA)], -0.15, 0.10, 'teras', 'plester', G_L1)
 
 # plat lantai 2: L (badan + blok tangga), void tangga di blok
 bx0, bx1, by0, by1 = TB_BLOK
@@ -246,12 +244,12 @@ tambah('A', {'jenis': 'atap', 'nama': 'Atap blok tangga', 'bentuk': 'limas', 'x0
 def simbol(nama, x, y, rot=0):
     tambah('L', {'jenis': 'gambar2d', 'bentuk': 'simbol', 'simbol': nama, 'lembar': 'denah', 'tempel': 'gambar', 'titik': [{'x': r2(x), 'y': r2(y), 'z': 0}], 'rotasi': rot})
 for x0, x1, sisi in KAMAR:
-    kx0, kx1 = (x1 - 2.0, x1) if sisi == 'timur' else (x0, x0 + 2.0)
+    kx0, kx1 = batas_km(x0, x1, sisi)
     simbol('kasur1', x0 + 0.75 if sisi == 'timur' else x1 - 0.75, 5.1, 0)       # tempat tidur di sudut depan, jauh dari KM
     simbol('kasur1', x1 - 0.75 if sisi == 'timur' else x0 + 0.75, 5.1, 0)
     simbol('lemari', (x0 + x1) / 2, 2.45, 0)
     simbol('klosetJongkok', kx0 + 0.5, 0.6, 0)
-    simbol('bakMandi', kx1 - 0.45, 0.5, 0)
+    if kx1 - kx0 >= 2.0: simbol('bakMandi', kx1 - 0.45, 0.5, 0)
 tambah('L', {'jenis': 'gambar2d', 'bentuk': 'legenda', 'lembar': 'denah', 'tempel': 'kertas', 'titik': [{'x': 22, 'y': 22}]})
 
 # ---------- garis potong & anotasi ----------
@@ -259,7 +257,7 @@ tambah('X', {'jenis': 'potong', 'nama': 'A', 'awal': P(-3, 4.0), 'akhir': P(40, 
 tambah('X', {'jenis': 'potong', 'nama': 'B', 'awal': P(9.25, -4.5), 'akhir': P(9.25, 11.5), 'pandang': 1})
 for i, (x0, x1, sisi) in enumerate(KAMAR, 1):
     tambah('N', {'jenis': 'anotasi', 'tipe': 'teks', 'teks': 'Kamar Tidur', 'titik': {'x': (x0 + x1) / 2, 'y': 4.4, 'z': 0}, 'pada': 'denah'})
-    kx0, kx1 = (x1 - 2.0, x1) if sisi == 'timur' else (x0, x0 + 2.0)
+    kx0, kx1 = batas_km(x0, x1, sisi)
     tambah('N', {'jenis': 'anotasi', 'tipe': 'teks', 'teks': 'KM/WC', 'titik': {'x': (kx0 + kx1) / 2, 'y': 1.0, 'z': 0}, 'pada': 'denah'})
 tambah('N', {'jenis': 'anotasi', 'tipe': 'teks', 'teks': 'Teras', 'titik': {'x': 18.5, 'y': 7.2, 'z': 0}, 'pada': 'denah'})
 tambah('N', {'jenis': 'anotasi', 'tipe': 'teks', 'teks': 'Tempat jemur', 'titik': {'x': 18.5, 'y': -1.6, 'z': 0}, 'pada': 'denah'})
