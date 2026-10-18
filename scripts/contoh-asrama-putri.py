@@ -98,7 +98,7 @@ tipe_kusen('PJ2', 'jendela', 1, 'kaca', kolom=1, baris=1, buka='tetap')
 tipe_kusen('J1', 'jendela', 2, 'kaca', kolom=1, baris=1, buka='kupu')
 tipe_kusen('J3', 'jendela', 3, 'kaca', kolom=1, baris=1, buka='kupu')
 tipe_kusen('V1', 'jendela', 2, 'jalusi', kolom=1, baris=1, buka='tetap', boven=0)
-tipe_kusen('PJ1', 'pintu', 1, 'kaca', kolom=1, baris=1, buka='kiri', boven=0, nama='Pintu kaca PJ1')
+tipe_kusen('PJ1', 'jendela', 1, 'kaca', kolom=1, baris=6, buka='tetap', boven=0, nama='Kaca mati tinggi PJ1 (6 kotak)')   # 110 × 580, 6 kotak kaca bersusun
 
 def bukaan(dinding, tipe, kode, x_abs, lebar, tinggi, ambang=0):
     """x_abs = koordinat X mutlak tepi bukaan (dinding sejajar X); jarak dihitung dari ujung awal dinding."""
@@ -223,7 +223,7 @@ sayap('utara')
 bx0, bx1, by0, by1 = BLOK
 g_blok = grup('Blok ruang tamu & tangga')
 H_BLOK = Z_RB + 0.6
-dinding((bx0, by0), (bx0, by1), 0, H_BLOK, g_blok, nama='Dinding barat blok')
+dW = dinding((bx0, by0), (bx0, by1), 0, H_BLOK, g_blok, nama='Dinding barat blok (sisi lorong/taman)')
 dT = dinding((bx1, by0), (bx1, by1), 0, H_BLOK, g_blok, nama='Dinding timur blok (entrance)')
 dinding((bx0, by1), (bx1, by1), 0, 1.0, g_blok, tebal=0.10, nama='Pagar sisi utara blok')     # terbuka ke teras utara, hanya pagar rendah
 # KM/WC blok di sudut barat laut (2,00 × 2,50)
@@ -234,6 +234,8 @@ bukaan(dKM, 'pintu', 'P4', bx0 + 1.1, 0.70, 2.10)
 yb = (by0 + by1) / 2
 tambah('B', {'jenis': 'bukaan', 'tipe': 'pintu', 'kode': 'P2', 'dinding': dT, 'jarak': r2(yb - by0 - 0.75), 'lebar': 1.50, 'tinggi': 2.10, 'ambang': 0})
 tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'PJ1', 'dinding': dT, 'jarak': r2(0.6), 'lebar': 1.10, 'tinggi': 5.80, 'ambang': 0.10})
+tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'PJ1', 'dinding': dW, 'jarak': r2(0.6), 'lebar': 1.10, 'tinggi': 5.80, 'ambang': 0.10})   # kaca tinggi yang sama di sisi lorong
+tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'J3', 'dinding': dW, 'jarak': r2(yb - by0 - 1.175), 'lebar': 2.35, 'tinggi': 1.20, 'ambang': Z2 + 0.90})
 tambah('B', {'jenis': 'bukaan', 'tipe': 'jendela', 'kode': 'J3', 'dinding': dT, 'jarak': r2(yb - by0 - 1.175), 'lebar': 2.35, 'tinggi': 1.20, 'ambang': Z2 + 0.90})
 lantai('Lantai ruang tamu', [(bx0, by0), (bx1, by0), (bx1, by1), (bx0, by1)], -0.10, 0.10, 'ruang', 'k40', g_blok)
 lantai('Lantai KM blok', [(bx0, by1 - 2.5), (bx0 + 2.0, by1 - 2.5), (bx0 + 2.0, by1), (bx0, by1)], -0.12, 0.10, 'km', 'k20', g_blok)
