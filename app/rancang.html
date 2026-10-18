@@ -6644,6 +6644,12 @@ function hurufPotongBaru() {
 const WARNA_BANTU = '#1FA39A';
 const BATAS_BANTU = 150;
 const matTangkap = new THREE.MeshBasicMaterial({visible: false});
+// Permukaan atas pelat lantai tertinggi (0 bila belum ada lantai): acuan ketinggian penanda garis potong
+function zAtasLantai() {
+  let z = 0;
+  for (const d of S.elems.values()) if (d.jenis === 'volume' && d.lantai) z = Math.max(z, (d.z0 || 0) + (d.tinggi || 0));
+  return Math.min(z, 1);
+}
 function bangunPenanda(g, id, d, f) {
   if (d.jenis === 'level') return; // level hanya data dan acuan snap
   let warna = d.jenis === 'potong' ? tok('--danger') : d.jenis === 'bantu' ? WARNA_BANTU : T.edge;
@@ -6660,7 +6666,8 @@ function bangunPenanda(g, id, d, f) {
     g.add(m);
   };
   if (d.jenis === 'potong') {
-    const {L, ux, uy, vx, vy} = arahPandang(d), z = 0.03, ext = 0.6, Lt = L + 2 * ext;
+    // penanda digambar di atas pelat lantai tertinggi (bukan 3 cm di atas ±0,00 yang tertimbun lantai) agar bisa diklik
+    const {L, ux, uy, vx, vy} = arahPandang(d), z = zAtasLantai() + 0.03, ext = 0.6, Lt = L + 2 * ext;
     const A = [d.awal.x - ux * ext, d.awal.y - uy * ext, z], B = [d.akhir.x + ux * ext, d.akhir.y + uy * ext, z];
     for (let s = 0; s < Lt; s += 0.6) { const e = Math.min(s + 0.4, Lt); ruas([A[0] + ux * s, A[1] + uy * s, z], [A[0] + ux * e, A[1] + uy * e, z]); }
     for (const P of [A, B]) {
@@ -6669,7 +6676,7 @@ function bangunPenanda(g, id, d, f) {
       ruas(tip, [tip[0] - vx * 0.25 + ux * 0.15, tip[1] - vy * 0.25 + uy * 0.15, z]);
       ruas(tip, [tip[0] - vx * 0.25 - ux * 0.15, tip[1] - vy * 0.25 - uy * 0.15, z]);
     }
-    tangkap(A, B, 0.25);
+    tangkap(A, B, 0.4);
   } else if (d.jenis === 'bantu') {
     // garis tak terbatas: putus-putus sepanjang ±BATAS_BANTU m dari titik awal, tanda silang di dua titik definisi
     const {ux, uy} = infoDinding(d), tinggi = bantuBertinggi(d), z = 0.03, bt = tinggi ? BATAS_BANTU_3D : BATAS_BANTU;
@@ -9235,6 +9242,13 @@ function htmlLevel() {
   <div class="aksi-panel">${tombol('tambah-level', 'Tambah level')}${nBantu && S.bisaUbah ? tombol('hapus-bantu-semua', `Hapus ${nBantu} garis bantu`, 'bahaya') : ''}</div>
   <p class="meta">${nBantu} garis bantu. Gambar dengan alat Garis bantu (V).</p></section>`;
 }
+// Daftar garis potong di panel ringkasan: penandanya tipis di lantai dan sulit diklik, jadi bisa dipilih dari sini
+function htmlDaftarPotong() {
+  const daftar = [...S.elems].filter(([, d]) => d.jenis === 'potong' && sah(d)).sort(([, x], [, y]) => String(x.nama).localeCompare(String(y.nama), 'id'));
+  if (!daftar.length) return '';
+  return `<section><h2>Garis potong</h2><ul class="daftar-komp">${daftar.map(([id, d]) => `<li>Potongan ${esc(d.nama)}–${esc(d.nama)} <span>${esc(id)}</span>${S.bisaUbah ? `<button class="tombol kecil" type="button" data-aksi="pilih-id" data-id="${esc(id)}">Pilih</button>` : ''}</li>`).join('')}</ul>
+  <p class="meta">Pilih untuk mengubah arah pandang, nama, atau menghapusnya. Tampilan potongannya ada di menu Potongan pada bar tampilan.</p></section>`;
+}
 function htmlRingkasan() {
   const komp = [...S.komp].map(([kid, k]) => {
     const n = [...S.elems.values()].filter(x => x.jenis === 'instance' && x.definisi === kid).length;
@@ -9252,6 +9266,7 @@ function htmlRingkasan() {
   </div></section>
   <section><h2>Ringkasan model</h2>${htmlTotal()}<p class="meta">${S.grup.size} grup · ${S.komp.size} komponen</p></section>
   ${htmlLevel()}
+  ${htmlDaftarPotong()}
   ${htmlRekapBagian([...S.elems.keys()])}
   <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button><button class="tombol" type="button" data-aksi="ekspor-dae" title="Dibuka di SketchUp lewat File &gt; Import">Unduh model 3D untuk SketchUp (.dae)</button></div>
   <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka.</p></section>
@@ -9486,6 +9501,7 @@ panel.addEventListener('click', e => {
     if (tid) terapkan([{id: tid, sesudah: null}]);
   }
   else if (aksi === 'pecah-lantai' && id) pecahLantai(id);
+  else if (aksi === 'pilih-id' && e.target.dataset.id && ambil(e.target.dataset.id)) { S.sel.clear(); S.sel.add(e.target.dataset.id); segarPilihan(); }
   else if (aksi === 'kembalikan-muka' && id) { const b = salin(S.elems.get(id)); delete b.mukaHapus; terapkan([{id, sesudah: b}]); }
   else if (aksi === 'pecah-atap' && id) pecahAtap(id);
   else if (aksi === 'bid-tambah' && id) ubahTitikBidang(id);
