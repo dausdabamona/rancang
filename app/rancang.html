@@ -578,7 +578,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | S | slof | awal, akhir, b, h, z0 (dasar), tul, sengkang, fc, selimut | `{"jenis":"slof","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"b":0.15,"h":0.2,"z0":-0.31,"tul":{"n":4,"d":10,"ulir":false},"sengkang":{"d":8,"s":0.15},"fc":18.7,"selimut":0.025}` |
 | R | ringbalk | sama dengan slof | z0 = dasar ring balk |
 | F | pondasi | tipe 'batukali' (awal, akhir, lebarAtas, lebarBawah, tinggi, aanstamping, pasir, z0); 'footplat' (x, y, p, l, tebal, tulPlat{d,s,ulir}, pedestal{b,h}, puncakPedestal, tul, sengkang, fc, selimut, z0); 'umpak' (x, y, bawah, atas, tinggi, fc, z0) | `{"jenis":"pondasi","tipe":"batukali","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"lebarAtas":0.3,"lebarBawah":0.7,"tinggi":0.7,"aanstamping":0.15,"pasir":0.05,"z0":-0.31}` |
-| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa','penuh','tritisan'), kuda{…}, lisplangSisi{…}, overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
+| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa','penuh','tritisan'), kuda{kaki,tarik,makelar,tiang,sokong,gording,bubungan,klos: [lebar,tinggi] m; lisMundur (jarak ujung spandek ke lisplang, m), jarakGording, …}, lisplangSisi{…}, overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
 | H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
 | J | batang | Batang lurus 3D (kuda-kuda, gording, usuk, reng, klos): awal{x,y,z}, akhir{x,y,z}, b (lebar), h (tinggi penampang), bahan ('kayu'/'bajaringan'), peran ('kaki','tarik','makelar','tiang','sokong','klos','gording','nok','usuk','reng','rangka','lain'). Opsional: atas [x,y,z] (arah tinggi penampang), jangkar ('tengah' = sumbu di tengah penampang; 'atas' = sumbu di sisi atas) | `{"jenis":"batang","peran":"kaki","bahan":"kayu","awal":{"x":0,"y":0,"z":3.6},"akhir":{"x":0,"y":3,"z":5.2},"b":0.06,"h":0.12,"jangkar":"tengah"}` |
 | U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
@@ -858,7 +858,8 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  * Ukuran dan susunan kuda-kuda kayu per atap (cm untuk penampang, % untuk posisi).
  * @typedef {{kaki?: [number, number], tarik?: [number, number], makelar?: [number, number], tiang?: [number, number],
  *   sokong?: [number, number], gording?: [number, number], posTiang?: number, posSokong?: number,
- *   pakaiTiang?: boolean, pakaiSokong?: boolean, tarikSambung?: boolean, jarakGording?: number}} KudaKuda
+ *   pakaiTiang?: boolean, pakaiSokong?: boolean, tarikSambung?: boolean, jarakGording?: number,
+ *   bubungan?: [number, number], klos?: [number, number], lisMundur?: number}} KudaKuda
  */
 /**
  * A — atap parametrik berdenah persegi (batas as dinding x0..x1, y0..y1). `z0` = elevasi dudukan.
@@ -1431,19 +1432,21 @@ function luas3D(t) {
 const SUSUN_KAYU = {tarik: 0.12, kaki: 0.12, gording: 0.12, penutup: 0.003, lebar: 0.06, lisMundur: 0.20, lisTebal: 0.025};
 // Kuda-kuda kayu yang bisa diatur per atap (ukuran batang [lebar, tinggi] dalam m, posisi sebagai pecahan tumpuan→makelar)
 const KUDA_BAWAAN = {kaki: [0.06, 0.12], tarik: [0.06, 0.12], makelar: [0.06, 0.12], tiang: [0.06, 0.12], sokong: [0.06, 0.12], gording: [0.06, 0.12],
+  bubungan: [0.06, 0.12], klos: [0.10, 0.07], lisMundur: 0.20,
   posTiang: 0.5, posSokong: 0.62, pakaiTiang: true, pakaiSokong: true, tarikSambung: true, jarakGording: 1.0};
 function aturKuda(d) {
   const o = d.kuda || {}, r = {...KUDA_BAWAAN};
-  for (const k of ['kaki', 'tarik', 'makelar', 'tiang', 'sokong', 'gording']) if (Array.isArray(o[k]) && o[k][0] > 0 && o[k][1] > 0) r[k] = o[k];
+  for (const k of ['kaki', 'tarik', 'makelar', 'tiang', 'sokong', 'gording', 'bubungan', 'klos']) if (Array.isArray(o[k]) && o[k][0] > 0 && o[k][1] > 0) r[k] = o[k];
   for (const k of ['posTiang', 'posSokong']) if (o[k] > 0.05 && o[k] < 0.95) r[k] = o[k];
   if (o.jarakGording >= 0.4 && o.jarakGording <= 2) r.jarakGording = o.jarakGording;
+  if (o.lisMundur >= 0 && o.lisMundur <= 0.5) r.lisMundur = o.lisMundur;
   for (const k of ['pakaiTiang', 'pakaiSokong', 'tarikSambung']) if (typeof o[k] === 'boolean') r[k] = o[k];
   return r;
 }
 // Susunan tinggi rangka kayu untuk atap ini (mengikuti ukuran batang yang diatur)
 function susunKayu(d) {
   const k = aturKuda(d);
-  return {...SUSUN_KAYU, tarik: k.tarik[1], kaki: k.kaki[1], gording: k.gording[1], lebar: k.gording[0]};
+  return {...SUSUN_KAYU, tarik: k.tarik[1], kaki: k.kaki[1], gording: k.gording[1], lebar: k.gording[0], lisMundur: k.lisMundur};
 }
 // Tepi bidang atap yang hanya dimiliki satu bidang (tritisan, tepi gunungan) = tepi luar
 function tepiLuarAtap(muka) {
@@ -5832,7 +5835,8 @@ const alatAtap = {
     }
     if (x1 - x0 < 0.1 || y1 - y0 < 0.1) return null;
     return {jenis: 'atap', bentuk: this.bentuk, x0, y0, x1, y1, arah: this.bentuk === 'sandar' ? 'selatan' : (x1 - x0 >= y1 - y0 ? 'x' : 'y'),
-      kemiringan: S.setel.kemiringanAtap, overstek: S.setel.overstekAtap, z0: tumpuanAtap(x0, y0, x1, y1), tebal: 0.12, rangka: 'bajaringan', penutup: 'spandek', catatan: ''};
+      kemiringan: S.setel.kemiringanAtap, overstek: S.setel.overstekAtap, z0: tumpuanAtap(x0, y0, x1, y1), tebal: 0.12, rangka: 'bajaringan', penutup: 'spandek', catatan: '',
+      kuda: {gording: [0.05, 0.10], bubungan: [0.05, 0.14], klos: [0.10, 0.07], lisMundur: 0.05}};
   },
   pratinjau() {
     bersihPratinjau(); S.label = [];
@@ -7360,7 +7364,7 @@ function rangkaAtap(d) {
       }
     }
     hasil.ukur.jumlahKuda = nKuda;
-    // balok bubungan 6/12 di sepanjang nok (tepi tertinggi bidang atap)
+    // balok bubungan (ukuran dapat dipilih) di sepanjang nok (tepi tertinggi bidang atap)
     if (kayu) {
       const zMaks = Math.max(...muka.flatMap(t => t.map(q => q[2]))), sudah = new Set();
       for (const info of susun.muka) for (let i = 0; i < info.tepi.length; i++) {
@@ -7371,7 +7375,7 @@ function rangkaAtap(d) {
         if (sudah.has(k)) continue;
         sudah.add(k);
         const tz = K.penutup / Math.cos(th) + (K.lebar / 2) * Math.tan(th);
-        tambah('gording', [p[0], p[1], p[2] - tz], [q[0], q[1], q[2] - tz], {tegak: true, ukuran: KD.gording});
+        tambah('gording', [p[0], p[1], p[2] - tz], [q[0], q[1], q[2] - tz], {tegak: true, ukuran: KD.bubungan});
       }
     }
     // reng (baja ringan) atau gording (kayu) sejajar listplang, tiap jarak sepanjang kemiringan
@@ -7405,13 +7409,13 @@ function rangkaAtap(d) {
             const ka = w.x ? (a - p[0]) / (q[0] - p[0] || 1e-9) : (a - p[1]) / (q[1] - p[1] || 1e-9);
             if (!(ka > 0.001 && ka < 0.999) || L < 0.1) continue;
             const G = V(...p).addScaledVector(ax, ka).addScaledVector(n, -K2.gording).addScaledVector(turun, K2.lebar / 2);
-            const P1 = G, P2 = G.clone().addScaledVector(turun, 0.10), P3 = G.clone().addScaledVector(n, 0.07);
+            const P1 = G, P2 = G.clone().addScaledVector(turun, KD.klos[0]), P3 = G.clone().addScaledVector(n, KD.klos[1]);
             const o = K2.lebar / 2, sisi = sg => [P1, P2, P3].map(v => v.clone().addScaledVector(w, sg * o).toArray());
             hasil.klos.push({titik: [...sisi(-1), ...sisi(1)]});
           }
         }
       }
-      volume.kuda += hasil.klos.length * 0.5 * 0.10 * 0.07 * K2.lebar;
+      volume.kuda += hasil.klos.length * 0.5 * KD.klos[0] * KD.klos[1] * K2.lebar;
     }
     for (const t of muka) {
       const zs = t.map(q => q[2]), zMin = Math.min(...zs), zMax = Math.max(...zs);
@@ -8211,7 +8215,7 @@ function htmlAtap(id, d) {
   ${datar || (d.rangka || 'bajaringan') === 'tanpa' ? '' : `<section><h2>Rangka atap ${esc(RANGKA_ATAP[d.rangka || 'bajaringan'].toLowerCase())}</h2><dl class="ukur">
     ${baris('Luas rangka (miring)', 'luasRangka', 'm²')}<dt>Jumlah kuda-kuda</dt><dd><span data-u="jumlahKuda"></span><small>buah</small></dd>
     ${(d.rangka || 'bajaringan') === 'kayu'
-      ? baris('Kayu kuda-kuda 6/12', 'kayuKuda', 'm³') + baris('Kayu gording 6/12', 'kayuGording', 'm³') + ((d.penutup || 'spandek') === 'genteng' ? baris('Kayu usuk 5/7', 'kayuUsuk', 'm³') + baris('Kayu reng 3/4', 'kayuReng', 'm³') : '') + baris('<b>Total kayu</b>', 'kayuTotal', 'm³')
+      ? baris('Kayu kuda-kuda dan klos', 'kayuKuda', 'm³') + baris('Kayu gording dan bubungan', 'kayuGording', 'm³') + ((d.penutup || 'spandek') === 'genteng' ? baris('Kayu usuk 5/7', 'kayuUsuk', 'm³') + baris('Kayu reng 3/4', 'kayuReng', 'm³') : '') + baris('<b>Total kayu</b>', 'kayuTotal', 'm³')
       : baris('Profil C75 kuda-kuda', 'panjangC75', 'm') + `<dt>C75 batang 6 m (+5%)</dt><dd><span data-u="batangC75"></span><small>batang</small></dd>` + baris('Reng R32', 'panjangR32', 'm') + `<dt>R32 batang 6 m (+5%)</dt><dd><span data-u="batangR32"></span><small>batang</small></dd>`}
   </dl></section>`}
   ${htmlKudaKuda(id, d)}
@@ -8543,19 +8547,21 @@ function htmlTipeKusen(b) {
   <div class="aksi-panel">${tombol('hapus-kusen', 'Hapus tipe kusen', 'bahaya')}</div></section>`;
 }
 // Kuda-kuda kayu per atap: ukuran tiap batang, posisi tiang dan sokong, sambungan balok tarik
-const BAGIAN_KUDA = {kaki: 'Kaki kuda-kuda', tarik: 'Balok tarik (dudukan)', makelar: 'Tiang makelar', tiang: 'Tiang penggantung', sokong: 'Balok sokong', gording: 'Gording dan bubungan'};
+const BAGIAN_KUDA = {kaki: 'Kaki kuda-kuda', tarik: 'Balok tarik (dudukan)', makelar: 'Tiang makelar', tiang: 'Tiang penggantung', sokong: 'Balok sokong', gording: 'Gording', bubungan: 'Balok bubungan (nok)', klos: 'Klos penahan gording (panjang/tinggi)'};
 function htmlKudaKuda(id, d) {
   if ((d.rangka || 'bajaringan') !== 'kayu' || d.bentuk === 'datar') return '';
   const k = aturKuda(d), cm = v => `${Math.round(v[0] * 100)}/${Math.round(v[1] * 100)}`, yaTidak = v => `<option value="ya" ${v ? 'selected' : ''}>Ya</option><option value="tidak" ${v ? '' : 'selected'}>Tidak</option>`;
   const polos = (d.plafonMiring || 'tanpa') === 'penuh';
   return `<section><h2>Kuda-kuda kayu</h2><div class="medan">
-    ${Object.entries(BAGIAN_KUDA).map(([b, t]) => medanTeks('w-' + b, t + ' (cm)', cm(k[b]))).join('')}
+    ${Object.entries(BAGIAN_KUDA).map(([b, t]) => `<label for="w-${b}">${t} (cm)</label><input id="w-${b}" class="teks" type="text" list="daftar-ukuran-kayu" value="${cm(k[b])}" ${dis()}>`).join('')}
+    <datalist id="daftar-ukuran-kayu">${['4/6', '5/7', '5/10', '5/14', '6/12', '6/15', '8/12', '8/15', '10/10', '10/15', '12/12'].map(v => `<option value="${v}">`).join('')}</datalist>
     <label for="w-tarikSambung">Balok tarik disambung ke kaki</label><select id="w-tarikSambung" ${dis()}>${yaTidak(k.tarikSambung)}</select>
     <label for="w-pakaiTiang">Pakai tiang penggantung</label><select id="w-pakaiTiang" ${dis()}>${yaTidak(k.pakaiTiang)}</select>
     ${medanAngka('w-posTiang', 'Posisi tiang (% tumpuan→makelar)', Math.round(k.posTiang * 100))}
     <label for="w-pakaiSokong">Pakai balok sokong</label><select id="w-pakaiSokong" ${dis()}>${yaTidak(k.pakaiSokong)}</select>
     ${medanAngka('w-posSokong', 'Ujung sokong di kaki (% tumpuan→makelar)', Math.round(k.posSokong * 100))}
     ${medanAngka('w-jarakGording', 'Jarak gording miring (m)', k.jarakGording)}
+    ${medanAngka('w-lisMundur', 'Jarak ujung spandek ke lisplang (cm)', Math.round(k.lisMundur * 1000) / 10)}
   </div><p class="meta">Ukuran ditulis lebar/tinggi dalam cm, misalnya 6/12 atau 8/15. Tinggi balok tarik, kaki, dan gording ikut menentukan tinggi atap.${polos ? ' Atap ini memakai plafon miring penuh, jadi hanya kaki kuda-kuda yang dipasang.' : ''} Balok tarik yang disambung diperpanjang sampai bertemu as kaki kuda-kuda di tumpuan.</p>
   ${d.kuda ? `<div class="aksi-panel">${tombol('kuda-reset', 'Kembalikan kuda-kuda ke bawaan')}</div>` : ''}</section>`;
 }
@@ -9000,6 +9006,10 @@ function ubahMedan(e) {
       const v = angka(t.value);
       if (!(v >= 10 && v <= 90)) return tolakAngka('Posisi antara 10 dan 90 %.');
       o[f] = r2(v) / 100;
+    } else if (f === 'lisMundur') {
+      const v = angka(t.value);
+      if (!(v >= 0 && v <= 50)) return tolakAngka('Jarak ujung spandek ke lisplang antara 0 dan 50 cm.');
+      o.lisMundur = r2(v * 10) / 1000;
     } else if (f === 'jarakGording') {
       const v = angka(t.value);
       if (!(v >= 0.4 && v <= 2)) return tolakAngka('Jarak gording antara 0,4 dan 2 m.');
@@ -11399,8 +11409,8 @@ function dataRAB(ids) {
   }
   if (bidAtapList.length) { const tb = tepiBersamaBidang(bidAtapList); at.nok += tb.nok; at.jurai += tb.jurai; }
   tambah(d5, 'KY-010', 'Rangka atap baja ringan (luas miring)', 'm²', at.rangka, at.rangka ? `C75 ${fmt(at.c75)} m (${Math.ceil(at.c75 * 1.05 / 6)} btg), R32 ${fmt(at.r32)} m (${Math.ceil(at.r32 * 1.05 / 6)} btg)` : '');
-  tambah(d5, 'KY-001', 'Kuda-kuda kayu 6/12', 'm³', at.kayu.kuda);
-  tambah(d5, 'KY-002', 'Gording kayu 6/12', 'm³', at.kayu.gording);
+  tambah(d5, 'KY-001', 'Kuda-kuda kayu dan klos (ukuran sesuai pengaturan atap)', 'm³', at.kayu.kuda);
+  tambah(d5, 'KY-002', 'Gording dan balok bubungan kayu (ukuran sesuai pengaturan atap)', 'm³', at.kayu.gording);
   tambah(d5, 'KY-003', 'Usuk kayu 5/7', 'm³', at.kayu.usuk);
   tambah(d5, 'KY-004', 'Reng kayu 3/4', 'm³', at.kayu.reng);
   for (const [p, L] of Object.entries(at.penutup)) tambah(d5, kodePenutup[p][0], kodePenutup[p][1], 'm²', L);
