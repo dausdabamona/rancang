@@ -315,6 +315,10 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .lembar-detail .detail-baris{padding-bottom:8px;border-bottom:1px dashed var(--line)}
 .lembar-detail .detail-dua{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .lembar-detail .tombol.kecil{padding:4px 8px;font-size:12px;justify-self:start}
+.deret{display:flex;flex-wrap:wrap;gap:4px;padding:6px 0 8px}
+.deret .tombol.kecil{padding:2px 8px;font-size:12px;min-width:28px}
+.tombol.kecil.aktif{background:#FF6A00;color:#fff;border-color:#FF6A00}
+#panel details summary{cursor:pointer;padding:4px 0;font-size:13px}
 .lembar-kop{border-top:1px solid var(--line);padding:10px 14px;display:grid;gap:7px;max-height:42%;overflow:auto}
 .lembar-kop label{display:grid;gap:3px;font-size:11.5px;color:var(--muted)}
 .kop-logo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
@@ -8219,6 +8223,7 @@ function htmlAtap(id, d) {
       : baris('Profil C75 kuda-kuda', 'panjangC75', 'm') + `<dt>C75 batang 6 m (+5%)</dt><dd><span data-u="batangC75"></span><small>batang</small></dd>` + baris('Reng R32', 'panjangR32', 'm') + `<dt>R32 batang 6 m (+5%)</dt><dd><span data-u="batangR32"></span><small>batang</small></dd>`}
   </dl></section>`}
   ${htmlKudaKuda(id, d)}
+  ${htmlDaftarRangka(id, d)}
   ${htmlLisplangSisi(id, d)}
   ${metaUbah(d)}
   <p class="meta">Geser atap dengan Pindah (M) atau tombol panah. Ubah ukurannya dengan Push/Pull (P) pada tepi atap, atau tombol di bawah.</p>
@@ -8546,6 +8551,70 @@ function htmlTipeKusen(b) {
   </div><p class="meta">Dipakai ${n} ${jenis} berkode ${esc(tp.kode)}. Mengubah tipe ini mengubah semuanya. Pola mengikuti ukuran bukaan.</p>
   <div class="aksi-panel">${tombol('hapus-kusen', 'Hapus tipe kusen', 'bahaya')}</div></section>`;
 }
+// Daftar rangka kayu atap: jumlah dan ukuran tiap jenis batang; klik satu baris untuk menyorotnya di 3D (tanpa memecah atap)
+const NAMA_RANGKA = {kaki: 'Kaki kuda-kuda', tarik: 'Balok tarik', makelar: 'Tiang makelar', tiang: 'Tiang penggantung', sokong: 'Balok sokong', gording: 'Gording', bubungan: 'Balok bubungan', klos: 'Klos'};
+let sorotRangkaKini = null;   // {id, kunci, idx} (idx null = semua batang jenis itu)
+const grupSorotRangka = new THREE.Group(); scene.add(grupSorotRangka);
+function daftarRangkaAtap(d) {
+  const rk = rangkaAtap(d), arahA = rk.arahA || [1, 0, 0], peta = new Map();
+  const ambilGrup = (kunci, ukuran) => { if (!peta.has(kunci)) peta.set(kunci, {kunci, nama: NAMA_RANGKA[kunci] || kunci, ukuran, item: []}); return peta.get(kunci); };
+  const sisiKotak = c => [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]].map(([a, b2]) => [c[a], c[b2]]);
+  for (const b of rk.batang || []) {
+    const kunci = b.jenis === 'kuda' ? (b.bagian || 'kaki') : b.jenis === 'gording' ? (b.tegak ? 'bubungan' : 'gording') : null;
+    if (!kunci) continue;
+    const pen = penampangKayu(b, arahA);
+    if (!pen) continue;
+    const c = [...pen.map(o => V(...b.p).add(o)), ...pen.map(o => V(...b.q).add(o))];
+    ambilGrup(kunci, b.ukuran || UKURAN_KAYU[b.jenis]).item.push({panjang: Math.hypot(b.q[0] - b.p[0], b.q[1] - b.p[1], b.q[2] - b.p[2]), sisi: sisiKotak(c).map(([u, v]) => [u.toArray(), v.toArray()])});
+  }
+  const kl = rk.klos || [];
+  if (kl.length) {
+    const g = ambilGrup('klos', aturKuda(d).klos);
+    for (const k of kl) {
+      const c = k.titik;
+      g.item.push({panjang: Math.hypot(c[3][0] - c[0][0], c[3][1] - c[0][1], c[3][2] - c[0][2]), sisi: [[0, 1], [1, 2], [2, 0], [3, 4], [4, 5], [5, 3], [0, 3], [1, 4], [2, 5]].map(([a, b2]) => [c[a], c[b2]])});
+    }
+  }
+  const urut = Object.keys(NAMA_RANGKA);
+  return [...peta.values()].sort((a, b) => urut.indexOf(a.kunci) - urut.indexOf(b.kunci));
+}
+function bersihSorotRangka() {
+  for (const o of /** @type {any[]} */ ([...grupSorotRangka.children])) { grupSorotRangka.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }
+  sorotRangkaKini = null;
+  minta();
+}
+function sorotRangka(id, kunci, idx) {
+  const sama = sorotRangkaKini && sorotRangkaKini.id === id && sorotRangkaKini.kunci === kunci && sorotRangkaKini.idx === idx;
+  bersihSorotRangka();
+  if (sama) return false;
+  const d = S.elems.get(id);
+  if (!d) return false;
+  const g = daftarRangkaAtap(d).find(x => x.kunci === kunci);
+  if (!g) return false;
+  const pos = [];
+  g.item.forEach((it, i) => { if (idx === null || idx === i) for (const [u, v] of it.sisi) pos.push(...u, ...v); });
+  if (!pos.length) return false;
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  const ln = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color: new THREE.Color('#FF6A00'), depthTest: false}));
+  ln.renderOrder = 6;
+  grupSorotRangka.add(ln);
+  sorotRangkaKini = {id, kunci, idx};
+  minta();
+  return true;
+}
+function htmlDaftarRangka(id, d) {
+  if ((d.rangka || 'bajaringan') !== 'kayu' || d.bentuk === 'datar') return '';
+  const dr = daftarRangkaAtap(d);
+  if (!dr.length) return '';
+  const cm = v => `${Math.round(v[0] * 100)}/${Math.round(v[1] * 100)}`, aktif = sorotRangkaKini && sorotRangkaKini.id === id ? sorotRangkaKini : null;
+  const baris = dr.map(g => {
+    const total = g.item.reduce((a, x) => a + x.panjang, 0), buka = aktif && aktif.kunci === g.kunci;
+    const semua = buka && aktif.idx === null ? ' aktif' : '';
+    return `<details ${buka ? 'open' : ''}><summary><button type="button" class="tombol kecil${semua}" data-aksi="sorot-rangka" data-kunci="${g.kunci}">${esc(g.nama)}</button> ${cm(g.ukuran)} cm · ${g.item.length} buah · ${fmt(total)} m</summary>
+      <div class="deret">${g.item.map((x, i) => `<button type="button" class="tombol kecil${buka && aktif.idx === i ? ' aktif' : ''}" data-aksi="sorot-rangka" data-kunci="${g.kunci}" data-idx="${i}" title="${esc(g.nama)} ${i + 1}: ${fmt(x.panjang)} m">${i + 1}</button>`).join('')}</div></details>`;
+  }).join('');
+  return `<section><h2>Daftar rangka kayu</h2>${baris}<p class="meta">Klik nama untuk menyorot semua batang jenis itu di 3D, atau nomor untuk satu batang (oranye). Klik lagi untuk melepas. Kaki kuda-kuda dan balok tarik dihitung per ruas (terpotong oleh sambungan). Memecah atap tidak perlu untuk sekadar melihat.</p></section>`;
+}
 // Kuda-kuda kayu per atap: ukuran tiap batang, posisi tiang dan sokong, sambungan balok tarik
 const BAGIAN_KUDA = {kaki: 'Kaki kuda-kuda', tarik: 'Balok tarik (dudukan)', makelar: 'Tiang makelar', tiang: 'Tiang penggantung', sokong: 'Balok sokong', gording: 'Gording', bubungan: 'Balok bubungan (nok)', klos: 'Klos penahan gording (panjang/tinggi)'};
 function htmlKudaKuda(id, d) {
@@ -8823,6 +8892,7 @@ function renderPanel(paksa) {
   if (fokus && kunci === S.panelKunci) { isiUkur(); return; }
   if (!paksa && kunci === S.panelKunci && !fokus) { /* tetap bangun ulang agar nilai segar */ }
   S.panelKunci = kunci;
+  if (sorotRangkaKini && !(S.sel.size === 1 && S.sel.has(sorotRangkaKini.id))) bersihSorotRangka();
   let html;
   if (S.sel.size === 1) {
     const id = [...S.sel][0], d = ambil(id);
@@ -8838,6 +8908,7 @@ panel.addEventListener('click', e => {
   const aksi = e.target.dataset && e.target.dataset.aksi;
   if (!aksi) return;
   const id = [...S.sel][0];
+  if (aksi === 'sorot-rangka') { e.preventDefault(); if (id) { sorotRangka(id, e.target.dataset.kunci, e.target.dataset.idx === undefined ? null : Number(e.target.dataset.idx)); renderPanel(true); } return; }
   if (aksi === 'hapus-sel') hapusPilihan();
   else if (aksi === 'tambah-level') tambahLevel();
   else if (aksi === 'hapus-level') { const lid = e.target.dataset.id; if (lid && S.elems.has(lid)) terapkan([{id: lid, sesudah: null}]); }
