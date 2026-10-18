@@ -5953,7 +5953,7 @@ const alatHapus = {
 
 // Alat Perpanjang/Pangkas (extend/trim) ujung papan lisplang: klik papan, lalu klik batasnya (papan lisplang lain atau dinding)
 const alatPerluas = {
-  petunjuk: '<b>Perpanjang/Pangkas:</b> 1) klik papan lisplang (dekat ujung yang diubah) atau klik plafon, 2) klik batasnya: papan lisplang lain, dinding, atau plafon di depannya. Ujung papan atau sisi plafon yang menghadap batas otomatis diperpanjang atau dipangkas sampai bertemu. Esc membatalkan, Ctrl+Z mengembalikan.',
+  petunjuk: '<b>Perpanjang/Pangkas:</b> 1) klik papan lisplang (dekat ujung yang diubah) atau klik plafon, 2) klik batasnya: papan lisplang (plafon berhenti di sisi dalamnya), dinding, atau plafon di depannya. Ujung papan atau sisi plafon yang menghadap batas otomatis diperpanjang atau dipangkas sampai bertemu. Esc membatalkan, Ctrl+Z mengembalikan.',
   vcb: 'Ukuran',
   pilih: null,
   sibuk() { return !!this.pilih; },
@@ -5985,6 +5985,11 @@ const alatPerluas = {
     if (d.jenis === 'plafon') return {ruas: cincin(d.alas.map(q => [q.x, q.y])), nama: d.nama || u.elemId};
     if (d.jenis === 'bidang') return {ruas: cincin(d.titik.map(q => [q.x, q.y])), nama: d.nama || u.elemId};
     if (d.jenis === 'atap' && u.face === 'plafon-miring') return {ruas: susunTepiAtap(d).plafon.flatMap(pf => cincin(pf.atas.map(q => [q[0], q[1]]))), nama: 'plafon ' + (d.nama || u.elemId)};
+    // papan lisplang sebagai batas: sisi DALAM papan (tempat plafon tritisan berhenti), bukan ujung seng
+    if (d.jenis === 'atap' && u.sisi) {
+      const bd = susunTepiAtap(d).papan.find(x => x.sisi === u.sisi);
+      if (bd) { const c = bd.titik; return {ruas: [[c[3][0], c[3][1], c[2][0], c[2][1]]], nama: 'lisplang ' + u.sisi}; }
+    }
     return null;
   },
   // perpanjang/pangkas sisi plafon yang menghadap titik klik tujuan sampai ruas batas terdekat; ujung sisi meluncur sepanjang sisi di sebelahnya
@@ -7951,7 +7956,14 @@ const alatPlafon = {
   gabungBatas(daftar) { return {x0: Math.min(...daftar.map(b => b.x0)), y0: Math.min(...daftar.map(b => b.y0)), x1: Math.max(...daftar.map(b => b.x1)), y1: Math.max(...daftar.map(b => b.y1))}; },
   // bidang penutup atap (titik 3D) dari satu elemen atap atau bidang atap bebas
   bidangAtapDari(d) {
-    if (d.jenis === 'atap') return d.bentuk === 'datar' ? [] : atapGeom(d).permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
+    // Plafon miring berhenti di sisi dalam papan lisplang, bukan di ujung seng: seng menjorok sejauh "Mundur dari ujung seng"
+    // (bawaan 20 cm pada rangka kayu, bisa diatur per sisi di panel Lisplang). Tanpa lisplang, batasnya tetap tepi penutup.
+    if (d.jenis === 'atap') {
+      if (d.bentuk === 'datar') return [];
+      const su = susunTepiAtap(d);
+      if (su.muka.length) return su.muka.map(m => m.dalam || m.t);
+      return atapGeom(d).permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
+    }
     if (d.jenis === 'bidang' && d.peran === 'atap') return [d.titik.map(ke3)];
     return null;
   },
@@ -13960,6 +13972,8 @@ window.rancangAPI = Object.freeze({
 // Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
 window.rancangUji = Object.freeze({
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
+  // plafon miring yang akan dibuat alat Plafon (mode miring) untuk atap/bidang tertentu: daftar bidang beserta titiknya
+  plafonMiring: id => (alatPlafon.miringDari(id) || []).map(b => b.titik),
   // palet perintah: hasil pencarian untuk teks tertentu (jenis + teks), tanpa membuka dialog
   palet: teks => butirPalet(teks).map(b => b.jenis + ': ' + b.teks),
   // tata letak: ganti keadaan rail/panel/fokus lalu laporkan kelas body dan lebar panel
