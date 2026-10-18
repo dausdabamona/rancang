@@ -531,7 +531,7 @@ body.panel-tutup{--rc-panel-w:0px}
     <button class="alat" data-alat="putar" aria-pressed="false" title="Putar (U), tekan Ctrl untuk menyalin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/><circle cx="12" cy="12" r="1.2"/></svg><span class="teks">Putar</span><kbd>U</kbd></button>
     <button class="alat" data-alat="cermin" aria-pressed="false" title="Cermin (I): klik dua titik garis cermin; tekan Ctrl untuk Cermin + Salin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2.4 2.4"/><path d="M9.5 7 3.5 17h6z"/><path d="M14.5 7l6 10h-6z"/></svg><span class="teks">Cermin</span><kbd>I</kbd></button>
     <button class="alat" data-alat="hapus" aria-pressed="false" title="Hapus (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M8 20h12M5 15l9-10 6 6-9 9H8z"/></svg><span class="teks">Hapus</span><kbd>E</kbd></button>
-    <button class="alat" data-alat="perluas" aria-pressed="false" title="Perpanjang/Pangkas lisplang (H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h10M10 8l4 4-4 4M19 5v14"/></svg><span class="teks">Extend/Trim</span><kbd>H</kbd></button>
+    <button class="alat" data-alat="perluas" aria-pressed="false" title="Perpanjang/Pangkas lisplang dan plafon (Shift+H)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h10M10 8l4 4-4 4M19 5v14"/></svg><span class="teks">Extend/Trim</span><kbd>⇧H</kbd></button>
   </div></div>
   <div class="rail-grup"><span class="kicker">Lihat</span><div class="rail-grid">
     <button class="alat" data-alat="orbit" aria-pressed="false" title="Orbit (O)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="12" rx="9" ry="4"/><path d="M17 6.5l2 1.8-2.6.8"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg><span class="teks">Orbit</span><kbd>O</kbd></button>
@@ -8629,7 +8629,8 @@ window.addEventListener('keydown', e => {
   if (e.shiftKey && k === 'z') { zoomSemua(); return; }
   if (k === 'g' && !e.shiftKey) { if (S.bisaUbah) jadikanKomponen(); return; }
   if (k === 'h' && !e.shiftKey) { aturTembus(); return; }
-  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', y: 'plafon', k: 'kolom', z: 'sanitair', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', v: 'bantu', e: 'hapus', h: 'perluas', o: 'orbit'};
+  if (k === 'h' && e.shiftKey) { e.preventDefault(); setAlat('perluas'); return; } // H sudah dipakai Tembus pandang
+  const peta = {' ': 'pilih', r: 'persegi', c: 'lingkaran', a: 'busur', q: 'offset', l: 'dinding', d: 'pintu', w: 'jendela', t: 'atap', y: 'plafon', k: 'kolom', z: 'sanitair', s: 'slof', f: 'pondasi', x: 'potong', n: 'anotasi', p: 'dorong', j: 'sapuan', b: 'bidang3d', m: 'pindah', u: 'putar', i: 'cermin', v: 'bantu', e: 'hapus', o: 'orbit'};
   if (peta[k] && !e.shiftKey) { e.preventDefault(); setAlat(peta[k]); }
 });
 document.querySelectorAll('[data-alat]').forEach(b => b.addEventListener('click', () => setAlat(b.dataset.alat)));
