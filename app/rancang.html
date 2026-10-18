@@ -399,6 +399,7 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
 .seg{display:inline-flex;flex:none;overflow:hidden;white-space:nowrap;border:1px solid var(--color-divider);border-radius:var(--radius-md)}
 .tampilan button{height:auto;padding:5px 10px;font-size:13px;border-radius:0;font-weight:400}
 .seg>button+button{border-left:1px solid var(--color-divider)}
+.seg[hidden]{display:none}
 .tampilan button[aria-pressed="true"],.tampilan button.aktif{background:var(--color-accent);color:var(--color-bg)}
 /* kanvas */
 #view{border:0;border-radius:var(--radius-lg)}
@@ -532,6 +533,7 @@ body.panel-tutup{--rc-panel-w:0px}
     <button data-lihat="belakang" title="Tampak belakang, dari utara">Belakang</button>
     <button data-lihat="kiri" title="Tampak kiri, dari barat">Kiri</button>
   </div>
+  <div class="seg" id="seg-potongan" role="group" aria-label="Potongan" hidden></div>
   <div class="seg">
     <button id="btn-paralel" aria-pressed="false" title="Proyeksi paralel (tanpa perspektif)">Paralel</button>
     <button id="btn-zoom" title="Tampilkan semua (Shift+Z)">Semua</button>
@@ -3102,6 +3104,7 @@ function aturIris(id) {
   IRIS.id = IRIS.id === id ? null : id; IRIS.geser = 0; IRIS.kotor = true;
   minta(); S.panelKunci = ''; renderPanel(true);
   toast(IRIS.id ? 'Irisan 3D aktif. Klik panah oranye lalu geser untuk memindahkan bidang irisan.' : 'Irisan 3D dimatikan.');
+  segarPotongan();
 }
 function aturIrisDatar(v) {
   const nyala = v === undefined ? IRIS.datar === null : v;
@@ -3350,6 +3353,46 @@ function setParalel(on) {
   $('#btn-paralel').setAttribute('aria-pressed', String(on));
   updCam();
 }
+/* Menu potongan di bar tampilan: satu tombol per garis potong (irisan 3D + arah pandang), tombol "2D" membuka gambar potongannya */
+let kunciPotongan = '';
+function segarPotongan() {
+  const seg = document.getElementById('seg-potongan');
+  if (!seg) return;
+  const daftar = [...S.elems].filter(([, d]) => d.jenis === 'potong' && sah(d))
+    .sort(([a, x], [b, y]) => String(x.nama).localeCompare(String(y.nama), 'id') || a.localeCompare(b, 'id', {numeric: true}));
+  const kunci = daftar.map(([id, d]) => id + ':' + d.nama).join('|') + '#' + (IRIS.id || '');
+  if (kunci === kunciPotongan) return;
+  kunciPotongan = kunci;
+  seg.hidden = daftar.length === 0;
+  const tombol = [];
+  for (const [id, d] of daftar) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.pot = id; b.textContent = `Potongan ${d.nama}–${d.nama}`;
+    b.setAttribute('aria-pressed', String(IRIS.id === id));
+    b.title = `Tampilan potongan ${d.nama}–${d.nama} (irisan 3D, dipandang tegak lurus bidang potong). Klik lagi untuk mematikan.`;
+    const b2 = document.createElement('button');
+    b2.type = 'button'; b2.dataset.pot2d = id; b2.textContent = '2D';
+    b2.title = `Buka gambar potongan ${d.nama}–${d.nama} di Ruang Lembar`;
+    tombol.push(b, b2);
+  }
+  seg.replaceChildren(...tombol);
+}
+function lihatPotongan(id) {
+  const d = S.elems.get(id);
+  if (!d || d.jenis !== 'potong') return;
+  const nyala = IRIS.id === id;
+  aturIris(id);
+  if (nyala) return;
+  const {vx, vy} = arahPandang(d);
+  nav.theta = Math.atan2(-vy, -vx); nav.phi = Math.PI / 2;   // kamera di belakang bidang, memandang ke arah pandang potongan
+  setParalel(true); zoomSemua();
+}
+document.getElementById('seg-potongan')?.addEventListener('click', e => {
+  const t = e.target.closest('button');
+  if (!t) return;
+  if (t.dataset.pot) lihatPotongan(t.dataset.pot);
+  else if (t.dataset.pot2d) buka2D('potongan:' + t.dataset.pot2d);
+});
 function lihat(nama) {
   const t = TAMPILAN[nama];
   nav.theta = t.theta; nav.phi = t.phi;
@@ -8919,7 +8962,7 @@ panel.addEventListener('change', e => {
   try { ubahMedan(e); } finally { S.serentak = null; }
 });
 function tampilNamaProyek() { $('#nama-proyek').textContent = S.setel.nama; }
-function perbaruiKosong() { $('#kosong').hidden = S.mode === 'muat' || S.elems.size > 0; }
+function perbaruiKosong() { $('#kosong').hidden = S.mode === 'muat' || S.elems.size > 0; segarPotongan(); }
 
 /* ============ Gambar 2D ============ */
 const KERTAS = {A4: [297, 210], A3: [420, 297]};
