@@ -444,8 +444,10 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
 .bawah{padding-top:var(--space-2);min-height:48px;gap:var(--space-4);flex-wrap:nowrap}
 .petunjuk{flex:1 1 auto;font-size:13px}
 .petunjuk b{font-weight:600;color:var(--color-text);margin-right:6px}
-/* info kursor/pilihan (v0.33): benda yang akan terpilih bila diklik, atau ringkasan pilihan sekarang */
-.kursor-info{flex:0 1 auto;min-width:0;max-width:52ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--color-text);padding:4px 10px;border-radius:var(--radius-md);background:var(--color-surface);font-variant-numeric:tabular-nums}
+/* info kursor/pilihan (v0.33): benda yang akan terpilih bila diklik, atau ringkasan pilihan sekarang.
+   Lapisan di atas kanvas (bukan di bilah bawah): muncul-hilangnya teks tidak boleh mengubah ukuran kanvas, karena
+   ResizeObserver akan menggeser gambar di bawah kursor dan sasaran sorotan ikut berubah (goyang). */
+.kursor-info{position:absolute;left:10px;bottom:10px;z-index:3;pointer-events:none;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.3;color:var(--color-text);padding:4px 10px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--color-surface) 88%,transparent);box-shadow:0 1px 3px rgba(0,0,0,.12);font-variant-numeric:tabular-nums}
 .kursor-info:empty{display:none}
 .kursor-info b{font-weight:600;color:var(--color-accent)}
 .kursor-info small{font-size:12px;color:var(--rc-muted)}
@@ -555,6 +557,7 @@ body.panel-tutup{--rc-panel-w:0px}
 <main id="view">
   <canvas id="c" tabindex="0" aria-label="Kanvas gambar 3D"></canvas>
   <div id="ovl"></div>
+  <div class="kursor-info" id="kursor-info" aria-live="polite"></div>
   <div class="banner" id="banner" hidden><span id="banner-teks"></span><button type="button" data-aksi="selesai-konteks">Selesai</button></div>
   <div class="kosong" id="kosong" hidden>
     <h2>Mulai gambar bangunan</h2>
@@ -636,7 +639,6 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 <footer class="bawah">
   <div class="petunjuk" id="petunjuk"></div>
-  <div class="kursor-info" id="kursor-info" aria-live="polite"></div>
   <div class="vcb">
     <label for="vcb" id="vcb-label">Ukuran</label>
     <input id="vcb" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-describedby="petunjuk">
@@ -13760,9 +13762,10 @@ window.rancangUji = Object.freeze({
   // kursor lewat di atas titik dunia (x, y, z) pada alat Pilih; hasil: sasaran yang disorot dan teks bilah bawah
   lewat: (x, y, z) => {
     setAlat('pilih');
-    const rc = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(camera);
+    const rc = canvas.getBoundingClientRect(), v = new THREE.Vector3(x, y, z).project(camera), tinggi0 = view.clientHeight;
     alatPilih.lewat({clientX: rc.left + (v.x + 1) / 2 * rc.width, clientY: rc.top + (1 - v.y) / 2 * rc.height, buttons: 0});
-    const r = {kunci: S.sorotKursor.kunci, jumlahMesh: S.sorotKursor.tukar.length, info: $('#kursor-info').textContent};
+    // ukuran kanvas wajib tetap saat info kursor muncul; kalau berubah, gambar bergeser di bawah kursor (goyang)
+    const r = {kunci: S.sorotKursor.kunci, jumlahMesh: S.sorotKursor.tukar.length, info: $('#kursor-info').textContent, kanvasTetap: view.clientHeight === tinggi0 && view.clientWidth === rc.width};
     alatPilih.batal();
     r.bersih = S.sorotKursor.tukar.length === 0 && S.sorotKursor.kunci === null;
     return r;

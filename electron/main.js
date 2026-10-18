@@ -291,7 +291,7 @@ async function ujiAsap() {
     // v0.33: kursor lewat di atas sudut dinding D1/D2 pada alat Pilih: dinding terdepan disorot, disebut di bilah bawah, lalu bersih lagi
     await halaman(`window.rancangUji.pilih([])`);
     const sorot = await halaman(`window.rancangUji.lewat(4, 1.5, 1.5)`);
-    catat('sorotan kursor alat Pilih', /^D[12]$/.test(sorot.kunci) && sorot.jumlahMesh > 0 && new RegExp('Dinding ' + sorot.kunci).test(sorot.info) && sorot.bersih, sorot);
+    catat('sorotan kursor alat Pilih', /^D[12]$/.test(sorot.kunci) && sorot.jumlahMesh > 0 && new RegExp('Dinding ' + sorot.kunci).test(sorot.info) && sorot.bersih && sorot.kanvasTetap, sorot);
     // v0.33: panel Properti plafon: lebar X diketik → alas diskalakan dari sisi barat; perluas 0,2 → semua sisi keluar 0,2
     const rp = await metode.terapkan({perubahan: [{id: 'P1', data: {jenis: 'plafon', nama: 'Plafon uji', alas: [{x: 0, y: 0}, {x: 4, y: 0}, {x: 4, y: 3}, {x: 0, y: 3}], z0: 3, bahan: 'grc', rangka: 'hollow'}}]});
     catat('buat plafon uji', rp && rp.ok, {r: rp});
