@@ -8209,6 +8209,7 @@ function htmlPlafon(id, d) {
     ${medanAngka('l-z0', 'Elevasi plafon (m)', d.z0 || 0)}
     ${medanCatatan('l-catatan', d.catatan)}
   </div></section>
+  ${htmlUkuranAlas('l', d)}
   <section><h2>Ukuran untuk RAB</h2><dl class="ukur">
     ${baris('Luas plafon', 'luasPlafon', 'm²')}${baris('Lis plafon', 'lisPlafon', 'm')}
     <dt>Lembar panel ${fmt(lembarPlafonDari(d)[0])} × ${fmt(lembarPlafonDari(d)[1])} (+5%)</dt><dd><span data-u="lembarPlafon"></span><small>lembar</small></dd>
@@ -8631,6 +8632,55 @@ $('#btn-ulang').addEventListener('click', ulangi);
 function segarPilihan() { if (S.muka && !(S.sel.size === 1 && S.sel.has(S.muka.id))) S.muka = null; bangunSemua(); S.panelKunci = ''; renderPanel(true); tulisInfoKursor(infoPilihan()); minta(); }
 const baris = (label, kunci, satuan) => `<dt>${label}</dt><dd><span data-u="${kunci}"></span><small>${satuan}</small></dd>`;
 const dis = () => (S.bisaUbah ? '' : 'disabled');
+/* ---- Ukuran alas di panel Properti (v0.33): lebar/panjang kotak pembatas dan perluas merata, untuk plafon (P) dan lantai/volume (V) ---- */
+// Pengguna mengetik ukuran baru: alas diskalakan dari sisi yang dipilih tetap; "Perluas semua sisi" memakai offsetPoligon.
+const JANGKAR_ALAS = {x: 'barat', y: 'selatan'};
+function kotakAlas(alas) {
+  const xs = alas.map(q => q.x), ys = alas.map(q => q.y), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  return {x0, x1, y0, y1, lebar: r2(x1 - x0), panjang: r2(y1 - y0)};
+}
+function htmlUkuranAlas(aw, d) {
+  if (!Array.isArray(d.alas) || d.alas.length < 3 || d.bentuk) return '';
+  const k = kotakAlas(d.alas), pil = (id, nilai, obj) => `<select id="${id}" ${dis()}>${Object.entries(obj).map(([v, t]) => `<option value="${v}" ${v === nilai ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+  return `<section><h2>Ukuran alas</h2><div class="medan">
+    ${medanAngka(aw + '-lebarx', 'Lebar arah X (m)', k.lebar)}
+    ${medanAngka(aw + '-panjangy', 'Panjang arah Y (m)', k.panjang)}
+    <label for="${aw}-tetapx">Sisi X yang tetap</label>${pil(aw + '-tetapx', JANGKAR_ALAS.x, {barat: 'Barat (kiri)', tengah: 'Tengah', timur: 'Timur (kanan)'})}
+    <label for="${aw}-tetapy">Sisi Y yang tetap</label>${pil(aw + '-tetapy', JANGKAR_ALAS.y, {selatan: 'Selatan (bawah)', tengah: 'Tengah', utara: 'Utara (atas)'})}
+    ${medanAngka(aw + '-perluas', 'Perluas semua sisi (m)', 0)}
+  </div><p class="meta">Ketik lebar atau panjang baru lalu Enter: alas diskalakan dari sisi yang tetap (${d.alas.length} titik ikut). Perluas: angka plus keluar, minus ke dalam, merata di semua sisi. Ctrl+Z mengembalikan.</p></section>`;
+}
+// Menangani isian Ukuran alas; mengembalikan true bila medan itu miliknya
+function ubahUkuranAlas(id, d, f, t) {
+  if (!['lebarx', 'panjangy', 'tetapx', 'tetapy', 'perluas'].includes(f)) return false;
+  if (f === 'tetapx' || f === 'tetapy') { JANGKAR_ALAS[f === 'tetapx' ? 'x' : 'y'] = t.value; return true; }
+  if (!Array.isArray(d.alas) || d.bentuk) return true;
+  const b = salin(d), k = kotakAlas(d.alas), v = angka(t.value);
+  const petaTitik = fn => { b.alas = d.alas.map(q => fn(q)); if (Array.isArray(d.lubang)) b.lubang = d.lubang.map(c => c.map(q => fn(q))); };
+  if (f === 'perluas') {
+    if (!Number.isFinite(v) || v === 0) return true;
+    if (Math.abs(v) > 5) return tolakAngka('Perluas antara -5 dan 5 m.'), true;
+    let p = d.alas.map(q => [q.x, q.y]);
+    const searah = luasBertanda(p) >= 0;
+    if (!searah) p = p.slice().reverse();
+    let r = offsetPoligon(p, v);
+    if (!r) return tolakAngka('Alas tidak bisa diperluas/dikecilkan sejauh itu.'), true;
+    if (!searah) r = r.reverse();
+    b.alas = r.map(([x, y]) => ({x: r2(x), y: r2(y)}));
+  } else {
+    if (!(v >= 0.05)) return tolakAngka('Isi ukuran minimal 0,05 m.'), true;
+    const sumbuX = f === 'lebarx', lama = sumbuX ? k.lebar : k.panjang;
+    if (lama < 1e-6) return tolakAngka('Alas terlalu tipis untuk diskalakan.'), true;
+    const s = v / lama, j = sumbuX ? JANGKAR_ALAS.x : JANGKAR_ALAS.y;
+    const acuan = sumbuX ? (j === 'timur' ? k.x1 : j === 'tengah' ? (k.x0 + k.x1) / 2 : k.x0) : (j === 'utara' ? k.y1 : j === 'tengah' ? (k.y0 + k.y1) / 2 : k.y0);
+    petaTitik(q => (sumbuX ? {...q, x: r2(acuan + (q.x - acuan) * s)} : {...q, y: r2(acuan + (q.y - acuan) * s)}));
+  }
+  if (!sah(b)) return tolakAngka('Hasilnya bukan alas yang sah.'), true;
+  terapkan([{id, sesudah: b}]);
+  const kb = kotakAlas(b.alas);
+  toast(`${namaJenis(b)} ${idTampil(id)}: ${fmt(kb.lebar)} × ${fmt(kb.panjang)} m. Ctrl+Z mengembalikan.`);
+  return true;
+}
 function medanAngka(id, label, nilai) {
   return `<label for="${id}">${label}</label><input id="${id}" type="text" inputmode="decimal" value="${esc(fmtIsi(nilai))}" ${dis()}>`;
 }
@@ -8732,7 +8782,7 @@ function htmlLantai(id, d) {
   const isi = `<label for="p-lantai">Jenis lantai</label><select id="p-lantai" ${dis()}><option value="" ${d.lantai ? '' : 'selected'}>Bukan lantai</option>${opsi(d.lantai || '', JENIS_LANTAI)}</select>`
     + (d.lantai ? `<label for="p-penutupLantai">Penutup lantai</label><select id="p-penutupLantai" ${dis()}>${opsi(d.penutupLantai || BAWAAN_LANTAI[d.lantai].penutup, PENUTUP_LANTAI)}</select>`
       + medanAngka('p-peil', 'Peil atas lantai (m)', r2((d.z0 || 0) + (d.tinggi || 0))) : '');
-  return `<section><h2>Lantai</h2><div class="medan">${isi}</div>
+  return htmlUkuranAlas('p', d) + `<section><h2>Lantai</h2><div class="medan">${isi}</div>
     <p class="meta">${d.lantai ? 'Warna 3D, pola keramik di denah, dan baris RAB mengikuti jenis dan penutup ini.' : 'Tandai sebagai lantai agar warna, pola keramik, dan RAB-nya terpisah per jenis.'} Pecah per ruang memotong lantai ini mengikuti dinding.</p>
     <div class="aksi-panel">${d.bentuk || !pemotongLantai(d).length ? '' : tombol('pecah-lantai', 'Pecah per ruang')}</div></section>`
     + ((d.mukaHapus || []).length ? `<section><h2>Muka dibuang</h2><p class="meta">${d.mukaHapus.map(namaMuka).join(', ')}. Klik volume yang sudah terpilih untuk memilih satu muka, lalu Delete.</p><div class="aksi-panel">${tombol('kembalikan-muka', 'Kembalikan semua muka')}</div></section>` : '');
@@ -9502,6 +9552,7 @@ function ubahMedan(e) {
   if ((awal === 'x' && d.jenis === 'potong') || (awal === 'n' && d.jenis === 'anotasi')) return ubahPenanda(id, d, awal, f, t);
   if ((awal === 'h' && d.jenis === 'bidang') || (awal === 'j' && d.jenis === 'batang')) return ubahBidangBatang(id, d, awal, f, t);
   if (awal === 'u' && d.jenis === 'sapuan') return ubahSapuan(id, d, f, t);
+  if ((awal === 'l' || awal === 'p') && ['plafon', 'volume'].includes(/** @type {any} */ (d).jenis) && ubahUkuranAlas(id, d, f, t)) return;
   if (awal === 'l' && d.jenis === 'plafon') {
     const b = salin(d);
     if (f === 'nama') b.nama = t.value.trim() || d.nama;
@@ -13698,6 +13749,14 @@ window.rancangAPI = Object.freeze({
 // Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
 window.rancangUji = Object.freeze({
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
+  // isi satu medan panel Properti lalu picu 'change' seperti pengguna menekan Enter; hasil: elemen terpilih sesudahnya
+  isiMedan: (idMedan, nilai) => {
+    const el = /** @type {HTMLInputElement | null} */ (panel.querySelector('#' + idMedan));
+    if (!el) return {galat: 'medan ' + idMedan + ' tidak ada'};
+    el.value = String(nilai); el.dispatchEvent(new Event('change', {bubbles: true}));
+    const id = [...S.sel][0];
+    return {id, data: id ? ambil(id) : null};
+  },
   // kursor lewat di atas titik dunia (x, y, z) pada alat Pilih; hasil: sasaran yang disorot dan teks bilah bawah
   lewat: (x, y, z) => {
     setAlat('pilih');

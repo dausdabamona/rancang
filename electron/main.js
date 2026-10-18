@@ -292,6 +292,16 @@ async function ujiAsap() {
     await halaman(`window.rancangUji.pilih([])`);
     const sorot = await halaman(`window.rancangUji.lewat(4, 1.5, 1.5)`);
     catat('sorotan kursor alat Pilih', /^D[12]$/.test(sorot.kunci) && sorot.jumlahMesh > 0 && new RegExp('Dinding ' + sorot.kunci).test(sorot.info) && sorot.bersih, sorot);
+    // v0.33: panel Properti plafon: lebar X diketik → alas diskalakan dari sisi barat; perluas 0,2 → semua sisi keluar 0,2
+    const rp = await metode.terapkan({perubahan: [{id: 'P1', data: {jenis: 'plafon', nama: 'Plafon uji', alas: [{x: 0, y: 0}, {x: 4, y: 0}, {x: 4, y: 3}, {x: 0, y: 3}], z0: 3, bahan: 'grc', rangka: 'hollow'}}]});
+    catat('buat plafon uji', rp && rp.ok, {r: rp});
+    await halaman(`window.rancangUji.pilih(['P1'])`);
+    const u1 = await halaman(`window.rancangUji.isiMedan('l-lebarx', '6')`);
+    const xs1 = u1.data && u1.data.alas.map(q => q.x);
+    catat('ukuran alas: lebar X diketik', !!xs1 && Math.min(...xs1) === 0 && Math.max(...xs1) === 6, {alas: u1.data && u1.data.alas});
+    const u2 = await halaman(`window.rancangUji.isiMedan('l-perluas', '0,2')`);
+    const xs2 = u2.data && u2.data.alas.map(q => q.x), ys2 = u2.data && u2.data.alas.map(q => q.y);
+    catat('ukuran alas: perluas semua sisi', !!xs2 && Math.min(...xs2) === -0.2 && Math.max(...xs2) === 6.2 && Math.min(...ys2) === -0.2 && Math.max(...ys2) === 3.2, {alas: u2.data && u2.data.alas});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;
