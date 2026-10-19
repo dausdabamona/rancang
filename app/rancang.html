@@ -7996,7 +7996,8 @@ function atapGeom(d) {
             const denahLain = kotakDenahPotong(o.e);
             if (bawah.length) { try { const lindung = PC.difference([denahSaya], [denahLain]); if (lindung.length) bawah = PC.difference(bawah, lindung); } catch { /* biarkan */ } }
             const atas = potongSetengah(ring, (x, y) => -fz(x, y), -0.01);
-            if (atas.length >= 3 && Math.abs(luas2D(atas)) > 1e-4) {
+            // hanya bila kedua bidang benar-benar bersilang; overstek yang seluruhnya di atas atap lain (teritis di atas atap sandar) tetap utuh
+            if (atas.length >= 3 && Math.abs(luas2D(atas)) > 1e-4 && Math.min(...ring.map(([x, y]) => fz(x, y))) < -0.01) {
               try { for (const p of PC.difference(PC.intersection([atas], [denahLain]), [denahSaya])) if (Math.abs(luas2D(bukaCincin(p[0]))) > 1e-4) buang.push(p); } catch { /* biarkan */ }
             }
           }
@@ -8010,7 +8011,7 @@ function atapGeom(d) {
     for (const poly of hasil) {
       const ring = bukaCincin(poly[0]);
       if (ring.length < 3 || Math.abs(luas2D(ring)) < 0.01) continue;
-      permukaan.push({jenis: 'atap', titik: ring.map(([x, y]) => [x, y, zBidang(t, n, x, y)]), dipotong: true});
+      permukaan.push({jenis: 'atap', titik: ring.map(([x, y]) => [x, y, zBidang(t, n, x, y)]), dipotong: true, ...(f.tepiDenah != null ? {tepiDenah: f.tepiDenah} : {})});
     }
   }
   const ukur = {...g.ukur, luasPenutup: permukaan.filter(p => p.jenis === 'atap').reduce((s, p) => s + luas3D(p.titik), 0)};
