@@ -650,7 +650,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 - G (grup): `{"nama":"Rumah","induk":null}`. Elemen masuk grup lewat isian `grup`.
 - K (komponen): `{"nama":"Kloset","elemen":[…data elemen lokal…]}`; dipasang lewat instance. Komponen sanitair bawaan (alat Sanitair, tombol Z) memakai `"sanitair":"klosetJongkok"` (kunci: klosetJongkok, klosetDuduk, bakMandi, kran, wastafel, shower, floorDrain, ember); volume utamanya bertanda `"sanitair"` (dihitung 1 unit di RAB, divisi Pekerjaan Sanitair), bagian lain `"tanpaRab":true`. Titik asal di tengah alas, +y lokal = sisi belakang; kran dipasang pada z0 0,6 dengan titik asal di muka dinding.
-- T (tipe kusen): `{"kode":"P1","untuk":"pintu","nama":"Pintu panil","daun":1,"isi":"panil6","buka":"kiri","profil":0.06,"boven":{"tinggi":0.4,"kolom":2,"baris":1}}`. isi: panil6, kaca, polos, jalusi, kosong (tanpa daun, kusen saja); buka: kiri, kanan, kupu, tetap. Berlaku untuk semua bukaan berkode sama.
+- T (tipe kusen): `{"kode":"P1","untuk":"pintu","nama":"Pintu panil","daun":1,"isi":"panil6","buka":"kiri","profil":0.06,"boven":{"tinggi":0.4,"kolom":2,"baris":1}}`. isi: panil6, kaca, polos, jalusi, kosong (tanpa daun, kusen saja); buka: kiri, kanan, kupu, tetap; boven.isi: kaca (bawaan) atau jalusi. Bukaan berkusen yang bersentuhan di dinding yang sama otomatis berbagi satu tiang/ambang (kusen gabung: pintu + jendela + angin-angin dalam satu rangka). Berlaku untuk semua bukaan berkode sama.
 
 ## Kebiasaan yang baik
 
@@ -1016,7 +1016,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  */
 /**
  * T — tipe kusen (koleksi `kusen`) untuk pasangan (kode, untuk).
- * @typedef {{kode: string, untuk: 'pintu' | 'jendela', daun: number, isi: string, boven?: {tinggi: number, kolom?: number, baris?: number} | null,
+ * @typedef {{kode: string, untuk: 'pintu' | 'jendela', daun: number, isi: string, boven?: {tinggi: number, kolom?: number, baris?: number, isi?: 'kaca' | 'jalusi'} | null,
  *   buka?: string, kolom?: number, baris?: number, profil?: number, nama?: string, catatan?: string, diubahOleh?: string, diubahPada?: string}} TipeKusen
  */
 /** Dokumen apa pun yang bisa dirujuk lewat id. @typedef {ElemenRancang | Grup | Komponen | TipeKusen} DokumenRancang */
@@ -2927,34 +2927,61 @@ function infoArahPintu(b) {
   const engsel = daun.length > 1 ? 'dua daun, engsel di kedua sisi' : daun.length ? 'di ' + ujung(daun[0].engsel) : 'tanpa daun';
   return {sisi, oto, ke: arahVektor(-uy * sisi, ux * sisi), plus: arahVektor(-uy, ux), minus: arahVektor(uy, -ux), engsel, dalamOto: arahBukaPintu({}, w)};
 }
-function polaKusen(t, W, H, balik) {
+/**
+ * Kusen bersambung (19/10/2026): bukaan berkusen yang bersentuhan di dinding yang sama (selisih ≤ 1 cm) berbagi satu tiang/ambang.
+ * Sisi dilepas bila tetangga di sisi itu menutup seluruh tinggi (atau lebar) bukaan ini; bila saling menutup (sama tinggi/lebar),
+ * tiang dipegang bukaan di awal dinding dan ambang dipegang bukaan di bawah.
+ * @param {any} b bukaan
+ * @param {any[]} [semua] bukaan sedinding
+ * @returns {{kiri: boolean, kanan: boolean, atas: boolean, bawah: boolean}}
+ */
+function sisiRangkai(b, semua) {
+  const r = {kiri: false, kanan: false, atas: false, bawah: false}, e = 0.01;
+  const za = b.ambang || 0, zt = za + b.tinggi, u0 = b.jarak, u1 = b.jarak + b.lebar;
+  for (const x of semua || []) {
+    const xa = x.ambang || 0, xt = xa + x.tinggi, x0 = x.jarak, x1 = x.jarak + x.lebar;
+    if (x === b || (Math.abs(x0 - u0) < 1e-6 && Math.abs(x1 - u1) < 1e-6 && Math.abs(xa - za) < 1e-6 && Math.abs(xt - zt) < 1e-6) || !tipeKusen(x)) continue;
+    const tutupZ = xa <= za + e && xt >= zt - e, ditutupZ = za <= xa + e && zt >= xt - e;
+    const tutupU = x0 <= u0 + e && x1 >= u1 - e, ditutupU = u0 <= x0 + e && u1 >= x1 - e;
+    if (Math.abs(x1 - u0) <= e && tutupZ) r.kiri = true;
+    if (Math.abs(x0 - u1) <= e && tutupZ && !ditutupZ) r.kanan = true;
+    if (Math.abs(xt - za) <= e && tutupU) r.bawah = true;
+    if (Math.abs(xa - zt) <= e && tutupU && !ditutupU) r.atas = true;
+  }
+  return r;
+}
+function polaKusen(t, W, H, balik, sisi) {
   const r = {kayu: [], kaca: [], panil: [], garis: [], daun: [], gagang: [], batas: [0], bt: 0};
   const kotak = (arr, u0, z0, u1, z1, jenis) => { if (u1 - u0 > 1e-4 && z1 - z0 > 1e-4) arr.push({u0, z0, u1, z1, jenis}); };
   const pf = batas(t.profil ?? 0.06, 0.02, Math.max(0.02, Math.min(W, H) / 5));
   const pintu = t.untuk === 'pintu', n = Math.max(1, Math.min(8, t.daun | 0 || 1));
-  kotak(r.kayu, 0, 0, pf, H, 'kusen'); kotak(r.kayu, W - pf, 0, W, H, 'kusen'); kotak(r.kayu, pf, H - pf, W - pf, H, 'kusen');
-  const zBawah = pintu ? 0 : pf;
-  if (!pintu) kotak(r.kayu, pf, 0, W - pf, pf, 'kusen');
+  // kusen bersambung (sisi): tiang/ambang yang dipakai bersama bukaan tetangga tidak digambar dua kali
+  const sk = sisi || {}, L0 = sk.kiri ? 0 : pf, R0 = sk.kanan ? W : W - pf, T0 = sk.atas ? H : H - pf;
+  if (!sk.kiri) kotak(r.kayu, 0, 0, pf, H, 'kusen');
+  if (!sk.kanan) kotak(r.kayu, W - pf, 0, W, H, 'kusen');
+  if (!sk.atas) kotak(r.kayu, L0, H - pf, R0, H, 'kusen');
+  const zBawah = pintu || sk.bawah ? 0 : pf;
+  if (!pintu && !sk.bawah) kotak(r.kayu, L0, 0, R0, pf, 'kusen');
   const bt = t.boven && t.boven.tinggi > 0 && H - t.boven.tinggi - zBawah > 0.25 ? Math.min(t.boven.tinggi, H - 0.25) : 0;
   r.bt = bt;
   const zAmbang = H - bt;
-  if (bt) kotak(r.kayu, pf, zAmbang - pf / 2, W - pf, zAmbang + pf / 2, 'kusen');
-  const zd1 = bt ? zAmbang - pf / 2 : H - pf;
+  if (bt) kotak(r.kayu, L0, zAmbang - pf / 2, R0, zAmbang + pf / 2, 'kusen');
+  const zd1 = bt ? zAmbang - pf / 2 : T0;
   // jendela: tiang kusen di as modul W / n (seperti ukuran di daftar kusen); pintu: daun rapat dibagi rata
-  const tiang = !pintu && n > 1, dw = (W - 2 * pf) / n;
+  const tiang = !pintu && n > 1, dw = (R0 - L0) / n;
   if (dw <= 0.05) return r;
   for (let i = 0; i < n; i++) {
-    const a = tiang ? (i === 0 ? pf : i * W / n + pf / 2) : pf + i * dw;
-    const b = tiang ? (i === n - 1 ? W - pf : (i + 1) * W / n - pf / 2) : a + dw;
+    const a = tiang ? (i === 0 ? L0 : i * W / n + pf / 2) : L0 + i * dw;
+    const b = tiang ? (i === n - 1 ? R0 : (i + 1) * W / n - pf / 2) : a + dw;
     if (i < n - 1) {
       const as = tiang ? (i + 1) * W / n : b;
       // tiang di antara daun: jendela setinggi kusen; pintu hanya di bovenlicht
-      if (tiang) kotak(r.kayu, as - pf / 2, zBawah, as + pf / 2, H - pf, 'kusen');
-      else if (bt) kotak(r.kayu, as - pf / 2, zAmbang + pf / 2, as + pf / 2, H - pf, 'kusen');
+      if (tiang) kotak(r.kayu, as - pf / 2, zBawah, as + pf / 2, T0, 'kusen');
+      else if (bt) kotak(r.kayu, as - pf / 2, zAmbang + pf / 2, as + pf / 2, T0, 'kusen');
       r.batas.push(as);
     }
     // tanpa daun: hanya kusen (dan bovenlicht bila ada); tidak ada daun, gagang, atau busur buka
-    if (t.isi === 'kosong') { if (bt) isiDaun(r, kotak, 'kaca', t.boven.kolom || 1, t.boven.baris || 1, a, zAmbang + pf / 2, b, H - pf, false); continue; }
+    if (t.isi === 'kosong') { if (bt) isiDaun(r, kotak, t.boven.isi === 'jalusi' ? 'jalusi' : 'kaca', t.boven.kolom || 1, t.boven.baris || 1, a, zAmbang + pf / 2, b, T0, false); continue; }
     let engsel = t.buka || (pintu ? 'kiri' : 'kupu');
     if (engsel === 'kupu') engsel = n === 1 ? 'kiri' : (i < n / 2 ? 'kiri' : 'kanan');
     if (balik && engsel !== 'tetap') engsel = engsel === 'kiri' ? 'kanan' : 'kiri';
@@ -2964,7 +2991,7 @@ function polaKusen(t, W, H, balik) {
     [r.kayu, r.kaca, r.panil, r.garis].forEach((arr, k) => { for (let j = jumlah[k]; j < arr.length; j++) arr[j].daun = i; });
     r.daun.push({u0: a, u1: b, z0: zBawah, z1: zd1, engsel});
     if (pintu && engsel !== 'tetap') { const gg = [engsel === 'kiri' ? b - 0.07 : a + 0.07, Math.min(1.0, (zd1 - zBawah) * 0.48) + zBawah]; gg.daun = i; r.gagang.push(gg); }
-    if (bt) isiDaun(r, kotak, 'kaca', t.boven.kolom || 1, t.boven.baris || 1, a, zAmbang + pf / 2, b, H - pf, false);
+    if (bt) isiDaun(r, kotak, t.boven.isi === 'jalusi' ? 'jalusi' : 'kaca', t.boven.kolom || 1, t.boven.baris || 1, a, zAmbang + pf / 2, b, T0, false);
   }
   r.batas.push(W);
   return r;
@@ -2998,8 +3025,8 @@ function isiDaun(r, kotak, isi, kolom, baris, u0, z0, u1, z1, daun) {
   }
 }
 // 3D: satu mesh kayu, satu mesh kaca, dan satu garis per bukaan. P(u, n) = titik dunia di dinding.
-function bangunKusen(g, pid, tp, P, u0, z0, W, H, tebalDinding, kayu, tepi, buka) {
-  const pola = polaKusen(tp, W, H, buka && buka.balik);
+function bangunKusen(g, pid, tp, P, u0, z0, W, H, tebalDinding, kayu, tepi, buka, sisi) {
+  const pola = polaKusen(tp, W, H, buka && buka.balik, sisi);
   // pintu digambar sedikit terbuka (25°) ke sisi buka, berputar pada engsel tiap daun
   const putar = (k, u, n) => {
     const dn = k == null || !buka || tp.untuk !== 'pintu' ? null : pola.daun[k];
@@ -3112,7 +3139,7 @@ function bangunDinding(g, id, d, mat, tepi, f, kunci) {
     if (S.kilat.has(pid) || f.kilat) wp = campur(wp, T.claude, 0.5); else if (S.sel.has(pid) || f.dipilih) wp = campur(wp, T.select, 0.5);
     if (f.redup) wp = campur(wp, T.sceneBg, 0.6);
     const buka = pintu ? {sisi: arahBukaPintu(b, d), balik: !!b.balikEngsel} : null;
-    if (tp) { bangunKusen(g, pid || id, tp, P, b.s, z0 + zb, b.e - b.s, zt - zb, d.tebal, wp, tepi, buka); continue; }
+    if (tp) { bangunKusen(g, pid || id, tp, P, b.s, z0 + zb, b.e - b.s, zt - zb, d.tebal, wp, tepi, buka, sisiRangkai(b, d._buk)); continue; }
     // pintu polos: daun terbuka 25° pada engselnya
     let [x1, y1] = P(b.s, 0), [x2, y2] = P(b.e, 0);
     if (pintu) {
@@ -9446,7 +9473,7 @@ function htmlTipeKusen(b) {
     ${kaca ? medanBulat('t-kolom', 'Kotak kaca per daun: kolom', tp.kolom || 1) + medanBulat('t-baris', 'Kotak kaca per daun: baris', tp.baris || 1) : ''}
     <label for="t-buka">Bukaan daun</label><select id="t-buka" ${dis()}>${opsi(tp.buka || 'kiri', BUKA_DAUN)}</select>
     ${medanAngka('t-boventinggi', 'Tinggi bovenlicht (m, 0 = tanpa)', bt)}
-    ${bt ? medanBulat('t-bovenkolom', 'Bovenlicht per daun: kolom', tp.boven.kolom || 1) + medanBulat('t-bovenbaris', 'Bovenlicht per daun: baris', tp.boven.baris || 1) : ''}
+    ${bt ? `<label for="t-boveni">Isi bovenlicht</label><select id="t-boveni" ${dis()}>${opsi(tp.boven.isi === 'jalusi' ? 'jalusi' : 'kaca', {kaca: 'Kaca', jalusi: 'Jalusi (sirip)'})}</select>` + medanBulat('t-bovenkolom', 'Bovenlicht per daun: kolom', tp.boven.kolom || 1) + medanBulat('t-bovenbaris', 'Bovenlicht per daun: baris', tp.boven.baris || 1) : ''}
     ${medanAngka('t-profil', 'Lebar profil kusen (m)', tp.profil ?? 0.06)}
   </div><p class="meta">Dipakai ${n} ${jenis} berkode ${esc(tp.kode)}. Mengubah tipe ini mengubah semuanya. Pola mengikuti ukuran bukaan.</p>
   <div class="aksi-panel">${tombol('hapus-kusen', 'Hapus tipe kusen', 'bahaya')}</div></section>`;
@@ -10106,6 +10133,7 @@ function ubahMedan(e) {
     const b = salin(tp);
     if (f === 'nama') b.nama = t.value.trim();
     else if (f === 'isi' || f === 'buka') b[f] = t.value;
+    else if (f === 'boveni') { if (!b.boven) return; b.boven = {...b.boven, isi: t.value === 'jalusi' ? 'jalusi' : 'kaca'}; }
     else {
       const v = angka(t.value);
       if (f === 'daun' || f === 'kolom' || f === 'baris' || f === 'bovenkolom' || f === 'bovenbaris') {
@@ -10281,7 +10309,7 @@ function kumpulBenda(geos, Dp, Hh) {
         const zb = batas(b.ambang || 0, 0, Ht), zt = batas((b.ambang || 0) + b.tinggi, 0, Ht);
         if (zb > 1e-6) prismaL.push({p: kotak(b.s, b.e), z0, h: zb, bahan: 'dinding', tanpaMuka: true});
         if (Ht - zt > 1e-6) prismaL.push({p: kotak(b.s, b.e), z0: z0 + zt, h: Ht - zt, bahan: 'dinding', tanpaMuka: true});
-        for (const n of [-t, t]) { const [ax, ay] = P(b.s, n), [bx, by] = P(b.e, n); bukL.push({tipe: b.tipe, tp: tipeKusen(b), kus: {be: !!b.balikEngsel, P, n, s: b.s, W: b.e - b.s, z0: z0 + zb, H: zt - zb}, titik: [[ax, ay, z0 + zb], [bx, by, z0 + zb], [bx, by, z0 + zt], [ax, ay, z0 + zt]]}); }
+        for (const n of [-t, t]) { const [ax, ay] = P(b.s, n), [bx, by] = P(b.e, n); bukL.push({tipe: b.tipe, tp: tipeKusen(b), kus: {be: !!b.balikEngsel, sisi: sisiRangkai(b, g._buk), P, n, s: b.s, W: b.e - b.s, z0: z0 + zb, H: zt - zb}, titik: [[ax, ay, z0 + zb], [bx, by, z0 + zb], [bx, by, z0 + zt], [ax, ay, z0 + zt]]}); }
         u = Math.max(u, b.e);
       }
       if (L + t > u + 1e-6) prismaL.push({p: kotak(u, L + t), z0, h: Ht, bahan: 'dinding', tanpaMuka: true});
@@ -11481,7 +11509,7 @@ function buatSVG(o) {
             : `<polygon points="${pts(m.q)}" fill="${m.isi}" stroke="#000" stroke-width="${m.tebal}" stroke-linejoin="round"/>`);
           if (m.kusen) {
             const k = m.kusen.kus;
-            isi.push(svgKusen(polaKusen(m.kusen.tp, k.W, k.H, k.be), (u, z) => { const [x, y] = k.P(k.s + u, k.n); return [X(Hh(x, y)), Y(k.z0 + z)]; }, Math.min(1, s / 20)));
+            isi.push(svgKusen(polaKusen(m.kusen.tp, k.W, k.H, k.be, k.sisi), (u, z) => { const [x, y] = k.P(k.s + u, k.n); return [X(Hh(x, y)), Y(k.z0 + z)]; }, Math.min(1, s / 20)));
           }
         }
         isi.push(garis(X(h0 - 0.8), Y(0), X(h1 + 0.8), Y(0), 0.7));
@@ -11573,7 +11601,7 @@ function buatSVG(o) {
           const ua = pr.u(g.awal.x + ux * b.jarak, g.awal.y + uy * b.jarak), ub = pr.u(g.awal.x + ux * (b.jarak + b.lebar), g.awal.y + uy * (b.jarak + b.lebar));
           if (Math.abs(ub - ua) < 0.05) continue;
           const zb = it.z0 + (b.ambang || 0);
-          it.buk.push({u0: Math.min(ua, ub), u1: Math.max(ua, ub), zb, zt: Math.min(zb + b.tinggi, it.z1), tipe: b.tipe, tp: tipeKusen(b), balik: ub < ua, be: !!b.balikEngsel});
+          it.buk.push({u0: Math.min(ua, ub), u1: Math.max(ua, ub), zb, zt: Math.min(zb + b.tinggi, it.z1), tipe: b.tipe, tp: tipeKusen(b), balik: ub < ua, be: !!b.balikEngsel, sisi: sisiRangkai(b, g._buk)});
         }
       }
       return it;
@@ -11641,7 +11669,7 @@ function buatSVG(o) {
           if (b.tp) {
             const W = b.u1 - b.u0;
             isi.push(`<rect x="${n2(bx)}" y="${n2(by)}" width="${n2(bw)}" height="${n2(bh)}" fill="#fff" stroke="none"/>`,
-              svgKusen(polaKusen(b.tp, W, b.zt - b.zb, b.be), (u, z) => [X(b.balik ? b.u1 - u : b.u0 + u), Y(b.zb + z)], Math.min(1, s / 10)));
+              svgKusen(polaKusen(b.tp, W, b.zt - b.zb, b.be, b.sisi), (u, z) => [X(b.balik ? b.u1 - u : b.u0 + u), Y(b.zb + z)], Math.min(1, s / 10)));
           } else if (b.tipe === 'pintu') {
             isi.push(`<rect x="${n2(bx)}" y="${n2(by)}" width="${n2(bw)}" height="${n2(bh)}" fill="#F3EEE7" stroke="#000" stroke-width="0.3"/>`,
               `<circle cx="${n2(bx + bw * (b.be !== b.balik ? 0.18 : 0.82))}" cy="${n2(by + bh * 0.52)}" r="0.4" fill="#000"/>`);

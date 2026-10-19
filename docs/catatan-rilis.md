@@ -9,6 +9,8 @@ Alat untuk bangunan bertingkat (disiapkan untuk menggambar Asrama Putri dua lant
 - **Proyek contoh Asrama Putri 2 lantai** (375 elemen: struktur lengkap, 16 kamar + KM, plat lantai berlubang, tangga, atap limas kayu, kusen bertipe) — buka lewat palet Ctrl+K *Buka contoh* atau panel Proyek → *Contoh*. Berkas `contoh/asrama-putri.json` ikut dipaketkan di desktop dan artifact; perintah *Buka proyek (.json)* juga tersedia di palet.
 - **Proyek contoh Kantor Utama 2 lantai** (478 elemen: gedung 30 × 12 m, hall tengah, tangga dogleg, teras mobil, kanopi dak, atap perisai + gable, kusen bertipe; sumber PDF CV. Wahana Multikarya Consultan 2015) — `app/contoh/kantor-utama.json`, dibangkitkan `scripts/contoh-kantor-utama.py`.
 - Denah per level kini juga menyaring anotasi menurut ketinggian (teks lantai 2 tidak muncul di denah lantai 1).
+- **Kusen gabung satu rangka**: pintu, jendela, dan angin-angin yang bersentuhan di dinding yang sama otomatis berbagi satu tiang/ambang kusen (3D, tampak, potongan), tidak lagi bertiang ganda.
+- **Isi bovenlicht jalusi**: tipe kusen kini bisa memakai boven jalusi (angin-angin) selain kaca — panel Tipe kusen → *Isi bovenlicht*.
 - **Lembar denah per lantai**: bila ada dua level atau lebih yang berdinding, set lembar (daftar gambar, PDF set, DXF) memuat *Denah Lantai 1*, *Denah Lantai 2*, … masing-masing dengan kode dan kopnya sendiri; denah gabungan tetap bisa dipilih di pratinjau. Lantai 3 cukup ditambah lewat panel Proyek → *Tambah level*. MCP `gambar_2d` menerima `jenis: "denah:4"`.
 
 ## Yang baru di 0.34.0
