@@ -627,7 +627,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | S | slof | awal, akhir, b, h, z0 (dasar), tul, sengkang, fc, selimut | `{"jenis":"slof","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"b":0.15,"h":0.2,"z0":-0.31,"tul":{"n":4,"d":10,"ulir":false},"sengkang":{"d":8,"s":0.15},"fc":18.7,"selimut":0.025}` |
 | R | ringbalk | sama dengan slof | z0 = dasar ring balk |
 | F | pondasi | tipe 'batukali' (awal, akhir, lebarAtas, lebarBawah, tinggi, aanstamping, pasir, z0); 'footplat' (x, y, p, l, tebal, tulPlat{d,s,ulir}, pedestal{b,h}, puncakPedestal, tul, sengkang, fc, selimut, z0); 'umpak' (x, y, bawah, atas, tinggi, fc, z0) | `{"jenis":"pondasi","tipe":"batukali","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"lebarAtas":0.3,"lebarBawah":0.7,"tinggi":0.7,"aanstamping":0.15,"pasir":0.05,"z0":-0.31}` |
-| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar', x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa'/'penuh'/'tritisan'; bila bukan tanpa: plafonBahan dan plafonRangka seperti elemen P) ('tanpa','penuh','tritisan'), kuda{kaki,tarik,makelar,tiang,sokong,skor,gording,bubungan,klos: [lebar,tinggi] m; lisMundur (jarak ujung spandek ke lisplang, m), jarakGording, …}, lisplangSisi{kunciSisi:{pasang,bahan,tebal,tinggi,mundur,awal,akhir (m; + perpanjang, − pangkas ujung papan)}}, overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
+| A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar'/'denah' (denah bebas: alas [{x,y}…] as dinding berlawanan jarum jam, tepi [{miring: true/false, overstek}] sejajar alas — tepi i = alas[i]→alas[i+1], miring = tritisan, false = dinding/gunungan; x0..y1 = kotak pembatas alas; satu kemiringan untuk semua tritisan; Fase 1: sudut cekung di antara dua tritisan belum didukung), x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa'/'penuh'/'tritisan'; bila bukan tanpa: plafonBahan dan plafonRangka seperti elemen P) ('tanpa','penuh','tritisan'), kuda{kaki,tarik,makelar,tiang,sokong,skor,gording,bubungan,klos: [lebar,tinggi] m; lisMundur (jarak ujung spandek ke lisplang, m), jarakGording, …}, lisplangSisi{kunciSisi:{pasang,bahan,tebal,tinggi,mundur,awal,akhir (m; + perpanjang, − pangkas ujung papan)}}, satukan (false = atap tidak dipangkas dan tidak memangkas atap lain di pertemuan; bawaan otomatis, bagian di atas denah dinding sendiri menang atas overstek atap lain), overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
 | H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Plafon (peran 'plafon'): bahan, rangka, lis seperti elemen P, turun (jarak di bawah penutup atap, m); RAB-nya menyatu dengan plafon datar. Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
 | J | batang | Batang lurus 3D (kuda-kuda, gording, usuk, reng, klos): awal{x,y,z}, akhir{x,y,z}, b (lebar), h (tinggi penampang), bahan ('kayu'/'bajaringan'), peran ('kaki','tarik','makelar','tiang','sokong','skor','klos','gording','nok','usuk','reng','skor','rangka','lain'). Opsional: atas [x,y,z] (arah tinggi penampang), jangkar ('tengah' = sumbu di tengah penampang; 'atas' = sumbu di sisi atas) | `{"jenis":"batang","peran":"kaki","bahan":"kayu","awal":{"x":0,"y":0,"z":3.6},"akhir":{"x":0,"y":3,"z":5.2},"b":0.06,"h":0.12,"jangkar":"tengah"}` |
 | U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
@@ -930,7 +930,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  */
 /**
  * A — atap parametrik berdenah persegi (batas as dinding x0..x1, y0..y1). `z0` = elevasi dudukan.
- * @typedef {DasarElemen & {jenis: 'atap', bentuk: 'pelana' | 'limas' | 'sandar' | 'datar', x0: number, y0: number, x1: number, y1: number,
+ * @typedef {DasarElemen & {jenis: 'atap', bentuk: 'pelana' | 'limas' | 'sandar' | 'datar' | 'denah', alas?: Titik2[], tepi?: {miring?: boolean, overstek?: number}[], satukan?: boolean, x0: number, y0: number, x1: number, y1: number,
  *   z0?: number, kemiringan?: number, overstek?: number, arah?: 'x' | 'y' | 'utara' | 'selatan' | 'timur' | 'barat',
  *   overstekSisi?: {utara?: number, selatan?: number, timur?: number, barat?: number},
  *   penutup?: 'spandek' | 'gelombang' | 'genteng' | 'datar', rangka?: 'bajaringan' | 'kayu' | 'tanpa', jarakKuda?: number,
@@ -1182,6 +1182,8 @@ function sah(d) {
   if (d.jenis === 'tangga') return titikSah(d.awal) && Number.isFinite(d.arah) && d.lebar >= 0.3 && d.tinggi > 0 && Number.isInteger(d.jumlahAnak) && d.jumlahAnak >= 2 && d.antrede >= 0.15 && d.tebalPlat > 0;
   if (d.jenis === 'plat') return Array.isArray(d.alas) && d.alas.length >= 3 && d.alas.every(titikSah) && d.tebal > 0 && Number.isFinite(d.z0);
   if (d.jenis === 'batang') return titikSah3(d.awal) && titikSah3(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y, d.akhir.z - d.awal.z) > 0.005 && d.b > 0 && d.h > 0 && !!PERAN_BATANG[d.peran];
+  if (d.jenis === 'atap' && d.bentuk === 'denah' && !(Array.isArray(d.alas) && d.alas.length >= 3 && d.alas.length <= 64 && d.alas.every(titikSah) && Math.abs(luas2D(d.alas.map(q => [q.x, q.y]))) > 0.25
+    && (d.tepi === undefined || (Array.isArray(d.tepi) && d.tepi.length === d.alas.length && d.tepi.every(t => t && typeof t === 'object' && (t.overstek === undefined || (Number.isFinite(t.overstek) && t.overstek >= 0 && t.overstek <= 5)) && (t.kemiringan === undefined || (Number.isFinite(t.kemiringan) && t.kemiringan >= 1 && t.kemiringan <= 75))))))) return false;
   if (d.jenis === 'atap') return ['x0', 'y0', 'x1', 'y1'].every(k => Number.isFinite(d[k])) && Math.abs(d.x1 - d.x0) > 0.05 && Math.abs(d.y1 - d.y0) > 0.05 && !!BENTUK_ATAP[d.bentuk];
   if (d.jenis === 'potong') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.1 && (d.pandang === 1 || d.pandang === -1) && typeof d.nama === 'string' && !!d.nama;
   if (d.jenis === 'bantu') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.02
@@ -1213,8 +1215,10 @@ function sah(d) {
 const AWALAN = {dinding: 'D', volume: 'V', atap: 'A', bidang: 'H', batang: 'J', sapuan: 'U', kolom: 'C', slof: 'S', ringbalk: 'R', plafon: 'P', pondasi: 'F', bukaan: 'B', instance: 'I', potong: 'X', bantu: 'Q', level: 'M', anotasi: 'N', tangga: 'Y', plat: 'W'};
 // Tangga (Y) dan plat lantai beton (W) ikut keluarga struktur (v0.35): geometri, potongan, dan RAB beton lewat strukturGeom
 const STRUKTUR = new Set(['kolom', 'slof', 'ringbalk', 'pondasi', 'tangga', 'plat']);
-const BENTUK_ATAP = {pelana: 'Pelana', limas: 'Limas', sandar: 'Sandar', datar: 'Datar / dak'};
-function batasAtap(d) { return {x0: Math.min(d.x0, d.x1), x1: Math.max(d.x0, d.x1), y0: Math.min(d.y0, d.y1), y1: Math.max(d.y0, d.y1)}; }
+const BENTUK_ATAP = {pelana: 'Pelana', limas: 'Limas', sandar: 'Sandar', datar: 'Datar / dak', denah: 'Denah bebas (L/T)'};
+function batasAtap(d) {
+  if (d.bentuk === 'denah' && Array.isArray(d.alas) && d.alas.length >= 3) { const xs = d.alas.map(q => q.x), ys = d.alas.map(q => q.y); return {x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys)}; }
+  return {x0: Math.min(d.x0, d.x1), x1: Math.max(d.x0, d.x1), y0: Math.min(d.y0, d.y1), y1: Math.max(d.y0, d.y1)}; }
 // Overstek per sisi (v0.28.3): isian overstekSisi {utara, selatan, timur, barat}; sisi yang kosong ikut overstek umum.
 // Limas tetap memakai overstek umum agar jurainya tetap 45° di denah.
 function ovSisi(d) {
@@ -1223,12 +1227,242 @@ function ovSisi(d) {
   return r;
 }
 // batas luar atap termasuk overstek tiap sisi: [x0, y0, x1, y1]
-function kotakOverstek(d) { const b = batasAtap(d), o = ovSisi(d); return [b.x0 - o.barat, b.y0 - o.selatan, b.x1 + o.timur, b.y1 + o.utara]; }
+function kotakOverstek(d) {
+  if (d.bentuk === 'denah' && Array.isArray(d.alas) && d.alas.length >= 3) { const O = cincinOverstekDenah(d), xs = O.map(q => q[0]), ys = O.map(q => q[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; }
+  const b = batasAtap(d), o = ovSisi(d); return [b.x0 - o.barat, b.y0 - o.selatan, b.x1 + o.timur, b.y1 + o.utara];
+}
+/* ============ Atap denah bebas (v0.35, Fase 1): denah poligon, tiap tepi tritisan (miring) atau dinding ============ */
+// Data: bentuk 'denah', alas [{x, y}] (as dinding, berlawanan jarum jam), tepi [{miring, overstek}] sejajar alas
+// (tepi i = alas[i] → alas[i+1]). Satu kemiringan untuk semua tepi miring. x0..y1 disimpan sebagai kotak pembatas alas.
+// Permukaan = bidang terendah dari semua bidang tepi miring di tiap titik (seperti Roof by Footprint di Revit).
+// Fase 1 tepat untuk denah cembung dan denah yang sudut cekungnya menempel dinding; sudut cekung di antara
+// dua tepi miring (jurai dalam) diberi peringatan dan menunggu Fase 2.
+const atapDenahKah = d => !!d && d.jenis === 'atap' && d.bentuk === 'denah' && Array.isArray(d.alas) && d.alas.length >= 3;
+// Pastikan alas berlawanan jarum jam, tanpa titik kembar; tepi ikut dipetakan. Mengubah b di tempat.
+function normalisasiDenah(b) {
+  if (!Array.isArray(b.alas)) return b;
+  let p = b.alas.map(q => ({x: r2(q.x), y: r2(q.y)}));
+  let tp = Array.isArray(b.tepi) && b.tepi.length === p.length ? b.tepi.map(t => ({...t})) : p.map(() => ({miring: true}));
+  // buang titik kembar berurutan (tepi sepanjang nol)
+  for (let i = p.length - 1; i >= 0 && p.length > 3; i--) {
+    const j = (i + 1) % p.length;
+    if (Math.hypot(p[j].x - p[i].x, p[j].y - p[i].y) < 0.005) { p.splice(j, 1); tp.splice(i, 1); }
+  }
+  if (luas2D(p.map(q => [q.x, q.y])) < 0) {
+    const n = p.length, tb = [];
+    for (let k = 0; k < n; k++) tb.push(tp[((n - 2 - k) % n + n) % n]);
+    p = p.slice().reverse(); tp = tb;
+  }
+  b.alas = p; b.tepi = tp;
+  const xs = p.map(q => q.x), ys = p.map(q => q.y);
+  b.x0 = r2(Math.min(...xs)); b.x1 = r2(Math.max(...xs)); b.y0 = r2(Math.min(...ys)); b.y1 = r2(Math.max(...ys));
+  return b;
+}
+// Alas (larik [x, y], berlawanan jarum jam), tanda miring dan overstek tiap tepi
+function infoDenah(d) {
+  let p = d.alas.map(q => [q.x, q.y]), tp = Array.isArray(d.tepi) && d.tepi.length === p.length ? d.tepi : p.map(() => ({miring: true}));
+  if (luas2D(p) < 0) { const n = p.length; tp = p.map((_, k) => tp[((n - 2 - k) % n + n) % n]); p = p.slice().reverse(); }
+  const ovUmum = Math.max(0, d.overstek ?? 0.6), kUmum = batas(d.kemiringan ?? 30, 1, 75);
+  const rata = Number.isFinite(d.tinggiAtas) && d.tinggiAtas > (d.z0 || 0) + 0.05;
+  const tepi = tp.map((t, i) => {
+    const miring = t ? t.miring !== false : true, ov = t && Number.isFinite(t.overstek) && t.overstek >= 0 ? t.overstek : (miring ? ovUmum : 0);
+    let kemiringan = t && Number.isFinite(t.kemiringan) ? batas(t.kemiringan, 1, 75) : kUmum, bentang = null;
+    // mode tinggi atas rata: kemiringan tiap tritisan = (tinggi atas − dudukan) ÷ bentang datarnya,
+    // sehingga jurai jatuh dari sudut ke sudut dan tepi atas semua sayap setinggi
+    if (miring && rata) { bentang = bentangTepiDenah(p, i); if (bentang > 0.2) kemiringan = batas(Math.atan(((d.tinggiAtas) - (d.z0 || 0)) / bentang) * 180 / Math.PI, 1, 75); }
+    return {miring, overstek: ov, kemiringan, bentang};
+  });
+  return {p, tepi};
+}
+// Bentang datar sebuah tepi tritisan: jarak dari titik tengah tepi, tegak lurus ke dalam, sampai keluar denah
+function bentangTepiDenah(p, i) {
+  const n = p.length, a = p[i], b = p[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  if (L < 1e-6) return 0;
+  const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+  let tMin = Infinity;
+  for (let k = 0; k < n; k++) {
+    if (k === i) continue;
+    const c = p[k], e = p[(k + 1) % n], ex = e[0] - c[0], ey = e[1] - c[1], den = nx * ey - ny * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((c[0] - mx) * ey - (c[1] - my) * ex) / den, u = ((c[0] - mx) * ny - (c[1] - my) * nx) / den;
+    if (t > 1e-6 && u >= -1e-9 && u <= 1 + 1e-9) tMin = Math.min(tMin, t);
+  }
+  return Number.isFinite(tMin) ? tMin : 0;
+}
+// Geser tiap tepi poligon (berlawanan jarum jam) ke luar sejauh dd[i]; sudut = perpotongan garis tepi bersebelahan
+function geserPoligon2D(p, dd) {
+  const n = p.length, garis = p.map((a, i) => {
+    const b = p[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, ox = ey, oy = -ex;
+    return {x: a[0] + ox * (dd[i] || 0), y: a[1] + oy * (dd[i] || 0), ex, ey, ox, oy};
+  });
+  const r = [];
+  for (let i = 0; i < n; i++) {
+    const A = garis[(i - 1 + n) % n], B = garis[i], cr = A.ex * B.ey - A.ey * B.ex;
+    if (Math.abs(cr) < 1e-9) {
+      r.push([p[i][0] + A.ox * (dd[(i - 1 + n) % n] || 0), p[i][1] + A.oy * (dd[(i - 1 + n) % n] || 0)]);
+      const q = [p[i][0] + B.ox * (dd[i] || 0), p[i][1] + B.oy * (dd[i] || 0)];
+      if (Math.hypot(q[0] - r[r.length - 1][0], q[1] - r[r.length - 1][1]) > 1e-6) r.push(q);
+      continue;
+    }
+    const t = ((B.x - A.x) * B.ey - (B.y - A.y) * B.ex) / cr;
+    r.push([A.x + A.ex * t, A.y + A.ey * t]);
+  }
+  return r;
+}
+// Cincin luar atap denah (termasuk overstek tiap tepi), larik [x, y]
+function cincinOverstekDenah(d) { const {p, tepi} = infoDenah(d); return geserPoligon2D(p, tepi.map(t => t.overstek)); }
+// Sudut cekung di antara dua tepi miring: belum bisa dibentuk jurai dalamnya di Fase 1
+function sudutCekungDenah(d) {
+  if (!atapDenahKah(d)) return [];
+  const {p, tepi} = infoDenah(d), n = p.length, r = [];
+  for (let i = 0; i < n; i++) {
+    const a = p[(i - 1 + n) % n], b = p[i], c = p[(i + 1) % n];
+    const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    if (cr < -1e-9 && tepi[(i - 1 + n) % n].miring && tepi[i].miring) r.push({i, x: b[0], y: b[1]});
+  }
+  return r;
+}
+// Isi permukaan atap denah: bidang tiap tepi miring (bagian tempat bidang itu terendah) dan dinding gunung di tepi dinding
+function isiAtapDenah(d, z0, tn, permukaan, u) {
+  const {p, tepi} = infoDenah(d), n = p.length;
+  const O = geserPoligon2D(p, tepi.map(t => t.overstek));
+  // bidang tepi miring i: z = z0 + tn × jarak ke dalam dari garis tepi → z = A x + B y + C
+  const bidang = [];
+  for (let i = 0; i < n; i++) {
+    if (!tepi[i].miring) continue;
+    const a = p[i], b = p[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 1e-6) continue;
+    const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;   // normal ke dalam (kiri) untuk poligon berlawanan jarum jam
+    const ti = Math.tan(tepi[i].kemiringan * Math.PI / 180);   // kemiringan per tepi (Fase 1b)
+    bidang.push({i, A: ti * nx, B: ti * ny, C: z0 - ti * (a[0] * nx + a[1] * ny)});
+  }
+  const zMin = (x, y) => (bidang.length ? Math.min(...bidang.map(q => q.A * x + q.B * y + q.C)) : z0);
+  const PC = typeof polygonClipping !== 'undefined' ? polygonClipping : null;
+  const luasO = Math.abs(luas2D(O));
+  u.luasProyeksi = luasO;
+  if (!bidang.length || !PC) {
+    // tanpa tepi miring: atap datar setinggi dudukan
+    permukaan.push({jenis: 'atap', titik: O.map(([x, y]) => [x, y, z0])});
+  } else {
+    const xs = O.map(q => q[0]), ys = O.map(q => q[1]), m = 1 + Math.max(...xs) - Math.min(...xs) + Math.max(...ys) - Math.min(...ys);
+    const kotak = [[Math.min(...xs) - m, Math.min(...ys) - m], [Math.max(...xs) + m, Math.min(...ys) - m], [Math.max(...xs) + m, Math.max(...ys) + m], [Math.min(...xs) - m, Math.max(...ys) + m]];
+    bidang.forEach((P, k) => {
+      let wil = kotak;
+      for (let j = 0; j < bidang.length && wil.length >= 3; j++) {
+        if (j === k) continue;
+        const Q = bidang[j], dA = P.A - Q.A, dB = P.B - Q.B, dC = Q.C - P.C;
+        if (Math.abs(dA) + Math.abs(dB) < 1e-9) {
+          // sejajar: bila sebidang, bidang dengan nomor lebih kecil yang dipakai
+          if (Math.abs(dC) < 1e-6) { if (j < k) wil = []; continue; }
+          if (dC < 0) wil = [];
+          continue;
+        }
+        wil = potongSetengah(wil, (x, y) => dA * x + dB * y, dC + 1e-9);
+      }
+      if (wil.length < 3) return;
+      let I;
+      try { I = PC.intersection([O], [wil]); } catch { return; }
+      for (const poly of I) {
+        const ring = bukaCincin(poly[0]).filter((q, k, arr) => { const r = arr[(k + 1) % arr.length]; return Math.hypot(q[0] - r[0], q[1] - r[1]) > 1e-3; });
+        if (ring.length < 3 || Math.abs(luas2D(ring)) < 1e-4) continue;
+        permukaan.push({jenis: 'atap', titik: ring.map(([x, y]) => [x, y, P.A * x + P.B * y + P.C]), tepiDenah: P.i});
+      }
+    });
+    // dinding gunung di tiap tepi dinding (bukan miring): dari dudukan sampai bawah atap, titik patah di pertemuan bidang
+    for (let i = 0; i < n; i++) {
+      if (tepi[i].miring) continue;
+      const a = p[i], b = p[(i + 1) % n], ts = new Set([0, 1]);
+      for (let x = 0; x < bidang.length; x++) for (let y = x + 1; y < bidang.length; y++) {
+        const P = bidang[x], Q = bidang[y], f0 = (P.A - Q.A) * a[0] + (P.B - Q.B) * a[1] + P.C - Q.C, f1 = (P.A - Q.A) * b[0] + (P.B - Q.B) * b[1] + P.C - Q.C;
+        if (Math.abs(f0 - f1) > 1e-12) { const t = f0 / (f0 - f1); if (t > 1e-6 && t < 1 - 1e-6) ts.add(t); }
+      }
+      const atas = [...ts].sort((s, t) => s - t).map(t => { const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t; return [x, y, Math.max(z0, zMin(x, y))]; });
+      if (Math.max(...atas.map(q => q[2])) - z0 < 0.02) continue;
+      const tg = [[a[0], a[1], z0], [b[0], b[1], z0], ...atas.slice().reverse()].filter((q, k, arr) => { const r = arr[(k + 1) % arr.length]; return Math.hypot(q[0] - r[0], q[1] - r[1], q[2] - r[2]) > 1e-6; });
+      if (tg.length >= 3) permukaan.push({jenis: 'gunung', titik: tg});
+    }
+  }
+  // ukuran: nok (tepi dalam mendatar) dan jurai (tepi dalam miring: jurai luar maupun dalam), lisplang di tepi luar berovestek
+  const atap = permukaan.filter(q => q.jenis === 'atap');
+  const jarakTepiO = (x, y) => {
+    let m = Infinity;
+    for (let i = 0; i < O.length; i++) {
+      const a = O[i], b = O[(i + 1) % O.length], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2));
+      m = Math.min(m, Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t));
+    }
+    return m;
+  };
+  let nok = 0, jurai = 0;
+  for (const f of atap) for (let i = 0; i < f.titik.length; i++) {
+    const a = f.titik[i], b = f.titik[(i + 1) % f.titik.length], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    if (L < 1e-4 || jarakTepiO((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) < 1e-3) continue;
+    if (Math.abs(b[2] - a[2]) < 1e-3) nok += L / 2; else jurai += L / 2;
+  }
+  let lis = 0;
+  for (let i = 0; i < n; i++) if (tepi[i].miring || tepi[i].overstek > 0) { const a = p[i], b = p[(i + 1) % n]; lis += Math.hypot(b[0] - a[0], b[1] - a[1]); }
+  Object.assign(u, {nok, jurai, lisplang: lis, puncak: Math.max(z0, ...atap.flatMap(f => f.titik.map(q => q[2])))});
+  u.luasGunung = permukaan.filter(q => q.jenis === 'gunung').reduce((s, q) => s + luas3D(q.titik), 0);
+}
+// Atap persegi (pelana/limas/sandar/datar) → data atap denah yang setara (dipakai saat ganti bentuk dan Gabung atap)
+function denahDariAtapPersegi(d) {
+  const {x0, x1, y0, y1} = batasAtap(d), os = ovSisi(d);
+  // urutan tepi berlawanan jarum jam: selatan, timur, utara, barat
+  const sisi = ['selatan', 'timur', 'utara', 'barat'];
+  let miring;
+  if (d.bentuk === 'limas' || d.bentuk === 'datar') miring = {selatan: true, timur: true, utara: true, barat: true};
+  else if (d.bentuk === 'sandar') { const ar = d.arah || 'selatan'; miring = {selatan: ar === 'selatan', timur: ar === 'timur', utara: ar === 'utara', barat: ar === 'barat'}; }
+  else { const ax = (d.arah === 'x' || d.arah === 'y' ? d.arah : (x1 - x0 >= y1 - y0 ? 'x' : 'y')) === 'x'; miring = {selatan: ax, utara: ax, timur: !ax, barat: !ax}; }
+  const alas = [{x: x0, y: y0}, {x: x1, y: y0}, {x: x1, y: y1}, {x: x0, y: y1}];
+  const tepi = sisi.map(k => ({miring: miring[k], overstek: r2(d.bentuk === 'limas' ? Math.max(0, d.overstek ?? 0.6) : os[k])}));
+  return {alas, tepi};
+}
+// Gabungkan beberapa atap persegi/denah terpilih menjadi satu atap denah (union denah dinding).
+// Tepi hasil mewarisi sifat tepi asal yang berimpit dengannya (tritisan tetap tritisan, gunungan/dinding tetap dinding).
+function gabungAtapDenah(ids) {
+  if (!S.bisaUbah) return toast('Akun ini hanya bisa melihat.');
+  if (S.edit) return toast('Selesaikan edit komponen dulu.');
+  const daftar = ids.map(id => [id, S.elems.get(id)]).filter(([, d]) => d && d.jenis === 'atap' && d.bentuk !== 'datar');
+  if (!daftar.length) return toast('Pilih satu atau beberapa atap miring dulu.');
+  if (typeof polygonClipping === 'undefined') return toast('Pustaka pemotong poligon belum termuat. Coba lagi sebentar.');
+  const sumber = daftar.map(([id, d]) => {
+    const dn = atapDenahKah(d) ? normalisasiDenah({alas: d.alas.map(q => ({...q})), tepi: (d.tepi || []).map(t => ({...t}))}) : denahDariAtapPersegi(d);
+    const {p, tepi} = infoDenah({...d, ...dn, bentuk: 'denah'});
+    return {id, d, p, tepi};
+  });
+  let U;
+  try { U = polygonClipping.union(...sumber.map(s => [s.p])); } catch { return toast('Denah atap tidak bisa digabung.'); }
+  if (U.length !== 1) return toast('Atap terpilih tidak bersentuhan. Pilih atap yang denahnya bersebelahan atau bertumpuk.');
+  const ring = bukaCincin(U[0][0]);
+  if (U[0].length > 1) toast('Ada lubang di tengah gabungan; lubangnya diabaikan.');
+  // tepi hasil: cari tepi asal yang berimpit (titik tengah tepi hasil terletak di tepi asal)
+  const padaRuas = (x, y, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1, t = ((x - a[0]) * dx + (y - a[1]) * dy) / L2; return t > -1e-6 && t < 1 + 1e-6 && Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t) < 0.01; };
+  const alas = ring.map(([x, y]) => ({x: r2(x), y: r2(y)}));
+  const tepi = ring.map((a, i) => {
+    const b = ring[(i + 1) % ring.length], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    for (const s of sumber) for (let k = 0; k < s.p.length; k++) if (padaRuas(mx, my, s.p[k], s.p[(k + 1) % s.p.length])) return {miring: s.tepi[k].miring, overstek: r2(s.tepi[k].overstek)};
+    return {miring: false, overstek: 0};
+  });
+  // atap acuan: yang denahnya paling luas (bahan, rangka, kemiringan, dudukan diambil darinya)
+  const acuan = sumber.slice().sort((a, b) => Math.abs(luas2D(b.p)) - Math.abs(luas2D(a.p)))[0];
+  const zs = sumber.map(s => s.d.z0 || 0), beda = Math.max(...zs) - Math.min(...zs);
+  const kmr = sumber.map(s => s.d.kemiringan ?? 30), bedaK = Math.max(...kmr) - Math.min(...kmr);
+  const baru = normalisasiDenah({...salin(acuan.d), bentuk: 'denah', alas, tepi});
+  for (const k of ['arah', 'overstekSisi', 'lisplangSisi']) delete baru[k];
+  const id = idBaru('A');
+  baru.nama = sumber.length > 1 ? 'Atap gabungan ' + id.replace('_', '') : (acuan.d.nama || 'Atap') + ' (denah)';
+  baru.catatan = `Gabungan dari ${sumber.map(s => s.id.replace('_', '')).join(', ')}`;
+  terapkan([...sumber.map(s => ({id: s.id, sesudah: null})), {id, sesudah: baru}]);
+  S.sel = new Set([id]); segarPilihan();
+  const cekung = sudutCekungDenah(baru);
+  toast(`${baru.nama}: ${sumber.length} atap disatukan` + (beda > 0.005 ? `, dudukan disamakan +${fmt(baru.z0 || 0)} m (beda ${fmt(beda)} m)` : '') + (bedaK > 0.05 ? `, kemiringan disamakan ${fmt(baru.kemiringan ?? 30)}°` : '') + (cekung.length ? `. Perhatian: ${cekung.length} sudut cekung di antara dua tritisan belum bisa diberi jurai dalam (Fase 2).` : '.'));
+}
+
 /* ============ Bidang dan batang bebas (v0.28): hasil Pecah atap ============ */
 // Bidang: muka 3D bebas (titik berurutan mengelilingi bidang). Batang: balok lurus 3D dengan penampang b × h.
 const PERAN_BIDANG = {atap: 'Bidang atap', gunung: 'Gunungan (sopi-sopi)', lisplang: 'Lisplang', plafon: 'Plafon miring'};
 const PERAN_BATANG = {kaki: 'Kaki kuda-kuda', tarik: 'Balok tarik', makelar: 'Makelar', tiang: 'Tiang penggantung', sokong: 'Sokong', skor: 'Skor (pengaku)', klos: 'Klos',
-  gording: 'Gording', nok: 'Balok bubungan', usuk: 'Usuk', reng: 'Reng', rangka: 'Batang rangka', lain: 'Batang lain'};
+  gording: 'Gording', nok: 'Balok bubungan', jurai: 'Balok jurai', murplat: 'Murplat / dudukan kuda-kuda', dudukan: 'Balok dudukan atas', usuk: 'Usuk', reng: 'Reng', rangka: 'Batang rangka', lain: 'Batang lain'};
 const BAHAN_BATANG = {kayu: 'Kayu', bajaringan: 'Baja ringan'};
 const BAHAN_LIS_BIDANG = {papan: 'Papan kayu', grc: 'GRC'};
 // batang yang membentuk kuda-kuda (digambar sebagai kuda-kuda di potongan); kelompok volume kayu di RAB
@@ -1565,7 +1799,8 @@ function atapGeomDasar(d) {
   const A0 = a0 - os[sA0], A1 = a1 + os[sA1], B0 = b0 - oB0, B1 = b1 + oB1, ze = z0 - oB0 * tn, ze1 = z0 - oB1 * tn;
   const atap = (...t) => permukaan.push({jenis: 'atap', titik: t.map(q => ke(...q))});
   const gunung = (...t) => permukaan.push({jenis: 'gunung', titik: t.map(q => ke(...q))});
-  if (d.bentuk === 'pelana') {
+  if (d.bentuk === 'denah' && Array.isArray(d.alas) && d.alas.length >= 3) isiAtapDenah(d, z0, tn, permukaan, u);
+  else if (d.bentuk === 'pelana') {
     const bm = (b0 + b1) / 2, zr = z0 + (b1 - b0) / 2 * tn;
     atap([A0, B0, ze], [A1, B0, ze], [A1, bm, zr], [A0, bm, zr]);
     atap([A1, B1, ze1], [A0, B1, ze1], [A0, bm, zr], [A1, bm, zr]);
@@ -1946,6 +2181,8 @@ function transformasi(d, f, dz) {
     if (b.arah === 'x' || b.arah === 'y') { const r = arahBaru(b.arah === 'x' ? 1 : 0, b.arah === 'y' ? 1 : 0); b.arah = r === 'timur' || r === 'barat' ? 'x' : 'y'; }
     else if (b.arah) { const v = {selatan: [0, -1], utara: [0, 1], timur: [1, 0], barat: [-1, 0]}[b.arah]; if (v) b.arah = arahBaru(...v); }
     if (d.overstekSisi) { const vs = {selatan: [0, -1], utara: [0, 1], timur: [1, 0], barat: [-1, 0]}, baru = {}; for (const [k, v] of Object.entries(d.overstekSisi)) if (vs[k]) baru[arahBaru(...vs[k])] = v; b.overstekSisi = baru; }
+    // atap denah: titik alas ikut ditransformasi (boleh sudut bebas); cermin membalik urutan, tepi dipetakan ulang
+    if (d.bentuk === 'denah' && Array.isArray(d.alas)) { b.alas = d.alas.map(q => { const r = f(q); return {x: r2(r.x), y: r2(r.y)}; }); normalisasiDenah(b); }
     b.z0 = r2((d.z0 || 0) + dz);
     return b;
   }
@@ -1984,7 +2221,7 @@ function transformasi(d, f, dz) {
 }
 // Putar elemen terhadap titik (cx, cy) sebesar deg derajat (positif = berlawanan jarum jam dilihat dari atas).
 // Atap, kolom, dan pondasi titik disimpan sejajar sumbu, jadi hanya boleh kelipatan 90°.
-const kunci90 = d => d.jenis === 'atap' || ((d.jenis === 'kolom' || d.jenis === 'pondasi') && Number.isFinite(d.x) && Number.isFinite(d.y));
+const kunci90 = d => (d.jenis === 'atap' && d.bentuk !== 'denah') || ((d.jenis === 'kolom' || d.jenis === 'pondasi') && Number.isFinite(d.x) && Number.isFinite(d.y));
 const kelipatan90 = deg => Math.abs(deg / 90 - Math.round(deg / 90)) < 1e-6;
 /**
  * Putar elemen `deg` derajat (berlawanan jarum jam dilihat dari atas) mengelilingi (cx, cy).
@@ -2034,7 +2271,7 @@ function petaCermin(P, deg) {
  * @returns {string | null}
  */
 function cerminTerlarang(daftar, deg) {
-  if (daftar.some(d => d.jenis === 'atap') && !kelipatan90(deg)) return 'Pilihan memuat atap, jadi garis cermin harus sejajar sumbu merah atau hijau (0° atau 90°).';
+  if (daftar.some(d => d.jenis === 'atap' && d.bentuk !== 'denah') && !kelipatan90(deg)) return 'Pilihan memuat atap, jadi garis cermin harus sejajar sumbu merah atau hijau (0° atau 90°).';
   if (daftar.some(d => (d.jenis === 'kolom' || d.jenis === 'pondasi') && Number.isFinite(/** @type {any} */ (d).x) && Number.isFinite(/** @type {any} */ (d).y)) && !kelipatan45(deg)) return 'Pilihan memuat kolom atau pondasi titik, jadi sudut garis cermin harus kelipatan 45°.';
   return null;
 }
@@ -2265,7 +2502,7 @@ function geser(d, dx, dy, dz = 0) {
   if (b.jenis === 'sapuan') { b.lintasan = b.lintasan.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy), z: r2(q.z + dz)})); return b; }
   if (b.jenis === 'bantu') { const m = q => ({x: r2(q.x + dx), y: r2(q.y + dy), ...(Number.isFinite(q.z) ? {z: r2(q.z + dz)} : {})}); b.awal = m(b.awal); b.akhir = m(b.akhir); return b; }
   if (dz && b.jenis !== 'potong') b.z0 = r2((b.z0 || 0) + dz);
-  if (b.jenis === 'atap') { b.x0 = r2(b.x0 + dx); b.x1 = r2(b.x1 + dx); b.y0 = r2(b.y0 + dy); b.y1 = r2(b.y1 + dy); return b; }
+  if (b.jenis === 'atap') { b.x0 = r2(b.x0 + dx); b.x1 = r2(b.x1 + dx); b.y0 = r2(b.y0 + dy); b.y1 = r2(b.y1 + dy); if (Array.isArray(b.alas)) b.alas = b.alas.map(q => ({x: r2(q.x + dx), y: r2(q.y + dy)})); return b; }
   if (Number.isFinite(b.x) && Number.isFinite(b.y)) { b.x = r2(b.x + dx); b.y = r2(b.y + dy); return b; }
   if (b.jenis === 'instance') { b.posisi = {x: r2(b.posisi.x + dx), y: r2(b.posisi.y + dy)}; return b; }
   if (b.pusat) { b.pusat = {x: r2(b.pusat.x + dx), y: r2(b.pusat.y + dy)}; return b; }
@@ -2546,11 +2783,11 @@ function penampangKayu(b, arahA) {
   ax.divideScalar(L);
   if (b.jenis === 'kuda' && b.bagian === 'skor') {
     // skor: papan tipis (tebal lb mendatar tegak lurus bidang X, lebar tb di bidang X)
-    const w = V(...arahA), bd = V().crossVectors(V(0, 0, 1), w).normalize(), vv = V().crossVectors(bd, ax).normalize();
+    const w = V(...(b.w || arahA)), bd = V().crossVectors(V(0, 0, 1), w).normalize(), vv = V().crossVectors(bd, ax).normalize();
     return [[-lb / 2, -tb / 2], [lb / 2, -tb / 2], [lb / 2, tb / 2], [-lb / 2, tb / 2]].map(([u, v]) => V().addScaledVector(bd, u).addScaledVector(vv, v));
   }
   if (b.jenis === 'kuda') {
-    const w = V(...arahA), n = V().crossVectors(ax, w).normalize();
+    const w = V(...(b.w || arahA)), n = V().crossVectors(ax, w).normalize();
     if (n.z < 0) n.negate();
     return [[-lb / 2, -tb / 2], [lb / 2, -tb / 2], [lb / 2, tb / 2], [-lb / 2, tb / 2]].map(([u, v]) => V().addScaledVector(w, u).addScaledVector(n, v));
   }
@@ -4656,6 +4893,10 @@ function bukaMenuKonteks(e) {
     // hanya untuk lantai yang memang diduduki dinding/kolom (bukan talang, balok, atau volume lain)
     else if (d && d.jenis === 'volume' && !d.bentuk && pemotongLantai(d).length) tambah('k-pecah', 'Pecah lantai per ruang');
   }
+  {
+    const atapSel = sel.map(x => ambil(x)).filter(x => x && x.jenis === 'atap' && x.bentuk !== 'datar');
+    if (ubah && atapSel.length && atapSel.length === sel.length && (atapSel.length > 1 || atapSel[0].bentuk !== 'denah')) { pisah(); tambah('k-gabung-atap', atapSel.length > 1 ? 'Gabung atap (satu denah)' : 'Jadikan atap denah'); }
+  }
   if (ubah && pilihanSolid()) {
     pisah();
     const pem = sel[0];
@@ -4694,6 +4935,7 @@ menuKonteksEl.addEventListener('click', e => {
   const k = b.dataset.k, id = [...S.sel][0], d = id ? ambil(id) : null;
   if (k === 'k-masuk') { if (kodeOf(id) === 'G') masukGrup(id); else masukKomponen(id); }
   else if (k === 'k-pecah') { if (kodeOf(id) === 'G') pecahGrup(id); else if (d.jenis === 'instance') pecahKomponen(id); else if (d.jenis === 'atap') pecahAtap(id); else pecahLantai(id); }
+  else if (k === 'k-gabung-atap') gabungAtapDenah([...S.sel]);
   else if (k === 'k-kurangi') operasiSolid('kurangi');
   else if (k === 'k-pangkas') operasiSolid('pangkas');
   else if (k === 'k-belah') operasiSolid('belah');
@@ -4995,6 +5237,7 @@ function dorongIkut(d, N, p0, jarak) {
   const b = salin(d), di = q => jarakBidang(N, p0, q), padaBidang = q => Math.abs(di(q)) < TOL_SEBIDANG;
   const geser3 = q => ({x: r2(q.x + N[0] * jarak), y: r2(q.y + N[1] * jarak), z: r2(q.z + N[2] * jarak)});
   if (d.jenis === 'atap') {
+    if (d.bentuk === 'denah') return null;   // atap denah: overstek diatur per tepi di panel
     const sisi = sisiAtapDari(N);
     if (!sisi) return null;
     const [x0, y0, x1, y1] = kotakOverstek(d), tepi = {barat: [x0, 0], timur: [x1, 0], selatan: [0, y0], utara: [0, y1]}[sisi];
@@ -5208,6 +5451,7 @@ const alatDorong = {
       const ke = ((h.point.x - A[0]) * U[0] + (h.point.y - A[1]) * U[1] + (h.point.z - A[2]) * U[2]) / L / L < 0.5 ? 'awal' : 'akhir';
       N = U.map(v => (ke === 'akhir' ? v : -v) / L); face = 'ujung-batang'; edge = ke; p0 = ke3(d[ke]);
     } else if (u.face === 'atap') {
+      if (d.bentuk === 'denah') return toast('Atap denah: ubah overstek tiap tepi di panel properti.');
       // tepi luar (teritis/sopi-sopi) terdekat dari titik klik; tarikan mengubah overstek sisi itu
       const [x0, y0, x1, y1] = kotakOverstek(d), px = h.point.x, py = h.point.y;
       const sisi = [['barat', Math.abs(px - x0)], ['timur', Math.abs(px - x1)], ['selatan', Math.abs(py - y0)], ['utara', Math.abs(py - y1)]].sort((p, q) => p[1] - q[1])[0][0];
@@ -6245,6 +6489,12 @@ const alatPintu = buatAlatBukaan('pintu'), alatJendela = buatAlatBukaan('jendela
 function pasAtap(id) {
   const d = S.elems.get(id);
   if (!d || d.jenis !== 'atap') return;
+  if (d.bentuk === 'denah') {
+    // atap denah: bentuk denahnya dipertahankan; hanya elevasi tumpuan yang mengikuti dinding di bawahnya
+    const bt = batasAtap(d), z = tumpuanAtap(bt.x0, bt.y0, bt.x1, bt.y1);
+    terapkan([{id, sesudah: {...salin(d), z0: z}}]);
+    return toast(`Tumpuan atap denah disesuaikan ke +${fmt(z)} m. Titik denahnya diubah lewat panel.`);
+  }
   const {x0, x1, y0, y1} = batasAtap(d), ov = (d.overstek ?? 0.6) + 0.3;
   const dalam = p => p.x >= x0 - ov && p.x <= x1 + ov && p.y >= y0 - ov && p.y <= y1 + ov;
   let a = Infinity, b = Infinity, c = -Infinity, e = -Infinity;
@@ -6268,20 +6518,38 @@ function tumpuanAtap(x0, y0, x1, y1) {
   }
   return Number.isFinite(z) ? r2(z) : S.setel.tinggiDinding;
 }
-const URUT_ATAP = ['pelana', 'limas', 'sandar', 'datar'];
+const URUT_ATAP = ['pelana', 'limas', 'sandar', 'datar', 'denah'];
+const namaBentukAtap = k => (k === 'denah' ? 'denah' : (BENTUK_ATAP[k] || '').toLowerCase());
 const alatAtap = {
-  bentuk: 'pelana', p1: null, p2: null, otomatis: null,
-  get petunjuk() { return `<b>Atap ${BENTUK_ATAP[this.bentuk].toLowerCase()}:</b> klik dinding atau lantai sebuah ruang untuk menutupnya otomatis, atau klik dua sudut di puncak dinding. Pilih grup lalu Enter untuk menutup seluruh pilihan. Tab mengganti bentuk.`; },
+  bentuk: 'pelana', p1: null, p2: null, otomatis: null, titik: [], kursor: null,
+  get petunjuk() {
+    if (this.bentuk === 'denah') return '<b>Atap denah bebas:</b> klik titik-titik as dinding keliling denah (bentuk L, T, U), lalu klik titik pertama, klik 2×, atau Enter untuk menutup. Semua tepi menjadi tritisan; ubah tepi yang menempel dinding di panel. Pilih beberapa atap lalu Enter untuk menggabungkannya. Tab mengganti bentuk.';
+    return `<b>Atap ${BENTUK_ATAP[this.bentuk].toLowerCase()}:</b> klik dinding atau lantai sebuah ruang untuk menutupnya otomatis, atau klik dua sudut di puncak dinding. Pilih grup lalu Enter untuk menutup seluruh pilihan. Tab mengganti bentuk.`;
+  },
   vcb: 'Dimensi',
-  sibuk() { return !!this.p1; },
-  batal() { this.p1 = this.p2 = this.otomatis = null; reset(); setVcb(''); },
+  sibuk() { return this.bentuk === 'denah' ? this.titik.length > 0 : !!this.p1; },
+  batal() { this.p1 = this.p2 = this.otomatis = null; this.titik = []; this.kursor = null; reset(); setVcb(''); },
   ganti() {
+    this.titik = []; this.kursor = null;
     this.bentuk = URUT_ATAP[(URUT_ATAP.indexOf(this.bentuk) + 1) % URUT_ATAP.length];
     tulisPetunjuk(); toast('Bentuk atap: ' + BENTUK_ATAP[this.bentuk]);
     if (S.eTerakhir) this.move(S.eTerakhir); else this.pratinjau();
     minta();
   },
-  data(batasPaksa) {
+  data(batasPaksa, alasPaksa) {
+    if (this.bentuk === 'denah') {
+      let alas = alasPaksa;
+      if (!alas) {
+        const bt = batasPaksa || this.otomatis;
+        if (!bt) return null;
+        alas = [{x: bt.x0, y: bt.y0}, {x: bt.x1, y: bt.y0}, {x: bt.x1, y: bt.y1}, {x: bt.x0, y: bt.y1}];
+      }
+      if (alas.length < 3) return null;
+      const b = normalisasiDenah({alas: alas.map(q => ({x: q.x, y: q.y})), tepi: alas.map(() => ({miring: true}))});
+      if (b.alas.length < 3 || Math.abs(luas2D(b.alas.map(q => [q.x, q.y]))) < 0.25) return null;
+      return {jenis: 'atap', bentuk: 'denah', ...b, kemiringan: S.setel.kemiringanAtap, overstek: S.setel.overstekAtap, z0: tumpuanAtap(b.x0, b.y0, b.x1, b.y1), tebal: 0.12, rangka: 'bajaringan', penutup: 'spandek', catatan: '',
+        kuda: {gording: [0.05, 0.10], bubungan: [0.05, 0.14], klos: [0.10, 0.07], lisMundur: 0.05}};
+    }
     const bt = batasPaksa || this.otomatis;
     let x0, x1, y0, y1;
     if (bt) ({x0, x1, y0, y1} = bt);
@@ -6294,7 +6562,21 @@ const alatAtap = {
       kemiringan: S.setel.kemiringanAtap, overstek: S.setel.overstekAtap, z0: tumpuanAtap(x0, y0, x1, y1), tebal: 0.12, rangka: 'bajaringan', penutup: 'spandek', catatan: '',
       kuda: {gording: [0.05, 0.10], bubungan: [0.05, 0.14], klos: [0.10, 0.07], lisMundur: 0.05}};
   },
+  pratinjauDenah() {
+    bersihPratinjau(); S.label = [];
+    const t = this.kursor ? [...this.titik, this.kursor] : this.titik.slice();
+    if (t.length >= 2) {
+      garisPratinjau(t.map(q => [q.x, q.y, q.z || 0]), T.accent);
+      if (t.length >= 3) garisPutus([[t[t.length - 1].x, t[t.length - 1].y, t[t.length - 1].z || 0], [t[0].x, t[0].y, t[0].z || 0]], T.accent);
+      const a = t[t.length - 2], b = t[t.length - 1], L = Math.hypot(b.x - a.x, b.y - a.y);
+      S.label = [{x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: a.z || 0, t: fmt(L) + ' m'}];
+      setVcb(fmtV(L));
+    }
+    if (t.length >= 3) { const d = this.data(null, t); if (d) for (const sf of atapGeom(d).permukaan) garisPratinjau(sf.titik, T.accent, true); }
+    minta();
+  },
   pratinjau() {
+    if (this.bentuk === 'denah') return this.pratinjauDenah();
     bersihPratinjau(); S.label = [];
     const d = this.data();
     if (!d) { if (this.p1 && this.p2) garisPratinjau([[this.p1.x, this.p1.y], [this.p2.x, this.p2.y]], T.accent); return; }
@@ -6306,6 +6588,11 @@ const alatAtap = {
     setVcb(fmtV(d.x1 - d.x0) + '; ' + fmtV(d.y1 - d.y0));
   },
   move(e) {
+    if (this.bentuk === 'denah') {
+      const s = titikSnap(e, null, {atas: true, bidangZ: this.titik.length ? this.titik[0].z || 0 : 0});
+      S.snap = s; this.kursor = s ? {x: s.x, y: s.y, z: s.z || 0} : null;
+      this.pratinjauDenah(); return;
+    }
     const s = titikSnap(e, null, {atas: true, bidangZ: this.p1 ? this.p1.z : 0});
     this.otomatis = null; this.grupOtomatis = null;
     if (!this.p1 && (!s || s.jenis !== 'ujung')) {
@@ -6323,19 +6610,45 @@ const alatAtap = {
   },
   down(e) {
     this.move(e);
+    if (this.bentuk === 'denah') {
+      const s = S.snap, t = this.titik;
+      if (!s) return;
+      const p = {x: s.x, y: s.y, z: s.z || 0}, akhir = t[t.length - 1];
+      if (t.length >= 3 && Math.hypot(p.x - t[0].x, p.y - t[0].y) < 0.05) { this.selesaiDenah(); return; }
+      if (akhir && Math.hypot(p.x - akhir.x, p.y - akhir.y) < 0.005) return;
+      t.push(p); this.pratinjauDenah(); tulisPetunjuk(); return;
+    }
     if (this.otomatis) { this.buat(); return; }
     const s = S.snap;
     if (!s) return;
     if (!this.p1) { this.p1 = s; return; }
     this.p2 = s; this.buat();
   },
+  dbl() { if (this.bentuk === 'denah' && this.titik.length >= 3) this.selesaiDenah(); },
+  selesaiDenah() {
+    if (this.titik.length < 3) return toast('Atap denah perlu paling sedikit tiga titik.');
+    this.buat(this.titik.slice());
+  },
   dariPilihan() {
     if (!S.sel.size) return toast('Pilih grup atau dinding dulu, lalu tekan Enter.');
+    if (this.bentuk === 'denah') {
+      const atapSel = [...S.sel].filter(x => { const e = ambil(x); return e && e.jenis === 'atap' && e.bentuk !== 'datar'; });
+      if (atapSel.length) return gabungAtapDenah(atapSel);
+    }
     const bt = batasDari([...S.sel]);
     if (!bt) return toast('Pilihan tidak membentuk ruang yang bisa diberi atap.');
     this.otomatis = bt; this.buat();
   },
   ketik(v) {
+    if (this.bentuk === 'denah') {
+      const akhir = this.titik[this.titik.length - 1];
+      if (!akhir) return toast('Klik titik pertama dulu, lalu ketik panjang tepinya.');
+      const L = angka(v);
+      if (!(L > 0)) return toast(`Tulis panjang dalam ${namaSatuan()}, misalnya ${cth(6)}.`);
+      const k = this.kursor, dx = k ? k.x - akhir.x : 1, dy = k ? k.y - akhir.y : 0, l = Math.hypot(dx, dy) || 1;
+      this.titik.push({x: r2(akhir.x + dx / l * L), y: r2(akhir.y + dy / l * L), z: akhir.z || 0});
+      this.pratinjauDenah(); return;
+    }
     if (!this.p1) return toast('Klik sudut as pertama dulu, lalu ketik ukurannya.');
     const [a, b] = v.split(/[;x*]/i).map(angka);
     if (!(a > 0) || !(b > 0)) return toast(`Tulis panjang;lebar dalam ${namaSatuan()}, misalnya ${cth(10, 9)}.`);
@@ -6343,11 +6656,11 @@ const alatAtap = {
     this.p2 = {x: r2(this.p1.x + sx * a), y: r2(this.p1.y + sy * b)};
     this.buat();
   },
-  buat() {
-    const d = this.data();
-    if (!d) { toast('Atap terlalu kecil. Klik sudut as yang berseberangan.'); return; }
+  buat(alasPaksa) {
+    const d = this.data(null, alasPaksa);
+    if (!d) { toast(this.bentuk === 'denah' ? 'Denah atap terlalu kecil atau titiknya berimpit.' : 'Atap terlalu kecil. Klik sudut as yang berseberangan.'); return; }
     const id = idBaru('A');
-    d.nama = 'Atap ' + BENTUK_ATAP[d.bentuk].toLowerCase() + ' ' + id.replace('_', '');
+    d.nama = 'Atap ' + namaBentukAtap(d.bentuk) + ' ' + id.replace('_', '');
     const isi = this.grupOtomatis && S.grup.has(this.grupOtomatis) ? {...d, grup: this.grupOtomatis} : denganKonteks(d);
     terapkan([{id, sesudah: isi}]);
     this.batal();
@@ -7603,7 +7916,7 @@ function normalMuka(t) {
   return n.z < 0 ? n.negate() : n;
 }
 const zBidang = (t, n, x, y) => t[0][2] - (n.x * (x - t[0][0]) + n.y * (y - t[0][1])) / (Math.abs(n.z) < 1e-9 ? 1e-9 : n.z);
-const kunciAtapGeom = d => [d.bentuk, d.arah, d.x0, d.x1, d.y0, d.y1, d.z0, d.kemiringan, d.overstek, JSON.stringify(d.overstekSisi || {}), d.rangka, d.tebalGunung, JSON.stringify(d.kuda || {})].join('|');
+const kunciAtapGeom = d => [d.bentuk, d.arah, d.x0, d.x1, d.y0, d.y1, d.z0, d.kemiringan, d.overstek, JSON.stringify(d.overstekSisi || {}), d.rangka, d.tebalGunung, JSON.stringify(d.kuda || {}), d.satukan === false ? 'pisah' : '', d.bentuk === 'denah' ? JSON.stringify([d.alas, d.tepi, d.tinggiAtas]) : ''].join('|');
 const luasAlasAtap = d => Math.abs((d.x1 - d.x0) * (d.y1 - d.y0));
 function luas2D(r) { let a = 0; for (let i = 0; i < r.length; i++) { const p = r[i], q = r[(i + 1) % r.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; }
 const bukaCincin = r => (r.length > 1 && r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1] ? r.slice(0, -1) : r);
@@ -7619,7 +7932,7 @@ function potongSetengah(r, f, batasF) {
 }
 function atapLain(d) {
   const kd = kunciAtapGeom(d), r = [];
-  for (const [id, e] of S.elems) if (e.jenis === 'atap' && e.bentuk !== 'datar' && !S.sembunyi.has(id) && sah(e) && kunciAtapGeom(e) !== kd) r.push(e);
+  for (const [id, e] of S.elems) if (e.jenis === 'atap' && e.bentuk !== 'datar' && e.satukan !== false && !S.sembunyi.has(id) && sah(e) && kunciAtapGeom(e) !== kd) r.push(e);
   return r;
 }
 // Bidang atap dipotong oleh atap lain (jurai dalam otomatis): bagian yang berada di bawah atap lain dibuang.
@@ -7627,7 +7940,7 @@ function atapLain(d) {
 const cacheAtapGeom = new Map();
 function atapGeom(d) {
   const g = atapGeomDasar(d);
-  if (g.prisma || typeof polygonClipping === 'undefined') return g;
+  if (g.prisma || typeof polygonClipping === 'undefined' || d.satukan === false) return g;
   const kd = kunciAtapGeom(d);
   const kotak = kotakOverstek;
   const [ax0, ay0, ax1, ay1] = kotak(d);
@@ -7638,6 +7951,9 @@ function atapGeom(d) {
   const kunci = kd + '#' + lain.map(kunciAtapGeom).join(';') + '#' + lainBid.map(x => x.t.flat().map(v => v.toFixed(3)).join(',') + JSON.stringify(x.dinding || '')).join(';');
   if (cacheAtapGeom.has(kunci)) return cacheAtapGeom.get(kunci);
   const PC = polygonClipping, luasSaya = luasAlasAtap(d);
+  // denah dinding (tanpa overstek) sebuah atap atau batas dinding bidang atap
+  const kotakDenahPotong = e => { const bx0 = Math.min(e.x0, e.x1), bx1 = Math.max(e.x0, e.x1), by0 = Math.min(e.y0, e.y1), by1 = Math.max(e.y0, e.y1); return [[bx0, by0], [bx1, by0], [bx1, by1], [bx0, by1]]; };
+  const denahSaya = kotakDenahPotong(d);
   const gl = [...lain.map(e => ({e, g: atapGeomDasar(e), luas: luasAlasAtap(e), k: kunciAtapGeom(e)})),
     ...lainBid.map(x => ({e: x.dinding, g: {permukaan: [{jenis: 'atap', titik: x.t}]}, luas: Math.abs(luas2D(x.t.map(q => [q[0], q[1]]))), k: 'bidang'}))];
   const mukaLain = gl.flatMap(o => o.g.permukaan.filter(x => x.jenis === 'atap').map(x => x.titik));
@@ -7672,7 +7988,19 @@ function atapGeom(d) {
             continue;
           }
           const sisa = potongSetengah(ring, fz, lebihKecil ? 0.01 : -0.01);
-          if (sisa.length >= 3 && Math.abs(luas2D(sisa)) > 1e-4) buang.push([sisa]);
+          let bawah = sisa.length >= 3 && Math.abs(luas2D(sisa)) > 1e-4 ? [[sisa]] : [];
+          // Prioritas denah (v0.35): bagian atap di atas denah dindingnya sendiri menang atas overstek atap lain.
+          // (a) Atap ini di dalam denahnya sendiri tidak dipangkas oleh overstek atap lain yang menyembul di atasnya.
+          // (b) Overstek atap ini yang menyembul di atas denah atap lain dipangkas, sehingga atap tidak saling silang.
+          if (o.e) {
+            const denahLain = kotakDenahPotong(o.e);
+            if (bawah.length) { try { const lindung = PC.difference([denahSaya], [denahLain]); if (lindung.length) bawah = PC.difference(bawah, lindung); } catch { /* biarkan */ } }
+            const atas = potongSetengah(ring, (x, y) => -fz(x, y), -0.01);
+            if (atas.length >= 3 && Math.abs(luas2D(atas)) > 1e-4) {
+              try { for (const p of PC.difference(PC.intersection([atas], [denahLain]), [denahSaya])) if (Math.abs(luas2D(bukaCincin(p[0]))) > 1e-4) buang.push(p); } catch { /* biarkan */ }
+            }
+          }
+          for (const p of bawah) buang.push(p);
         }
       }
     }
@@ -7808,12 +8136,45 @@ function susunTepiAtap(d) {
       awal: Number.isFinite(o.awal) ? batas(o.awal, -5, 5) : 0, akhir: Number.isFinite(o.akhir) ? batas(o.akhir, -5, 5) : 0};
   };
   const penutup = kayu ? K.penutup : 0.003;
+  const ruasDindingDenah = [];
+  if (d.bentuk === 'denah' && Array.isArray(d.alas) && d.alas.length >= 3) { const {p: pd, tepi: td} = infoDenah(d); pd.forEach((A, i) => { if (!td[i].miring && td[i].overstek < 0.01) ruasDindingDenah.push([A, pd[(i + 1) % pd.length]]); }); }
+  const turunPlafonTepi = kayu ? K.penutup + K.gording + K.kaki + turunTambah : 0.15;
   for (const info of hasil.muka) {
     const {t, n} = info, N = t.length;
-    info.tepi.forEach(e => { e.set = e.luar ? atur(e.kunci) : null; });
+    info.tepi.forEach((e, i) => {
+      e.set = e.luar ? atur(e.kunci) : null;
+      // atap denah: tepi yang menempel dinding (tepi dinding tanpa overstek) tidak diberi lisplang
+      if (e.set && ruasDindingDenah.length) {
+        const p = t[i], q = t[(i + 1) % N], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+        if (ruasDindingDenah.some(([A, B]) => { const dx = B[0] - A[0], dy = B[1] - A[1], L2 = dx * dx + dy * dy || 1, k = ((mx - A[0]) * dx + (my - A[1]) * dy) / L2; return k > -0.01 && k < 1.01 && Math.hypot(mx - A[0] - dx * k, my - A[1] - dy * k) < 0.03; })) e.set = null;
+      }
+    });
     const luarD = info.tepi.map(e => (e.set ? e.set.mundur : 0)), dalamD = info.tepi.map(e => (e.set ? e.set.mundur + e.set.tebal : 0));
     const O = mundurMukaPasang(t, luarD), I = mundurMukaPasang(t, dalamD);
     info.dalam = mundurMukaArr(t, dalamD); info.dalamPasang = I;
+    // Plafon miring: tepi luarnya harus tepat di muka dalam lisplang pada kedalaman plafon. Papan lisplang turun
+    // tegak lurus bidang atap, sehingga di tritisan muka dalamnya bergeser masuk sebesar turunPlafon × sin(kemiringan).
+    // Tanpa koreksi ini ujung plafon (yang diturunkan tegak) menembus papan lisplang. Geser tepi berlisplang ke dalam
+    // sepanjang bidang atap sejauh turunPlafon × tan(kemiringan) (nol di sisi gunung yang sejajar arah miring).
+    {
+      const cx = t.reduce((s, q) => s + q[0], 0) / N, cy = t.reduce((s, q) => s + q[1], 0) / N, cz = t.reduce((s, q) => s + q[2], 0) / N;
+      const tambah = info.tepi.map((e, i) => {
+        if (!e.set) return 0;
+        const p = t[i], q = t[(i + 1) % N], ex = q[0] - p[0], ey = q[1] - p[1], ez = q[2] - p[2], L = Math.hypot(ex, ey, ez), Lh = Math.hypot(ex, ey);
+        if (L < 1e-6 || Lh < 1e-6) return 0;
+        // w: arah ke dalam muka, sejajar bidang atap, tegak lurus tepi
+        let wx = n.y * ez - n.z * ey, wy = n.z * ex - n.x * ez, wz = n.x * ey - n.y * ex;
+        const wl = Math.hypot(wx, wy, wz) || 1; wx /= wl; wy /= wl; wz /= wl;
+        const mx0 = (p[0] + q[0]) / 2, my0 = (p[1] + q[1]) / 2, mz0 = (p[2] + q[2]) / 2;
+        if ((cx - mx0) * wx + (cy - my0) * wy + (cz - mz0) * wz < 0) { wx = -wx; wy = -wy; wz = -wz; }
+        // m: tegak lurus tepi di denah, ke arah dalam
+        let mx = -ey / Lh, my = ex / Lh;
+        if (mx * wx + my * wy < 0) { mx = -mx; my = -my; }
+        const geserPerMeter = wx * mx + wy * my, perlu = -(n.x * mx + n.y * my) * turunPlafonTepi;
+        return geserPerMeter > 0.05 && perlu > 0 ? perlu / geserPerMeter : 0;
+      });
+      info.dalamPlafon = tambah.some(v => v > 0) ? mundurMukaArr(t, dalamD.map((v, i) => v + tambah[i])) : info.dalam;
+    }
     // arah turun papan di tiap titik sudut: di nok/jurai mengikuti garis bagi kedua bidang agar papan tidak saling tumpang
     const turun = t.map((_, k) => {
       for (const e of [info.tepi[(k - 1 + N) % N], info.tepi[k]]) if (e.bersama !== undefined) { const n2 = hasil.muka[e.bersama].n; return n.clone().add(n2).normalize().negate(); }
@@ -7850,13 +8211,13 @@ function susunTepiAtap(d) {
     for (const info of hasil.muka) {
       // tepi luar: proyeksi tegak lurus atap dari sisi dalam lisplang (papan juga tegak lurus atap);
       // tepi dalam: tegak di sisi luar ring balk, agar plafon tepat bertemu sudut atas ring balk
-      const {n} = info, nD = normalMuka(info.dalam), I2 = info.dalam.map(q => [q[0] - n.x * ujungLuar, q[1] - n.y * ujungLuar]);
+      const {n} = info, dP = info.dalamPlafon || info.dalam, nD = normalMuka(dP), I2 = dP.map(q => [q[0] - n.x * ujungLuar, q[1] - n.y * ujungLuar]);
       let bagian = [[I2]];
       if (mode === 'tritisan') { try { bagian = polygonClipping.difference([I2], [denah], ...denahLain.map(r => [r])); } catch { bagian = []; } }
       for (const poly of bagian) {
         const ring = bukaCincin(poly[0]);
         if (ring.length < 3 || Math.abs(luas2D(ring)) < 0.01) continue;
-        const atas = ring.map(([x, y]) => V(x, y, zBidang(info.dalam, nD, x, y) - turunP / Math.max(0.2, n.z)));
+        const atas = ring.map(([x, y]) => V(x, y, zBidang(dP, nD, x, y) - turunP / Math.max(0.2, n.z)));
         const bawah = atas.map(v => v.clone().addScaledVector(n, -tebalP));
         const M = atas.length, F = [atas.map(v => v.toArray()), bawah.slice().reverse().map(v => v.toArray())];
         for (let k = 0; k < M; k++) F.push([atas[k], atas[(k + 1) % M], bawah[(k + 1) % M], bawah[k]].map(v => v.toArray()));
@@ -7987,6 +8348,189 @@ function zAtapDi(muka, x, y) {
   return z;
 }
 // Rangka atap (kuda-kuda, reng/gording, usuk) dan pola penutup dari geometri atap
+// Rangka kayu atap denah (v0.35, Fase 3a) — mengikuti gambar S-01 Rev. 2:
+// murplat 8/12 di tiap tritisan, balok dudukan atas 8/12 di dinding tepi atas, balok jurai 8/15 di tiap pertemuan bidang,
+// kuda-kuda sandar tiap ±jarak kuda-kuda (digeser ke atas dinding di bawahnya bila dekat), tiang penggantung di atas dinding
+// yang dilintasi, tiang tengah bila bentang tak bertumpu > 3,5 m, sokong dari kaki tiang yang bertumpu ke puncak tiang
+// berikutnya ke arah tritisan, gording 6/12 pada KETINGGIAN SAMA di semua bidang (bertemu di jurai), klos di tiap kaki dan jurai.
+function rangkaDenahKayu(d, muka, susun, tambah, hasil, volume) {
+  const z0 = d.z0 || 0, K = susunKayu(d), KD = aturKuda(d), {p, tepi} = infoDenah(d), n = p.length;
+  const geo = atapGeom(d), wajah = geo.permukaan.filter(f => f.jenis === 'atap');
+  const jarak = jarakKudaDari(d), tbTarik = KD.tarik[1], tbKaki = KD.kaki[1];
+  const dalamPoli = (x, y, t) => { let r = false; for (let i = 0, j = t.length - 1; i < t.length; j = i++) { const [xi, yi] = t[i], [xj, yj] = t[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) r = !r; } return r; };
+  const jarakRuas = (x, y, A, B) => { const dx = B[0] - A[0], dy = B[1] - A[1], L2 = dx * dx + dy * dy || 1, k = Math.max(0, Math.min(1, ((x - A[0]) * dx + (y - A[1]) * dy) / L2)); return Math.hypot(x - A[0] - dx * k, y - A[1] - dy * k); };
+  // dinding pendukung: puncaknya setinggi dudukan (±), bukan dinding tinggi tempat atap bersandar
+  const dind = [];
+  for (const [eid, el] of S.elems) {
+    if (S.sembunyi.has(eid)) continue;
+    for (const g of geometriElemen(eid, el)) {
+      if (g.jenis !== 'dinding') continue;
+      const top = (g.z0 || 0) + (g.tinggi || 0);
+      if (top >= z0 - 0.45 && top <= z0 + 0.35) dind.push([[g.awal.x, g.awal.y], [g.akhir.x, g.akhir.y]]);
+    }
+  }
+  // bidang atap per tepi tritisan (denah) dan kemiringannya
+  const mukaTepi = new Map();
+  for (const f of wajah) if (f.tepiDenah != null) { if (!mukaTepi.has(f.tepiDenah)) mukaTepi.set(f.tepiDenah, []); mukaTepi.get(f.tepiDenah).push(f.titik.map(q => [q[0], q[1]])); }
+  const cosT = i => Math.cos(tepi[i].kemiringan * Math.PI / 180);
+  const zKaki = (x, y, cs) => { const z = zAtapDi(muka, x, y); return z === null ? null : z - (K.penutup + K.gording + tbKaki / 2) / cs; };
+  const ukur = {kaki: KD.kaki, tarik: KD.tarik, makelar: KD.makelar, tiang: KD.tiang, sokong: KD.sokong};
+  const kuda = [];   // stasiun kuda-kuda (untuk klos)
+  let nKuda = 0;
+  for (let i = 0; i < n; i++) {
+    if (!tepi[i].miring || !mukaTepi.has(i)) continue;
+    const a = p[i], b = p[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 0.3) continue;
+    const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, nx = -ey, ny = ex, cs = cosT(i), polis = mukaTepi.get(i), w = [ex, ey, 0];
+    const diMuka = (x, y) => polis.some(t => dalamPoli(x, y, t));
+    // 1. murplat di garis dinding tritisan
+    tambah('kuda', [a[0], a[1], z0 - 0.06], [b[0], b[1], z0 - 0.06], {bagian: 'murplat', ukuran: [0.08, 0.12], w: [nx, ny, 0]});
+    // 2. stasiun kuda-kuda: tiap ±jarak, digeser ke atas dinding yang tegak lurus tritisan bila ≤ 0,9 m
+    const nK = Math.max(1, Math.round(L / jarak)), cand = nK === 1 ? [L / 2] : Array.from({length: nK - 1}, (_, k) => L * (k + 1) / nK);
+    const stasiun = [];
+    for (let s of cand) {
+      let terbaik = null;
+      for (const [A, B] of dind) {
+        const dx = B[0] - A[0], dy = B[1] - A[1], Lw = Math.hypot(dx, dy);
+        if (Lw < 0.5 || Math.abs((dx * ex + dy * ey) / Lw) > 0.1) continue;   // hanya dinding tegak lurus tritisan
+        const sw = ((A[0] + B[0]) / 2 - a[0]) * ex + ((A[1] + B[1]) / 2 - a[1]) * ey;
+        const t0 = Math.min((A[0] - a[0]) * nx + (A[1] - a[1]) * ny, (B[0] - a[0]) * nx + (B[1] - a[1]) * ny);
+        if (Math.abs(sw - s) <= 0.9 && sw > 0.2 && sw < L - 0.2 && t0 < 1.0 && (!terbaik || Math.abs(sw - s) < Math.abs(terbaik - s))) terbaik = sw;
+      }
+      if (terbaik !== null) s = terbaik;
+      if (!stasiun.some(q => Math.abs(q - s) < 0.8)) stasiun.push(s);
+    }
+    for (const s of stasiun) {
+      const P0 = [a[0] + ex * s, a[1] + ey * s], Q = t => [P0[0] + nx * t, P0[1] + ny * t];
+      // ujung atas: titik keluar dari bidang atap ini (dinding tepi atas atau jurai)
+      let tEnd = 0;
+      for (let t = 0.05; t < 60; t += 0.02) { const q = Q(t); if (!diMuka(q[0], q[1])) break; tEnd = t; }
+      if (tEnd < 0.5) continue;
+      const qe = Q(tEnd + 0.02);
+      const keDinding = p.some((A, k) => !tepi[k].miring && jarakRuas(qe[0], qe[1], A, p[(k + 1) % n]) < 0.06);
+      const tUjung = keDinding ? tEnd - 0.08 : tEnd - 0.04, tAwal = -Math.max(0, tepi[i].overstek - 0.12);
+      const kel = `${i}:${s.toFixed(2)}`, opsi = bag => ({bagian: bag, ukuran: ukur[bag] || KD.kaki, w, kelompok: kel});
+      const zk = t => { const q = Q(t); return zKaki(q[0], q[1], cs); };
+      if (zk(tAwal) === null || zk(tUjung) === null) continue;
+      const P3 = (t, z) => { const q = Q(t); return [q[0], q[1], z]; };
+      tambah('kuda', P3(tAwal, zk(tAwal)), P3(tUjung, zk(tUjung)), opsi('kaki'));
+      tambah('kuda', P3(-0.04, z0 + tbTarik / 2), P3(tUjung, z0 + tbTarik / 2), opsi('tarik'));
+      const bawahKaki = t => zk(t) - (tbKaki / 2) / cs, atasTarik = z0 + tbTarik;
+      // tiang: di ujung atas, di atas tiap dinding yang dilintasi, dan di tengah bentang tak bertumpu > 3,5 m
+      const tiang = [{t: tUjung - 0.03, tumpu: true}];
+      for (const [A, B] of dind) {
+        const dx = B[0] - A[0], dy = B[1] - A[1], den = nx * dy - ny * dx;
+        if (Math.abs(den) < 1e-9) continue;
+        const t = ((A[0] - P0[0]) * dy - (A[1] - P0[1]) * dx) / den, u = ((A[0] - P0[0]) * ny - (A[1] - P0[1]) * nx) / den;
+        if (u >= -0.01 && u <= 1.01 && t > 0.3 && t < tUjung - 0.3 && !tiang.some(q => Math.abs(q.t - t) < 0.3)) tiang.push({t, tumpu: true});
+      }
+      let batasT = [0, ...tiang.map(q => q.t)].sort((x, y) => x - y);
+      for (let k = 0; k + 1 < batasT.length; k++) if (batasT[k + 1] - batasT[k] > 3.5) tiang.push({t: (batasT[k] + batasT[k + 1]) / 2, tumpu: false});
+      tiang.sort((x, y) => x.t - y.t);
+      for (const q of tiang) { const zb = bawahKaki(q.t); if (zb - atasTarik > 0.05) tambah('kuda', P3(q.t, atasTarik), P3(q.t, zb), opsi(q.t >= tUjung - 0.05 ? 'tiang' : 'makelar')); }
+      // sokong: dari kaki tiang yang bertumpu dinding ke puncak tiang berikutnya ke arah tritisan
+      for (const q of tiang) {
+        if (!q.tumpu || q.t >= tUjung - 0.05) continue;
+        const keTritisan = tiang.filter(r => r.t < q.t - 0.8 && r.t > q.t - 3.2).pop();
+        if (keTritisan) tambah('kuda', P3(q.t, atasTarik + 0.03), P3(keTritisan.t, bawahKaki(keTritisan.t) - 0.03), opsi('sokong'));
+      }
+      kuda.push({i, P0, nx, ny, ex, ey, tAwal, tUjung});
+      hasil.stasiun.push(s);
+      nKuda++;
+    }
+  }
+  hasil.ukur.jumlahKuda = nKuda;
+  // 3. balok dudukan atas di dinding tepi atas (tanpa overstek), ikut tinggi bawah kaki tiap bidang
+  for (let j = 0; j < n; j++) {
+    if (tepi[j].miring || tepi[j].overstek > 0.01) continue;
+    const A = p[j], B = p[(j + 1) % n], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+    if (L < 0.3) continue;
+    const ix = -(B[1] - A[1]) / L, iy = (B[0] - A[0]) / L, off = 0.115;
+    const runs = [];
+    for (let k = 0; k <= Math.ceil(L / 0.05); k++) {
+      const u = Math.min(1, k * 0.05 / L), x = A[0] + (B[0] - A[0]) * u + ix * off, y = A[1] + (B[1] - A[1]) * u + iy * off;
+      let f = null;
+      for (const [ti, polis] of mukaTepi) if (polis.some(t => dalamPoli(x, y, t))) { f = ti; break; }
+      const akhir = runs[runs.length - 1];
+      if (f === null) continue;
+      if (akhir && akhir.f === f && akhir.k1 === k - 1) { akhir.k1 = k; akhir.u1 = u; } else runs.push({f, k0: k, k1: k, u0: u, u1: u});
+    }
+    for (const r of runs) {
+      if ((r.u1 - r.u0) * L < 0.2) continue;
+      const titik = u => { const x = A[0] + (B[0] - A[0]) * u + ix * off, y = A[1] + (B[1] - A[1]) * u + iy * off, z = zKaki(x, y, cosT(r.f)); return z === null ? null : [x, y, z - (tbKaki / 2) / cosT(r.f) - 0.06]; };
+      const q0 = titik(r.u0), q1 = titik(r.u1);
+      if (q0 && q1) tambah('kuda', q0, q1, {bagian: 'dudukan', ukuran: [0.08, 0.12], w: [ix, iy, 0]});
+    }
+  }
+  // 4. balok jurai di tepi bersama dua bidang dari tritisan berbeda
+  const jurai = [];
+  const fs = [...mukaTepi.entries()].flatMap(([ti, polis]) => polis.map(t => ({ti, t})));
+  for (let x = 0; x < fs.length; x++) for (let y = 0; y < fs.length; y++) {
+    if (fs[x].ti >= fs[y].ti) continue;
+    const t = fs[x].t, u = fs[y].t;
+    for (let k = 0; k < t.length; k++) {
+      const A = t[k], B = t[(k + 1) % t.length];
+      if (Math.hypot(B[0] - A[0], B[1] - A[1]) < 0.2) continue;
+      const pada = q => u.some((c, m) => jarakRuas(q[0], q[1], c, u[(m + 1) % u.length]) < 0.003);
+      if (pada(A) && pada(B) && !jurai.some(([C, D]) => jarakRuas((A[0] + B[0]) / 2, (A[1] + B[1]) / 2, C, D) < 0.01)) jurai.push([A, B, fs[x].ti, fs[y].ti]);
+    }
+  }
+  const zJurai = (x, y, csMin) => { const z = zAtapDi(muka, x, y); return z === null ? null : z - (K.penutup + K.gording) / csMin - 0.075; };
+  for (const [A, B, ti, tj] of jurai) {
+    const csMin = Math.min(cosT(ti), cosT(tj)), Lh = Math.hypot(B[0] - A[0], B[1] - A[1]), dx = (B[0] - A[0]) / Lh, dy = (B[1] - A[1]) / Lh;
+    const za = zAtapDi(muka, A[0], A[1]) ?? 0, zb = zAtapDi(muka, B[0], B[1]) ?? 0;
+    // ujung bawah (tritisan) mundur di dalam lisplang, ujung atas mundur dari muka dinding
+    const [lo, hi] = za <= zb ? [A, B] : [B, A], sg = za <= zb ? 1 : -1;
+    const p0 = [lo[0] + dx * sg * 0.15, lo[1] + dy * sg * 0.15], p1 = [hi[0] - dx * sg * 0.1, hi[1] - dy * sg * 0.1];
+    const z0j = zJurai(p0[0], p0[1], csMin), z1j = zJurai(p1[0], p1[1], csMin);
+    if (z0j !== null && z1j !== null) tambah('kuda', [...p0, z0j], [...p1, z1j], {bagian: 'jurai', ukuran: [0.08, 0.15], w: [-dy, dx, 0]});
+  }
+  // 5. gording pada ketinggian sama di semua bidang; tiap bidang memakai kelipatan langkah tinggi bersama
+  const infos = susun.muka.filter(info => info.n && info.n.z > 0.05 && info.n.z < 0.9999);
+  if (!infos.length) return;
+  const tanF = info => Math.sqrt(1 - info.n.z * info.n.z) / info.n.z;
+  const tanMin = Math.min(...infos.map(tanF)), cosMin = 1 / Math.sqrt(1 + tanMin * tanMin);
+  const dH = KD.jarakGording * cosMin * tanMin;
+  let dasar = z0;
+  for (let i = 0; i < n; i++) if (tepi[i].miring) { const a = p[i], b = p[(i + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.3) continue; const z = zAtapDi(muka, (a[0] + b[0]) / 2 - (b[1] - a[1]) / L * 0.01, (a[1] + b[1]) / 2 + (b[0] - a[0]) / L * 0.01); if (z !== null) { dasar = z; break; } }
+  const K2 = susunKayu(d);
+  for (const info of infos) {
+    const t = info.dalam, nn = info.n, tf = tanF(info), cf = 1 / Math.sqrt(1 + tf * tf), sf = tf * cf;
+    const zs = t.map(q => q[2]), zMin = Math.min(...zs), zMax = Math.max(...zs);
+    const langkah = Math.max(1, Math.round((KD.jarakGording * cf) / (dH / tf)));
+    const tingkat = [];
+    for (let m = Math.ceil((zMin + 0.04 - dasar) / dH); dasar + m * dH <= zMax - 0.1; m++) if (((m % langkah) + langkah) % langkah === 0) tingkat.push(dasar + m * dH);
+    const zTritisan = zMin + (K2.lebar / 2) * sf;
+    if (!tingkat.length || (tingkat[0] - zTritisan) / sf > 0.3) tingkat.unshift(zTritisan);
+    const zPuncak = zMax - 0.12 * sf;
+    if ((zPuncak - tingkat[tingkat.length - 1]) / sf > 0.45) tingkat.push(zPuncak);
+    const turun = V(nn.x * nn.z, nn.y * nn.z, nn.z * nn.z - 1).normalize();
+    const geserN = q => [q[0] - nn.x * K2.penutup, q[1] - nn.y * K2.penutup, q[2] - nn.z * K2.penutup];
+    for (const z of tingkat) {
+      const ir = irisMuka(t, [0, 0, 1], z);
+      if (!ir) continue;
+      const g0 = geserN(ir[0]), g1 = geserN(ir[1]);
+      if (Math.hypot(g1[0] - g0[0], g1[1] - g0[1]) < 0.15) continue;
+      tambah('gording', g0, g1, {n: [nn.x, nn.y, nn.z], ukuran: KD.gording});
+      // klos: di tiap kaki kuda-kuda yang dilintasi gording, dan di ujung gording yang bertumpu pada jurai
+      const ax = V(...g1).sub(V(...g0)), Lg = ax.length(), wv = ax.clone().normalize();
+      const klosDi = ka => {
+        const G = V(...g0).addScaledVector(ax, ka).addScaledVector(nn, -K2.gording).addScaledVector(turun, K2.lebar / 2);
+        const P1 = G, P2 = G.clone().addScaledVector(turun, KD.klos[0]), P3 = G.clone().addScaledVector(nn, KD.klos[1]);
+        const o = K2.lebar / 2, sisi = sg => [P1, P2, P3].map(v => v.clone().addScaledVector(wv, sg * o).toArray());
+        hasil.klos.push({titik: [...sisi(-1), ...sisi(1)]});
+      };
+      for (const k of kuda) {
+        const kx = k.P0[0], ky = k.P0[1], den = ax.x * k.ny - ax.y * k.nx;
+        if (Math.abs(den) < 1e-9) continue;
+        const ka = ((kx - g0[0]) * k.ny - (ky - g0[1]) * k.nx) / den, tk = ((kx - g0[0]) * ax.y - (ky - g0[1]) * ax.x) / den;
+        if (ka > 0.02 && ka < 0.98 && tk > k.tAwal && tk < k.tUjung) klosDi(ka);
+      }
+      for (const [A, B] of jurai) for (const [ka, q] of [[0.02, g0], [0.98, g1]]) if (jarakRuas(q[0], q[1], A, B) < 0.08 && Lg > 0.3) klosDi(ka);
+    }
+  }
+  volume.kuda += hasil.klos.length * 0.5 * KD.klos[0] * KD.klos[1] * K2.lebar;
+}
 function rangkaAtap(d) {
   const geo = atapGeom(d), hasil = {batang: [], pola: [], ukur: {}};
   if (geo.prisma) return hasil;
@@ -8078,7 +8622,8 @@ function rangkaAtap(d) {
     // atap bergunungan (pelana, sandar): kuda-kuda ujung diganti sopi-sopi, gording menumpang di sopi-sopi
     const adaGunung = kayu && geo.permukaan.some(p => p.jenis === 'gunung');
     hasil.stasiun = [];
-    for (let i = 0; i <= nK; i++) {
+    // atap denah (Fase 1): kuda-kuda belum disusun otomatis (menunggu Fase 3); bubungan, gording, dan reng tetap dibuat per bidang
+    for (let i = 0; i <= nK && d.bentuk !== 'denah'; i++) {
       if (adaGunung && (i === 0 || i === nK) && nK >= 2) continue;
       const a = Math.min(a1 - 0.05, Math.max(a0 + 0.05, a0 + (a1 - a0) * i / nK));
       const titikB = [b0 - oB0 + 0.02];
@@ -8138,7 +8683,8 @@ function rangkaAtap(d) {
     // reng (baja ringan) atau gording (kayu) sejajar listplang, tiap jarak sepanjang kemiringan
     const jarakR = rangka === 'kayu' ? 1.0 : JARAK_RENG[penutup] || 0.6, dz = jarakR * Math.sin(th);
     hasil.klos = [];
-    if (kayu) {
+    if (kayu && d.bentuk === 'denah') rangkaDenahKayu(d, muka, susun, tambah, hasil, volume);
+    else if (kayu) {
       const K2 = susunKayu(d), w = V(...hasil.arahA);
       // gording hanya di bidang dalam (di dalam lisplang): tidak menembus lisplang maupun atap lain
       for (const info of susun.muka) {
@@ -8176,7 +8722,9 @@ function rangkaAtap(d) {
     }
     for (const t of muka) {
       const zs = t.map(q => q[2]), zMin = Math.min(...zs), zMax = Math.max(...zs);
-      if (!kayu) for (let z = zMin + dz / 2; z < zMax - 1e-3; z += dz) {
+      // atap denah: tiap bidang bisa beda kemiringan, jadi langkah tinggi reng dihitung per bidang
+      const nmF = d.bentuk === 'denah' ? normalMuka(t) : null, dzF = nmF ? jarakR * Math.sqrt(Math.max(0, 1 - nmF.z * nmF.z)) : dz;
+      if (!kayu) for (let z = zMin + dzF / 2; z < zMax - 1e-3; z += dzF) {
         const s = irisMuka(t, [0, 0, 1], z);
         if (s) tambah(kayu ? 'gording' : 'reng', [s[0][0], s[0][1], z - tebalPenutup - (kayu ? 0 : 0.02)], [s[1][0], s[1][1], z - tebalPenutup - (kayu ? 0 : 0.02)]);
       }
@@ -8195,7 +8743,10 @@ function rangkaAtap(d) {
     const jr = penutup === 'spandek' ? 0.25 : penutup === 'gelombang' ? 0.1 : penutup === 'genteng' ? 0.3 : 0;
     if (!jr) continue;
     // rusuk tegak lurus listplang (sepanjang kemiringan); pada jurai limas ikut terpotong bidangnya
-    const n = sepanjangX ? [1, 0, 0] : [0, 1, 0], vals = t.map(q => q[0] * n[0] + q[1] * n[1]);
+    let n = sepanjangX ? [1, 0, 0] : [0, 1, 0];
+    // atap denah: rusuk mengikuti arah miring tiap bidang (tegak lurus tritisannya)
+    if (d.bentuk === 'denah') { const nm = normalMuka(t), h = Math.hypot(nm.x, nm.y); if (h > 1e-6) n = [-nm.y / h, nm.x / h, 0]; }
+    const vals = t.map(q => q[0] * n[0] + q[1] * n[1]);
     for (let a = Math.min(...vals) + jr / 2; a < Math.max(...vals); a += jr) { const s = irisMuka(t, n, a); if (s) hasil.pola.push(s); }
   }
   // ukuran untuk RAB
@@ -9145,6 +9696,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Tab' && (S.tool === 'sanitair' || S.tool === 'atap' ||S.tool === 'plafon' || S.tool === 'kolom' || S.tool === 'pondasi' || S.tool === 'anotasi' || S.tool === 'slof' || S.tool === 'ringbalk' || S.tool === 'persegi' || S.tool === 'lingkaran' || S.tool === 'busur' || S.tool === 'dorong' || S.tool === 'offset' || S.tool === 'sapuan' || (S.tool === 'bantu' && alatBantu.sibuk()))) { e.preventDefault(); alat().ganti(); return; }
   if (e.key === 'Enter' && S.tool === 'sapuan' && alatSapuan.sibuk()) { e.preventDefault(); alatSapuan.selesai(false); return; }
   if (e.key === 'Enter' && S.tool === 'bidang3d' && alatBidang3D.sibuk()) { e.preventDefault(); alatBidang3D.selesai(); return; }
+  if (e.key === 'Enter' && S.tool === 'atap' && alatAtap.bentuk === 'denah' && alatAtap.titik.length >= 3) { e.preventDefault(); alatAtap.selesaiDenah(); return; }
   if (e.key === 'Enter' && alat().dariPilihan && !(alat().sibuk && alat().sibuk())) { e.preventDefault(); alat().dariPilihan(); return; }
   if (e.key.startsWith('Arrow') && S.tool === 'pilih' && S.sel.size && !ctrl) { e.preventDefault(); geserPilihan(e.key, e.shiftKey); return; }
   const PANAH = {ArrowRight: 'x', ArrowLeft: 'y', ArrowUp: 'z', ArrowDown: null};
@@ -9275,31 +9827,50 @@ const htmlTotal = () => `<dl class="ukur">
 </dl>`;
 // Rekap struktur untuk pilihan atau seluruh model
 const htmlRekapBagian = ids => { const h = htmlRekap(total(ids).rekap); return h ? `<section><h2>Rekap struktur dan pondasi untuk RAB</h2>${h}</section>` : ''; };
+// Panel atap denah: tiap tepi (tritisan/dinding, overstek) dan tiap titik alas
+function htmlTepiDenah(d) {
+  if (!Array.isArray(d.alas)) return '';
+  const {tepi} = infoDenah(d), n = d.alas.length, cekung = sudutCekungDenah(d), ovUmum = d.overstek ?? 0.6;
+  const opsiM = m => [['miring', 'Tritisan (miring)'], ['dinding', 'Dinding / gunungan']].map(([v, t]) => `<option value="${v}" ${(v === 'miring') === m ? 'selected' : ''}>${esc(t)}</option>`).join('');
+  let h = cekung.length ? `<p class="meta" style="grid-column:1/-1">Perhatian: ${cekung.length} sudut cekung di antara dua tritisan (titik ${cekung.map(c => c.i + 1).join(', ')}). Jurai dalamnya belum bisa dibentuk di versi ini; jadikan salah satu tepinya dinding, atau pecah menjadi dua atap.</p>` : '';
+  const rata = Number.isFinite(d.tinggiAtas);
+  h += `<label for="a-tinggiAtas">Tinggi tepi atas rata (m)</label><input id="a-tinggiAtas" type="text" inputmode="decimal" placeholder="kosong = kemiringan per tepi" value="${rata ? esc(fmtIsi(d.tinggiAtas)) : ''}" title="Isi elevasi tepi atas (setinggi dudukan di dinding tertinggi). Kemiringan tiap tritisan dihitung dari bentangnya, sehingga jurai jatuh dari sudut ke sudut." ${dis()}>`;
+  for (let i = 0; i < n; i++) {
+    const a = d.alas[i], b = d.alas[(i + 1) % n], L = Math.hypot(b.x - a.x, b.y - a.y), tp = (d.tepi || [])[i] || {};
+    h += `<label for="a-tm${i}">Tepi ${i + 1} (${fmt(L)} m)</label><select id="a-tm${i}" ${dis()} title="Tritisan: bidang atap turun ke tepi ini. Dinding: tepi ini menempel dinding atau menjadi gunungan.">${opsiM(tepi[i].miring)}</select>`;
+    if (tepi[i].miring) h += rata ? `<label>Kemiringan tepi ${i + 1}</label><span class="meta">${fmt(tepi[i].kemiringan, 1)}° (bentang ${fmt(tepi[i].bentang || 0)} m)</span>`
+      : `<label for="a-tk${i}">Kemiringan tepi ${i + 1} (°)</label><input id="a-tk${i}" type="text" inputmode="decimal" placeholder="${esc(fmtIsi(d.kemiringan ?? 30))}" value="${Number.isFinite(tp.kemiringan) ? esc(fmtIsi(tp.kemiringan)) : ''}" title="Kosongkan agar ikut kemiringan umum." ${dis()}>`;
+    h += `<label for="a-to${i}">Overstek tepi ${i + 1} (m)</label><input id="a-to${i}" type="text" inputmode="decimal" placeholder="${esc(fmtIsi(tepi[i].miring ? ovUmum : 0))}" value="${Number.isFinite(tp.overstek) ? esc(fmtIsi(tp.overstek)) : ''}" title="Kosongkan agar ikut overstek umum (tritisan) atau 0 (dinding)." ${dis()}>`;
+  }
+  for (let i = 0; i < n; i++) h += medanAngka(`a-tx${i}`, `Titik ${i + 1} X (m)`, d.alas[i].x) + medanAngka(`a-ty${i}`, `Titik ${i + 1} Y (m)`, d.alas[i].y);
+  return h;
+}
 function htmlAtap(id, d) {
-  const {x0, x1, y0, y1} = batasAtap(d), datar = d.bentuk === 'datar';
+  const {x0, x1, y0, y1} = batasAtap(d), datar = d.bentuk === 'datar', denah = d.bentuk === 'denah';
   const opsi = (nilai, daftar) => daftar.map(([v, t]) => `<option value="${v}" ${v === nilai ? 'selected' : ''}>${esc(t)}</option>`).join('');
   const arahOpsi = d.bentuk === 'sandar'
     ? [['selatan', 'Air turun ke selatan'], ['utara', 'Air turun ke utara'], ['timur', 'Air turun ke timur'], ['barat', 'Air turun ke barat']]
     : [['x', 'Nok timur–barat'], ['y', 'Nok utara–selatan']];
   const arah = d.arah || (d.bentuk === 'sandar' ? 'selatan' : (x1 - x0 >= y1 - y0 ? 'x' : 'y'));
   return `
-  <section><h2>Atap terpilih</h2><p class="judul">${esc(d.nama || id)}</p><span class="lencana">${esc(id.replace('_', ''))} · ${esc(BENTUK_ATAP[d.bentuk])} · as ${fmt(x1 - x0)} × ${fmt(y1 - y0)} m</span></section>
+  <section><h2>Atap terpilih</h2><p class="judul">${esc(d.nama || id)}</p><span class="lencana">${esc(id.replace('_', ''))} · ${esc(BENTUK_ATAP[d.bentuk])} · ${denah ? `${d.alas.length} titik, kotak ${fmt(x1 - x0)} × ${fmt(y1 - y0)} m` : `as ${fmt(x1 - x0)} × ${fmt(y1 - y0)} m`}</span></section>
   <section><h2>Properti</h2><div class="medan">
     ${medanTeks('a-nama', 'Nama', d.nama)}
     <label for="a-bentuk">Bentuk</label><select id="a-bentuk" ${dis()}>${opsi(d.bentuk, Object.entries(BENTUK_ATAP))}</select>
     ${datar ? medanAngka('a-tebal', 'Tebal dak (m)', d.tebal > 0 ? d.tebal : 0.12)
-            : `<label for="a-arah">Arah</label><select id="a-arah" ${dis()}>${opsi(arah, arahOpsi)}</select>` + medanAngka('a-kemiringan', 'Kemiringan (°)', d.kemiringan ?? 30)}
+            : (denah ? '' : `<label for="a-arah">Arah</label><select id="a-arah" ${dis()}>${opsi(arah, arahOpsi)}</select>`) + medanAngka('a-kemiringan', 'Kemiringan (°)', d.kemiringan ?? 30)}
     ${medanAngka('a-overstek', 'Overstek (m)', d.overstek ?? 0.6)}
-    ${d.bentuk === 'limas' ? '' : ['utara', 'selatan', 'timur', 'barat'].map(k => `<label for="a-sisi${k}">Overstek sisi ${k} (m)</label><input id="a-sisi${k}" type="text" inputmode="decimal" placeholder="${esc(fmtIsi(d.overstek ?? 0.6))}" value="${Number.isFinite((d.overstekSisi || {})[k]) ? esc(fmtIsi(d.overstekSisi[k])) : ''}" title="Kosongkan agar ikut overstek umum. 0 = atap berhenti di muka dinding (mis. kanopi yang bersandar ke dinding)." ${dis()}>`).join('')}
+    ${d.bentuk === 'limas' || denah ? '' : ['utara', 'selatan', 'timur', 'barat'].map(k => `<label for="a-sisi${k}">Overstek sisi ${k} (m)</label><input id="a-sisi${k}" type="text" inputmode="decimal" placeholder="${esc(fmtIsi(d.overstek ?? 0.6))}" value="${Number.isFinite((d.overstekSisi || {})[k]) ? esc(fmtIsi(d.overstekSisi[k])) : ''}" title="Kosongkan agar ikut overstek umum. 0 = atap berhenti di muka dinding (mis. kanopi yang bersandar ke dinding)." ${dis()}>`).join('')}
     ${datar ? '' : `<label for="a-penutup">Penutup</label><select id="a-penutup" ${dis()}>${opsi(d.penutup || 'spandek', Object.entries(PENUTUP_ATAP))}</select>
     <label for="a-rangka">Rangka</label><select id="a-rangka" ${dis()}>${opsi(d.rangka || 'bajaringan', Object.entries(RANGKA_ATAP))}</select>
     <label for="a-lisplang">Lisplang</label><select id="a-lisplang" ${dis()}>${opsi(d.lisplang || 'papan', Object.entries(LISPLANG_ATAP))}</select>
     <label for="a-plafonMiring">Plafon miring</label><select id="a-plafonMiring" ${dis()}>${opsi(d.plafonMiring || 'tanpa', Object.entries(PLAFON_MIRING))}</select>
+    <label for="a-satukan">Satukan dengan atap lain</label><select id="a-satukan" ${dis()} title="Pangkas otomatis di pertemuan dengan atap lain (jurai dalam)">${opsi(d.satukan === false ? 'tidak' : 'ya', [['ya', 'Ya (otomatis)'], ['tidak', 'Tidak, biarkan utuh']])}</select>
     ${(d.plafonMiring || 'tanpa') === 'tanpa' ? '' : medanSetelPlafon('a', d, {kunciBahan: 'plafonBahan', kunciRangka: 'plafonRangka', lis: false})}
-    ${(d.rangka || 'bajaringan') === 'tanpa' ? '' : medanAngka('a-jarakKuda', 'Jarak kuda-kuda (m)', jarakKudaDari(d))}`}
+    ${(d.rangka || 'bajaringan') === 'tanpa' || denah ? '' : medanAngka('a-jarakKuda', 'Jarak kuda-kuda (m)', jarakKudaDari(d))}`}
     ${medanAngka('a-z0', 'Elevasi tumpuan (m)', d.z0 || 0)}
-    ${medanAngka('a-x0', 'As barat X (m)', x0)}${medanAngka('a-x1', 'As timur X (m)', x1)}
-    ${medanAngka('a-y0', 'As selatan Y (m)', y0)}${medanAngka('a-y1', 'As utara Y (m)', y1)}
+    ${denah ? htmlTepiDenah(d) : medanAngka('a-x0', 'As barat X (m)', x0) + medanAngka('a-x1', 'As timur X (m)', x1)}
+    ${denah ? '' : medanAngka('a-y0', 'As selatan Y (m)', y0) + medanAngka('a-y1', 'As utara Y (m)', y1)}
     ${medanCatatan('a-catatan', d.catatan)}
   </div></section>
   <section><h2>Ukuran untuk RAB</h2><dl class="ukur">
@@ -9390,8 +9961,8 @@ function pecahAtap(id) {
   // 5. rangka: kuda-kuda per subgrup (diurutkan menurut posisinya), batang lain langsung di grup
   const w = V(...(rk.arahA || [1, 0, 0])), subgrup = new Map();
   const kunciKuda = p => Math.round((p[0] * w.x + p[1] * w.y) * 50) / 50;
-  const grupKuda = p => {
-    const k = kunciKuda(p);
+  const grupKuda = (p, kk) => {
+    const k = kk ?? kunciKuda(p);
     if (!subgrup.has(k)) { const sg = nid('G'); subgrup.set(k, sg); tulis.push({id: sg, sesudah: {nama: `Kuda-kuda ${subgrup.size}`, induk: gid, catatan: ''}}); }
     return subgrup.get(k);
   };
@@ -9401,11 +9972,11 @@ function pecahAtap(id) {
     if (ax.length() < 1e-4) continue;
     ax.normalize();
     if (b.jenis === 'kuda') {
-      const atas = b.bagian === 'skor' ? V().crossVectors(V().crossVectors(V(0, 0, 1), w), ax) : V().crossVectors(ax, w);
+      const wb = b.w ? V(...b.w) : w, atas = b.bagian === 'skor' ? V().crossVectors(V().crossVectors(V(0, 0, 1), wb), ax) : V().crossVectors(ax, wb);
       if (atas.lengthSq() < 1e-8) atas.set(0, 0, 1); else { atas.normalize(); if (atas.z < 0) atas.negate(); }
       const [lb, tb] = kayu ? (b.ukuran || UKURAN_KAYU.kuda) : [0.035, 0.075];
       const mid = [(b.p[0] + b.q[0]) / 2, (b.p[1] + b.q[1]) / 2];
-      tambah('J', {jenis: 'batang', peran: kayu ? (b.bagian || 'kaki') : 'rangka', bahan: kayu ? 'kayu' : 'bajaringan', awal: P(b.p), akhir: P(b.q), b: lb, h: tb, atas: vek(atas), jangkar: 'tengah'}, grupKuda(mid));
+      tambah('J', {jenis: 'batang', peran: kayu ? (b.bagian || 'kaki') : 'rangka', bahan: kayu ? 'kayu' : 'bajaringan', awal: P(b.p), akhir: P(b.q), b: lb, h: tb, atas: vek(atas), jangkar: 'tengah'}, ['murplat', 'dudukan', 'jurai'].includes(b.bagian) ? gid : grupKuda(mid, b.kelompok));
       continue;
     }
     const peran = b.tegak ? 'nok' : b.jenis, uk = kayu ? (b.ukuran || UKURAN_KAYU[b.jenis] || [0.05, 0.05]) : [0.04, 0.03];
@@ -10315,8 +10886,36 @@ function ubahMedan(e) {
       const {x0, x1, y0, y1} = batasAtap(b);
       if (b.bentuk === 'sandar' && !['utara', 'selatan', 'timur', 'barat'].includes(b.arah)) b.arah = 'selatan';
       if (b.bentuk !== 'sandar' && b.arah !== 'x' && b.arah !== 'y') b.arah = x1 - x0 >= y1 - y0 ? 'x' : 'y';
-      if (/^Atap /.test(d.nama || '')) b.nama = 'Atap ' + BENTUK_ATAP[b.bentuk].toLowerCase() + ' ' + id.replace('_', '');
+      // ke/dari atap denah: persegi → denah setara (tepi mewarisi tritisan/gunungan); denah → kotak pembatasnya
+      if (b.bentuk === 'denah' && d.bentuk !== 'denah') { Object.assign(b, denahDariAtapPersegi(d)); normalisasiDenah(b); for (const k of ['arah', 'overstekSisi', 'lisplangSisi']) delete b[k]; }
+      if (b.bentuk !== 'denah' && d.bentuk === 'denah') { Object.assign(b, batasAtap(d)); delete b.alas; delete b.tepi; delete b.lisplangSisi; }
+      if (/^Atap /.test(d.nama || '')) b.nama = 'Atap ' + namaBentukAtap(b.bentuk) + ' ' + id.replace('_', '');
     } else if (f === 'arah') b.arah = t.value;
+    else if (b.bentuk === 'denah' && f === 'tinggiAtas') {
+      if (t.value.trim() === '') delete b.tinggiAtas;
+      else { const v = angka(t.value); if (!(v > (b.z0 || 0) + 0.05)) return tolakAngka('Tinggi tepi atas harus di atas elevasi tumpuan.'); b.tinggiAtas = r2(v); }
+    }
+    else if (b.bentuk === 'denah' && /^t[mkoxy]\d+$/.test(f)) {
+      const k = f[1], i = Number(f.slice(2));
+      normalisasiDenah(b);
+      if (!(i >= 0 && i < b.alas.length)) return;
+      if (k === 'm') b.tepi[i] = {...b.tepi[i], miring: t.value === 'miring'};
+      else if (k === 'k') {
+        if (t.value.trim() === '') { const tt = {...b.tepi[i]}; delete tt.kemiringan; b.tepi[i] = tt; }
+        else { const v = angka(t.value); if (!(v >= 1 && v <= 75)) return tolakAngka('Kemiringan antara 1° dan 75°.'); b.tepi[i] = {...b.tepi[i], kemiringan: r2(v)}; }
+      }
+      else if (k === 'o') {
+        if (t.value.trim() === '') { const tt = {...b.tepi[i]}; delete tt.overstek; b.tepi[i] = tt; }
+        else { const v = angka(t.value); if (!(v >= 0 && v <= 5)) return tolakAngka('Overstek tepi antara 0 dan 5 m; kosongkan agar ikut bawaan.'); b.tepi[i] = {...b.tepi[i], overstek: r2(v)}; }
+      } else {
+        const v = angka(t.value);
+        if (!Number.isFinite(v)) return tolakAngka('Isi koordinat dalam meter.');
+        b.alas[i] = {...b.alas[i], [k]: r2(v)};
+        normalisasiDenah(b);
+        if (!sah(b)) return tolakAngka('Titik itu membuat denah atap tidak sah (terlalu kecil atau titiknya berimpit).');
+      }
+    }
+    else if (f === 'satukan') { if (t.value === 'tidak') b.satukan = false; else delete b.satukan; }
     else if (f === 'rangka' || f === 'penutup' || f === 'lisplang' || f === 'plafonMiring' || f === 'plafonBahan' || f === 'plafonRangka') b[f] = t.value;
     else if (/^sisi(utara|selatan|timur|barat)$/.test(f)) {
       const k = f.slice(4), os = {...(b.overstekSisi || {})};

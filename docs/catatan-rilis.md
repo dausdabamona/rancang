@@ -1,3 +1,15 @@
+## Yang baru di 0.37.0
+
+Atap denah bebas ala Roof by Footprint (Revit), penyatuan atap, dan rangka kayu otomatis untuk atap L (19 Oktober 2026, dikerjakan bersama untuk gambar Masjid 20 × 20 m).
+
+- **Atap denah bebas (L/T/U)**: bentuk atap baru *Denah bebas*. Gambar dengan alat Atap (Tab sampai *Denah bebas*): klik titik keliling denah, tutup dengan klik titik pertama, klik 2×, atau Enter. Tiap tepi diberi tanda **tritisan** (miring) atau **dinding/gunungan**, dengan overstek dan kemiringan sendiri; permukaan diambil dari bidang terendah sehingga jurai terbentuk sendiri. Boleh diputar dengan sudut bebas.
+- **Tinggi tepi atas rata**: isi satu elevasi; kemiringan tiap tritisan dihitung dari bentangnya sehingga jurai jatuh dari sudut ke sudut dan tepi atas semua sayap setinggi (mis. serambi 17,9° + sayap 10°).
+- **Gabung atap (satu denah)** dan **Jadikan atap denah** di menu klik kanan: union denah beberapa atap; tepi hasil mewarisi tritisan/gunungan atap asal.
+- **Rangka kayu otomatis atap denah**: murplat 8/12 di tritisan, balok dudukan atas 8/12 di dinding tepi atas, balok jurai 8/15, kuda-kuda sandar ±3 m (menempel ke dinding di bawahnya bila dekat), tiang penggantung di atas dinding yang dilintasi, tiang tengah bila bentang tak bertumpu > 3,5 m, sokong dari kaki tiang yang bertumpu ke puncak tiang berikutnya, gording pada ketinggian sama di semua bidang (berpasangan di jurai), klos di tiap kaki dan di jurai.
+- **Prioritas denah di pertemuan atap**: bagian atap di atas denah dindingnya sendiri tidak dipangkas overstek atap lain; overstek yang menyembul di atas denah atap lain dipangkas. Sakelar baru per atap: *Satukan dengan atap lain*.
+- **Perbaikan plafon miring**: ujung plafon tidak lagi menembus papan lisplang di tritisan (koreksi turun plafon × sin kemiringan).
+- Fase berikutnya: jurai dalam di sudut cekung antara dua tritisan (Fase 2), rangka baja ringan atap denah.
+
 ## Yang baru di 0.36.0
 
 Ukur dan dimensi ala SketchUp, denah per lantai, dan kusen gabung (19 Oktober 2026).
