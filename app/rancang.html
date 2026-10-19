@@ -707,6 +707,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
       <div class="lembar-kop" id="m-kop"></div>
       <div class="lembar-kaki">
         <button class="tombol utama" type="button" id="m-pdf">Unduh PDF semua lembar</button>
+        <button class="tombol" type="button" id="m-dxf-satu" title="Semua lembar yang dicentang dalam satu berkas DXF, disusun seperti matriks (kiri→kanan, lalu turun)">Unduh DXF semua lembar (1 berkas)</button>
         <button class="tombol" type="button" id="m-dxf-semua" title="Satu berkas DXF per lembar yang dicentang, dibungkus ZIP">Unduh DXF semua lembar (ZIP)</button>
         <p class="meta" id="m-lembar-info"></p>
       </div>
@@ -11889,7 +11890,7 @@ function segar2D() {
   const o = opsi2D();
   $('#m-info').textContent = o.jenis === 'sampul' ? 'Sampul set gambar. Isi data proyek di panel kiri.' : o.jenis === 'daftar' ? 'Daftar gambar dibuat otomatis dari lembar yang dicentang.' : hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, ${hasil2D.skala === 'TERTERA' ? 'skala tertera di tiap detail, ukuran dalam cm' : `skala 1 : ${hasil2D.skala}`}, kertas ${o.kertas} lanskap.${hasil2D.skala === 'TERTERA' ? '' : ' Ukuran dalam meter.'}`;
   const bisa = !!S.unduh;
-  ['#m-svgbtn', '#m-png', '#m-png3d', '#m-pdf', '#m-dxf', '#m-dxf-semua', '#m-dae'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? '' : 'Unduhan tidak tersedia di tampilan ini'; });
+  ['#m-svgbtn', '#m-png', '#m-png3d', '#m-pdf', '#m-dxf', '#m-dxf-satu', '#m-dxf-semua', '#m-dae'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? '' : 'Unduhan tidak tersedia di tampilan ini'; });
 }
 function isiPilihan2D(pilih) {
   isiLevel2D();
@@ -12227,7 +12228,9 @@ function warnaGelap(w) {
   return 0.299 * r + 0.587 * g + 0.114 * b < 128;
 }
 // SVG lembar (mm) → teks DXF
-function svgKeDXF(svgTeks, W, H) {
+function svgKeDXF(svgTeks, W, H) { return susunDXF(entitasDXF(svgTeks, W, H), W, H); }
+// entitas DXF satu lembar (mm kertas, titik asal kiri bawah); dipakai DXF per lembar dan DXF gabungan
+function entitasDXF(svgTeks, W, H) {
   const doc = new DOMParser().parseFromString(svgTeks, 'image/svg+xml'), akar = doc.documentElement;
   const ent = [], Y = y => H - y;
   const WARIS = ['stroke', 'stroke-width', 'fill', 'stroke-dasharray', 'font-size', 'text-anchor', 'dominant-baseline', 'visibility', 'fill-opacity', 'stroke-opacity'];
@@ -12300,7 +12303,10 @@ function svgKeDXF(svgTeks, W, H) {
   const vb = (akar.getAttribute('viewBox') || `0 0 ${W} ${H}`).split(/[\s,]+/).map(Number);
   const m0 = [1, 0, 0, 1, -vb[0], -vb[1]];
   for (const c of akar.children) kunjungi(c, m0, {stroke: 'none', fill: '#000', 'stroke-width': '1'});
-  // susun berkas
+  return ent;
+}
+// susun berkas DXF R12 dari daftar entitas; batas gambar W × H mm; lapisLain = layer tambahan [nama, warna]
+function susunDXF(ent, W, H, lapisLain = []) {
   const L = [], k = (c, v) => L.push(String(c), typeof v === 'number' ? angkaDXF(v) : String(v));
   k(0, 'SECTION'); k(2, 'HEADER');
   k(9, '$ACADVER'); k(1, 'AC1009');
@@ -12316,7 +12322,7 @@ function svgKeDXF(svgTeks, W, H) {
   k(0, 'LTYPE'); k(2, 'DASHED'); k(70, 0); k(3, '__ __ __ __'); k(72, 65); k(73, 2); k(40, 3); k(49, 2); k(49, -1);
   k(0, 'LTYPE'); k(2, 'CENTER'); k(70, 0); k(3, '____ _ ____ _'); k(72, 65); k(73, 4); k(40, 8); k(49, 5); k(49, -1); k(49, 1); k(49, -1);
   k(0, 'ENDTAB');
-  const lapis = [...DXF_LAPIS.map(([, n, w]) => [n, w]), ...DXF_LAPIS_LAIN];
+  const lapis = [...DXF_LAPIS.map(([, n, w]) => [n, w]), ...DXF_LAPIS_LAIN, ...lapisLain];
   k(0, 'TABLE'); k(2, 'LAYER'); k(70, lapis.length);
   for (const [n, w] of lapis) { k(0, 'LAYER'); k(2, n); k(70, 0); k(62, w); k(6, 'CONTINUOUS'); }
   k(0, 'ENDTAB');
@@ -12364,6 +12370,46 @@ function dxfSemuaLembar(o = opsi2D(), lapor = () => {}) {
     return {nama: `${String(i + 1).padStart(2, '0')}_${slugBerkas(l.kode || '')}_${slugBerkas(l.nama)}.dxf`, data: svgKeDXF(h.svg, h.W, h.H).dxf};
   });
 }
+/**
+ * DXF semua lembar dalam satu berkas (v0.36, keputusan 19 Okt 2026): lembar yang dicentang disusun seperti matriks,
+ * kolom ⌈√n⌉, dibaca per baris (kiri → kanan, lalu turun), jarak 20 mm, lembar pertama di kiri atas.
+ * Judul (kode + nama) tiap lembar di layer LEMBAR-JUDUL, 4 mm di atas bingkainya.
+ * @param {any} [o] opsi gambar 2D
+ * @param {(i: number, n: number, nama: string) => void} [lapor] kemajuan
+ */
+async function dxfGabungan(o = opsi2D(), lapor = () => {}) {
+  const lembar = daftarLembar().filter(l => l.masuk);
+  if (!lembar.length) throw new Error('Belum ada lembar yang dicentang.');
+  const hasil = [];
+  for (const [i, l] of lembar.entries()) {
+    lapor(i + 1, lembar.length, l.nama);
+    await new Promise(r => setTimeout(r, 0));
+    const h = buatSVG({...o, jenis: l.jenis, lembar: l});
+    hasil.push({l, W: h.W, H: h.H, ent: entitasDXF(h.svg, h.W, h.H)});
+  }
+  const kol = Math.ceil(Math.sqrt(hasil.length)), baris = Math.ceil(hasil.length / kol), JARAK = 20, JUDUL = 12;
+  const lebarSel = Math.max(...hasil.map(x => x.W)) + JARAK, tinggiSel = Math.max(...hasil.map(x => x.H)) + JARAK + JUDUL;
+  const ent = [], Wt = kol * lebarSel - JARAK, Ht = baris * tinggiSel - JARAK;
+  const X_KODE = new Set([10, 11, 12, 13]), Y_KODE = new Set([20, 21, 22, 23]);
+  hasil.forEach((x, i) => {
+    const c = i % kol, r = Math.floor(i / kol), dx = c * lebarSel, dy = Ht - (r + 1) * tinggiSel + JARAK + JUDUL + (tinggiSel - JARAK - JUDUL - x.H);
+    for (const e of x.ent) ent.push(e.map(([kd, v]) => [kd, typeof v === 'number' && X_KODE.has(kd) ? v + dx : typeof v === 'number' && Y_KODE.has(kd) ? v + dy : v]));
+    const judul = `${x.l.kode ? x.l.kode + '  ' : ''}${x.l.nama}`;
+    ent.push([[0, 'TEXT'], [8, 'LEMBAR-JUDUL'], [10, dx], [20, dy + x.H + 4], [30, 0], [40, 5], [1, teksDXF(judul)], [50, 0], [7, 'STANDARD']]);
+  });
+  return {dxf: susunDXF(ent, Wt, Ht, [['LEMBAR-JUDUL', 1]]).dxf, jumlah: hasil.length, kolom: kol, baris};
+}
+$('#m-dxf-satu').addEventListener('click', async () => {
+  if (!S.unduh) return toast('Unduhan tidak tersedia di tampilan ini.');
+  const tombol = $('#m-dxf-satu'), info = $('#m-lembar-info');
+  tombol.disabled = true;
+  try {
+    const r = await dxfGabungan(opsi2D(), (i, n, nama) => { info.textContent = `Menyusun DXF ${i}/${n}: ${nama}…`; });
+    await simpanBerkas(`${dasarBerkas()}_semua-lembar_${$('#m-kertas').value}.dxf`, new Blob([r.dxf], {type: 'application/dxf'}));
+    toast(`DXF gabungan: ${r.jumlah} lembar, ${r.kolom} kolom × ${r.baris} baris.`);
+  } catch (err) { console.error('[dxf]', err); toast(err.message); }
+  finally { tombol.disabled = false; renderLembar(); }
+});
 $('#m-dxf').addEventListener('click', () => {
   const o = opsi2D(), h = buatSVG({...o, lembar: daftarLembar().find(l => l.jenis === o.jenis)}), r = svgKeDXF(h.svg, h.W, h.H);
   simpanBerkas(namaBerkas('dxf'), new Blob([r.dxf], {type: 'application/dxf'}));
@@ -14410,7 +14456,7 @@ window.rancangAPI = Object.freeze({
   gambar2DPng,
   tangkap3D,
   daftarLembar: () => daftarLembar(),
-  dxf: (o = {}) => { const opsi = {...opsi2D(), ...o}, l = daftarLembar().find(x => x.jenis === opsi.jenis); const h = buatSVG({...opsi, lembar: l}); return svgKeDXF(h.svg, h.W, h.H); },
+  dxf: (o = {}) => { if (o.semua) return dxfGabungan({...opsi2D(), ...o, semua: undefined}); const opsi = {...opsi2D(), ...o}, l = daftarLembar().find(x => x.jenis === opsi.jenis); const h = buatSVG({...opsi, lembar: l}); return svgKeDXF(h.svg, h.W, h.H); },
   dae: () => { const r = buatDAE(); return {dae: r.dae, elemen: r.elemen, segitiga: r.segitiga}; },
   pdfSet: async (o = {}) => { const r = await buatPDFSet({...opsi2D(), ...o}); return {jumlah: r.jumlah, raster: r.raster, pdf: await keDataURL(r.blob)}; },
   rab: ids => { const r = dataRAB(ids && ids.length ? ids : semuaId()); return r.divisi; },

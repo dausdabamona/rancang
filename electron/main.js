@@ -339,6 +339,9 @@ async function ujiAsap() {
     const lbr = await halaman(`window.rancangAPI.daftarLembar().filter(l => l.jenis.startsWith('denah')).map(l => l.jenis + '|' + l.nama)`);
     const dk2 = await metode.gambar2D({jenis: 'denah:4'});
     catat('lembar denah per lantai', ku.elemen > 400 && lbr.join() === 'denah:0|Denah Lantai 1,denah:4|Denah Lantai 2' && /DENAH LANTAI 2/.test(dk2.svg), {elemen: ku.elemen, lembar: lbr});
+    // v0.36: DXF semua lembar dalam satu berkas, disusun matriks
+    const dg = await halaman(`window.rancangAPI.dxf({semua: true}).then(r => ({jumlah: r.jumlah, kolom: r.kolom, baris: r.baris, panjang: r.dxf.length, judul: (r.dxf.match(/LEMBAR-JUDUL/g) || []).length, eof: r.dxf.trim().endsWith('EOF')}))`);
+    catat('DXF gabungan satu berkas', dg.jumlah > 5 && dg.kolom === Math.ceil(Math.sqrt(dg.jumlah)) && dg.judul >= dg.jumlah && dg.eof, dg);
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {
