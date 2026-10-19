@@ -328,6 +328,11 @@ async function ujiAsap() {
     catat('buka contoh Asrama Putri', ct && ct.elemen > 300 && ct.kusen >= 9 && /Asrama/.test(ct.nama), {elemen: ct.elemen, kusen: ct.kusen, proyek: ct.nama});
     const dl3 = await metode.gambar2D({jenis: 'denah', level: 4});
     catat('denah lantai 2 contoh', dl3.svg.length > 20000 && /TURUN/.test(dl3.svg), {panjang: dl3.svg.length});
+    // lembar denah per lantai: contoh Kantor Utama → Denah Lantai 1 dan Denah Lantai 2 sebagai lembar sendiri (level Ring balk dilewati)
+    const ku = await halaman(`window.rancangUji.contoh('kantor-utama', 'ganti')`);
+    const lbr = await halaman(`window.rancangAPI.daftarLembar().filter(l => l.jenis.startsWith('denah')).map(l => l.jenis + '|' + l.nama)`);
+    const dk2 = await metode.gambar2D({jenis: 'denah:4'});
+    catat('lembar denah per lantai', ku.elemen > 400 && lbr.join() === 'denah:0|Denah Lantai 1,denah:4|Denah Lantai 2' && /DENAH LANTAI 2/.test(dk2.svg), {elemen: ku.elemen, lembar: lbr});
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {

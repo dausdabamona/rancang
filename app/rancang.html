@@ -5688,6 +5688,17 @@ function levelTerdekat(z, tol = meterPerPiksel() * 8) {
 }
 const daftarLevel = () => [...S.elems].filter(([, d]) => d.jenis === 'level' && sah(d)).map(([id, d]) => { const l = /** @type {any} */ (d); return {id, nama: l.nama, z: l.z}; }).sort((a, b) => a.z - b.z);
 const fmtElevasi = z => (Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z));
+/**
+ * Lembar denah per lantai (19/10/2026): tiap level yang punya dinding berdiri di elevasinya (±0,30 m) menjadi lembar `denah:<elevasi>`.
+ * Hanya bila ada sedikitnya dua level berdinding; level tanpa dinding (mis. ring balk) dilewati.
+ * @returns {{kunci: string, nama: string, z: number}[]}
+ */
+function levelDenah() {
+  const zDinding = /** @type {any[]} */ ([...S.elems.values()]).filter(d => d.jenis === 'dinding' && sah(d)).map(d => d.z0 || 0);
+  const lv = daftarLevel(), daftar = lv.some(l => Math.abs(l.z) < 0.01) ? lv : [{id: '', nama: 'Lantai 1', z: 0}, ...lv];
+  const ada = daftar.filter(l => zDinding.some(z => Math.abs(z - l.z) <= 0.3));
+  return ada.length >= 2 ? ada.map(l => ({kunci: 'denah:' + r2(l.z), nama: l.nama || 'Level', z: l.z})) : [];
+}
 /** Bingkai putus-putus setinggi level di sekitar (x, y): umpan balik saat sebuah gerakan menempel ke level. */
 function gambarLevel(x, y, lv) {
   const h = 2.5, z = lv.z;
@@ -10208,6 +10219,7 @@ const SKALA = [20, 50, 100, 150, 200, 500, 1000];
 function namaGambar(j) {
   if (j && j.startsWith('potongan:')) { const d = S.elems.get(j.slice(9)); return 'POTONGAN ' + (d ? d.nama + '–' + d.nama : ''); }
   if (j && j.startsWith('det:')) return 'LEMBAR DETAIL ' + nomorDet(j);
+  if (j && j.startsWith('denah:')) { const l = levelDenah().find(x => x.kunci === j); return 'DENAH ' + (l ? l.nama.toUpperCase() : 'LEVEL ' + fmtElevasi(+j.slice(6))); }
   return NAMA_2D[j];
 }
 const NAMA_2D = {sampul: 'SAMPUL', daftar: 'DAFTAR GAMBAR', denah: 'DENAH', atap: 'DENAH ATAP', plafon: 'RENCANA PLAFON DAN RANGKA', pondasi: 'DENAH PONDASI', detail: 'DETAIL PENULANGAN', kusen: 'DAFTAR KUSEN', depan: 'TAMPAK DEPAN (SELATAN)', belakang: 'TAMPAK BELAKANG (UTARA)', kanan: 'TAMPAK KANAN (TIMUR)', kiri: 'TAMPAK KIRI (BARAT)'};
@@ -10346,7 +10358,7 @@ const n2k = v => Math.round(v * 100) / 100;
 const esk = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const LEMBAR_BAKU = ['sampul', 'daftar', 'denah', 'atap', 'plafon', 'pondasi', 'depan', 'belakang', 'kanan', 'kiri', 'potongan:*', 'kusen', 'detail', 'det:*'];
 const LEMBAR_STRUKTUR = new Set(['pondasi', 'detail']);
-const rankLembar = j => { const i = LEMBAR_BAKU.indexOf(j.startsWith('potongan:') ? 'potongan:*' : j.startsWith('det:') ? 'det:*' : j); return i < 0 ? 99 : i + (j.startsWith('det:') ? nomorDet(j) / 1000 : 0); };
+const rankLembar = j => { const i = LEMBAR_BAKU.indexOf(j.startsWith('potongan:') ? 'potongan:*' : j.startsWith('det:') ? 'det:*' : j.startsWith('denah:') ? 'denah' : j); return i < 0 ? 99 : i + (j.startsWith('det:') ? nomorDet(j) / 1000 : j.startsWith('denah:') ? (100 + +j.slice(6)) / 10000 : 0); };
 const ISIAN_SAMPUL = [['judul', 'Judul', 'GAMBAR KERJA'], ['nama', 'Nama proyek', ''], ['lokasi', 'Lokasi', ''], ['pemilik', 'Pemilik / instansi', ''],
   ['tahun', 'Tahun anggaran', ''], ['perencana', 'Perencana', ''], ['penggambar', 'Digambar oleh', ''], ['tanggal', 'Tanggal', '']];
 // semua lembar yang tersedia, mengikuti urutan tersimpan; lembar baru masuk di posisi bakunya
@@ -10355,6 +10367,10 @@ function daftarLembar() {
   for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && !ada.includes('potongan:' + id)) ada.push('potongan:' + id);
   for (const j of lembarDetailAda()) if (!ada.includes(j)) ada.push(j);
   for (let i = ada.length - 1; i >= 0; i--) if (ada[i].startsWith('det:') && !lembarDetailAda().includes(ada[i])) ada.splice(i, 1);
+  // denah per lantai: lembar per level menggantikan denah gabungan di set lembar/PDF; lembar level yang sudah hilang dibuang
+  const lvDenah = levelDenah().map(l => l.kunci);
+  for (const j of lvDenah) if (!ada.includes(j)) ada.push(j);
+  for (let i = ada.length - 1; i >= 0; i--) if ((ada[i].startsWith('denah:') && !lvDenah.includes(ada[i])) || (ada[i] === 'denah' && lvDenah.length)) ada.splice(i, 1);
   const sim = S.setel.lembar || {}, urut = (sim.urutan || []).filter(j => ada.includes(j));
   for (const j of ada) {
     if (urut.includes(j)) continue;
@@ -10373,6 +10389,7 @@ function daftarLembar() {
 function judulLembar(j) {
   if (j === 'sampul') return 'Sampul';
   if (j === 'daftar') return 'Daftar gambar';
+  if (j.startsWith('denah:')) { const l = levelDenah().find(x => x.kunci === j); return 'Denah ' + (l ? l.nama : 'level ' + fmtElevasi(+j.slice(6))); }
   const op = [...$('#m-jenis').options].find(x => x.value === j);
   if (op) return op.textContent;
   if (j.startsWith('potongan:')) { const d = S.elems.get(j.slice(9)); return `Potongan ${d ? d.nama + '–' + d.nama : ''}`; }
@@ -10420,7 +10437,7 @@ function kopGambar(o, W, H, skalaTeks) {
   const gr = (x1, y1, x2, y2, w) => `<line x1="${n2k(x1)}" y1="${n2k(y1)}" x2="${n2k(x2)}" y2="${n2k(y2)}" stroke="#000" stroke-width="${w}"/>`;
   const tk = (x, y, t, uk, extra = '') => `<text x="${n2k(x)}" y="${n2k(y)}" font-size="${n2k(uk)}" ${extra}>${esk(t)}</text>`;
   const bingkai = `<rect x="${m}" y="${m}" width="${W - 2 * m}" height="${H - 2 * m}" fill="none" stroke="#000" stroke-width="0.5"/>`;
-  const judulG = namaGambar(o.jenis) || '';
+  const judulG = namaGambar(o.jenisAsli || o.jenis) || '';
   if (model === 'bawah') {
     const kopH = 22, ky = H - m - kopH;
     const nomor = l && l.kode ? `${l.kode} · ${l.urut}/${l.total}` : '–';
@@ -10753,6 +10770,7 @@ function lembarKhusus(o) {
  * @returns {{svg: string, info: string, skala: number | string, W: number, H: number, peta?: any, anotStat?: any, petak?: any[]}} `skala` angka penyebut, '-' (sampul/daftar) atau 'TERTERA' (lembar detail)
  */
 function buatSVG(o) {
+  if (o.jenis.startsWith('denah:')) o = {...o, lembar: o.lembar !== undefined ? o.lembar : infoLembar(o.jenis), jenisAsli: o.jenis, jenis: 'denah', level: +o.jenis.slice(6)};   // lembar denah per lantai
   if (o.jenis === 'sampul' || o.jenis === 'daftar') return lembarKhusus(o);
   if (o.jenis.startsWith('det:')) return lembarDetail(o);
   const [W, H] = KERTAS[o.kertas], m = 10;
@@ -11698,7 +11716,13 @@ function segar2D() {
 function isiPilihan2D(pilih) {
   isiLevel2D();
   const sel = $('#m-jenis'), lama = pilih || sel.value;
-  for (const op of [...sel.options]) if (op.value.startsWith('potongan:') || op.value.startsWith('det:')) op.remove();
+  for (const op of [...sel.options]) if (op.value.startsWith('potongan:') || op.value.startsWith('det:') || op.value.startsWith('denah:')) op.remove();
+  const opDenah = [...sel.options].find(op => op.value === 'denah'), lvDenah = levelDenah();
+  if (opDenah) {
+    opDenah.textContent = lvDenah.length ? 'Denah gabungan (semua level)' : 'Denah';
+    let sesudah = opDenah;
+    for (const l of lvDenah) { const op = document.createElement('option'); op.value = l.kunci; op.textContent = `Denah ${l.nama} (${fmtElevasi(l.z)})`; sesudah.after(op); sesudah = op; }
+  }
   const daftar = [...S.elems].filter(([, d]) => d.jenis === 'potong' && sah(d)).sort((a, b) => a[1].nama.localeCompare(b[1].nama));
   for (const [id, d] of daftar) { const op = document.createElement('option'); op.value = 'potongan:' + id; op.textContent = `Potongan ${d.nama}–${d.nama}`; sel.appendChild(op); }
   for (const j of lembarDetailAda()) { const op = document.createElement('option'); op.value = j; op.textContent = 'Lembar detail ' + nomorDet(j); sel.appendChild(op); }
@@ -14173,6 +14197,7 @@ function jenisGambar2D() {
   for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d)) daftar.push({jenis: 'potongan:' + id, nama: `Potongan ${d.nama}–${d.nama}`});
   // lembar detail (det:N) dibaca langsung dari model, bukan dari pilihan layar yang bisa usang
   for (const j of lembarDetailAda()) if (!daftar.some(x => x.jenis === j)) daftar.push({jenis: j, nama: judulLembar(j)});
+  for (const l of levelDenah()) if (!daftar.some(x => x.jenis === l.kunci)) daftar.push({jenis: l.kunci, nama: `Denah ${l.nama} (${fmtElevasi(l.z)})`});
   return daftar;
 }
 /**
