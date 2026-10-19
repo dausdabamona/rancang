@@ -11075,7 +11075,7 @@ function buatSVG(o) {
             `<text x="${n2(cx)}" y="${n2(cy + 1.05)}" font-size="3" font-weight="700" text-anchor="middle">${esc(d.nama)}</text>`);
         }
       }
-      isi.push(...anotasiSvg(p => [X(p.x), Y(p.y)], 'denah'));
+      isi.push(...anotasiSvg(p => [X(p.x), Y(p.y)], 'denah', o.level != null ? d => (d.titik.z ?? 0) >= o.level - 1 && (d.titik.z ?? 0) < o.level + 3.5 : null));   // denah per level: hanya anotasi di ketinggian level itu
       peta = {pada: 'denah', keDunia: (px, py) => ({x: r2(bx0 + (px - ox) / s), y: r2(by1 - (py - oy) / s), z: 0}), geser: (dx, dy) => ({x: dx / s, y: -dy / s, z: 0})};
       if (o.dimensi && o.dimDinding) {
         for (const {g} of dinding) {
@@ -12375,7 +12375,10 @@ function muatProyek(p, cara) {
   toast(`${p.el.length} elemen ditambahkan dan sudah terpilih. Tekan M untuk memindahkannya bila bertumpuk.`);
 }
 // Proyek contoh (v0.35): berkas JSON di folder contoh/ di samping halaman (artifact: berkas pendukung; desktop: build/renderer/contoh)
-const CONTOH_PROYEK = {'asrama-putri': {nama: 'Asrama Putri 2 lantai', ket: 'Renovasi Asrama Putri Poltek KP Sorong (2015): 2 × 8 kamar + KM, plat lantai, tangga, atap limas kayu'}};
+const CONTOH_PROYEK = {
+  'asrama-putri': {nama: 'Asrama Putri 2 lantai', ket: 'Renovasi Asrama Putri Poltek KP Sorong (2015): 2 × 8 kamar + KM, plat lantai, tangga, atap limas kayu'},
+  'kantor-utama': {nama: 'Kantor Utama 2 lantai', ket: 'Gedung Kantor Utama Poltek KP Sorong (2015): 30 × 12 m, hall tengah, tangga dogleg, teras mobil, atap perisai + gable'}
+};
 async function ambilContoh(kunci) {
   const url = 'contoh/' + kunci + '.json';
   let teks;
