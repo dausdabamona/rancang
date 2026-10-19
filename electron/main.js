@@ -331,6 +331,9 @@ async function ujiAsap() {
     // v0.36: Meteran (tanpa elemen) dan Dimensi (anotasi ukuran bergeser, tampil di denah)
     const mt = await halaman(`window.rancangUji.meteran({x: 0, y: 0, z: 0}, {x: 3, y: 4, z: 0})`);
     catat('alat Meteran', /5,00|500/.test(mt.hasil) && /ΔZ/.test(mt.hasil) && mt.elemenBaru === 0, mt);
+    const mz = await halaman(`window.rancangUji.sumbuMeteran({x: 1, y: 1, z: 0}, {x: 1, y: 1, z: 2.5})`);
+    const mtp = await halaman(`window.rancangUji.meteranTepi({x: 0, y: 0, z: 0}, {x: 1, y: 0, z: 0}, {x: 2, y: 1.5, z: 0})`);
+    catat('Meteran: kunci sumbu Z dan garis bantu sejajar tepi', mz && mz.kunci === 'z' && Math.abs(mz.p[2] - 2.5) < 0.05 && mtp.elemenBaru === 1 && mtp.bantu && mtp.bantu.jenis === 'bantu' && Math.abs(mtp.bantu.awal.y - 1.5) < 0.01 && Math.abs(mtp.bantu.akhir.y - 1.5) < 0.01, {mz, bantu: mtp.bantu});
     const dm = await halaman(`window.rancangUji.dimensi({x: 0, y: 0, z: 0}, {x: 6, y: 0, z: 0}, 0.8)`);
     const dmSvg = await metode.gambar2D({jenis: 'denah'});
     catat('alat Dimensi', !!dm.id && dm.data && dm.data.tipe === 'ukuran' && Math.abs(Math.hypot(dm.data.geser.x, dm.data.geser.y) - 0.8) < 0.01 && dmSvg.svg.includes('data-anot="' + dm.id + '"'), {id: dm.id, geser: dm.data && dm.data.geser});
