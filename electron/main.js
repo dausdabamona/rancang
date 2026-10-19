@@ -328,6 +328,12 @@ async function ujiAsap() {
     catat('buka contoh Asrama Putri', ct && ct.elemen > 300 && ct.kusen >= 9 && /Asrama/.test(ct.nama), {elemen: ct.elemen, kusen: ct.kusen, proyek: ct.nama});
     const dl3 = await metode.gambar2D({jenis: 'denah', level: 4});
     catat('denah lantai 2 contoh', dl3.svg.length > 20000 && /TURUN/.test(dl3.svg), {panjang: dl3.svg.length});
+    // v0.36: Meteran (tanpa elemen) dan Dimensi (anotasi ukuran bergeser, tampil di denah)
+    const mt = await halaman(`window.rancangUji.meteran({x: 0, y: 0, z: 0}, {x: 3, y: 4, z: 0})`);
+    catat('alat Meteran', /5,00|500/.test(mt.hasil) && /ΔZ/.test(mt.hasil) && mt.elemenBaru === 0, mt);
+    const dm = await halaman(`window.rancangUji.dimensi({x: 0, y: 0, z: 0}, {x: 6, y: 0, z: 0}, 0.8)`);
+    const dmSvg = await metode.gambar2D({jenis: 'denah'});
+    catat('alat Dimensi', !!dm.id && dm.data && dm.data.tipe === 'ukuran' && Math.abs(Math.hypot(dm.data.geser.x, dm.data.geser.y) - 0.8) < 0.01 && dmSvg.svg.includes('data-anot="' + dm.id + '"'), {id: dm.id, geser: dm.data && dm.data.geser});
     // lembar denah per lantai: contoh Kantor Utama → Denah Lantai 1 dan Denah Lantai 2 sebagai lembar sendiri (level Ring balk dilewati)
     const ku = await halaman(`window.rancangUji.contoh('kantor-utama', 'ganti')`);
     const lbr = await halaman(`window.rancangAPI.daftarLembar().filter(l => l.jenis.startsWith('denah')).map(l => l.jenis + '|' + l.nama)`);
