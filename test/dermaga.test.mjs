@@ -118,6 +118,11 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     for (const l of ['T1', 'T2', 'T11', 'T12']) assert.ok(ada(l), `as ${l} terlihat harus digambar`);
     for (const l of ['T3', 'T5', 'T8', 'T10']) assert.ok(!ada(l), `as ${l} di bagian yang dihilangkan tidak boleh digambar`);
     assert.ok(/>27,00</.test(svg), 'ukuran T2–T11 menyambung dengan nilai sebenarnya 27,00');
+    // simbol garis putus datar hanya selebar benda yang dipendekkan (pelat trestle 10 m) ± 2 mm, bukan setinggi seluruh gambar
+    const skala = Number((/1 : (\d+)/.exec(svg) || [])[1]);
+    const putih = /<g data-g2="L900"><rect [^>]*height="([\d.]+)"/.exec(svg);
+    assert.ok(skala > 0 && putih, 'skala dan simbol garis putus ada di SVG');
+    assert.ok(Math.abs(Number(putih[1]) - (10 * 1000 / skala + 4)) < 0.6, `tinggi penutup ${putih[1]} mm harus selebar trestle pada 1:${skala}`);
     const t3 = await c.callTool({name: 'tangkap_layar_3d', arguments: {tampilan: 'iso'}});
     fs.writeFileSync(path.join(keluar, 'dermaga-3d.png'), Buffer.from(t3.content[0].data, 'base64'));
   } finally {
