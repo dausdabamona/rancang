@@ -1003,7 +1003,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * M — level: elevasi bernama (z, meter) sebagai acuan snap tinggi; bukan benda fisik (tidak masuk RAB).
- * @typedef {DasarElemen & {jenis: 'level', nama: string, z: number, datum?: 'hwl' | 'msl' | 'lwl' | 'dasar'}} Level
+ * @typedef {DasarElemen & {jenis: 'level', nama: string, z: number, datum?: 'hwl' | 'msl' | 'lwl' | 'dasar', profil?: {awal: Titik2, akhir: Titik2, titik: number[][]}}} Level
  * @typedef {DasarElemen & {jenis: 'tangga', awal: Titik2, arah: number, lebar: number, tinggi: number, jumlahAnak: number, antrede: number, tebalPlat: number, z0: number, fc?: number, tul?: {d: number, s: number}, railing?: string}} Tangga
  * @typedef {DasarElemen & {jenis: 'plat', alas: Titik2[], lubang?: Titik2[][], z0: number, tebal: number, fc?: number, tul?: {d: number, s: number}}} Plat
  */
@@ -1220,7 +1220,8 @@ function sah(d) {
   if (d.jenis === 'potong') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.1 && (d.pandang === 1 || d.pandang === -1) && typeof d.nama === 'string' && !!d.nama;
   if (d.jenis === 'bantu') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.02
     && ((d.awal.z === undefined && d.akhir.z === undefined) || (Number.isFinite(d.awal.z) && Number.isFinite(d.akhir.z)));
-  if (d.jenis === 'level') return Number.isFinite(d.z) && typeof d.nama === 'string' && d.nama.length > 0 && (d.datum === undefined || !!DATUM_PASUT[d.datum]);
+  if (d.jenis === 'level') return Number.isFinite(d.z) && typeof d.nama === 'string' && d.nama.length > 0 && (d.datum === undefined || !!DATUM_PASUT[d.datum])
+    && (d.profil === undefined || (d.datum === 'dasar' && profilDasarSah(d.profil)));
   if (d.jenis === 'gambar2d') return typeof d.lembar === 'string' && !!d.lembar && Array.isArray(d.titik) && d.titik.length >= 1 && d.titik.every(titikSah)
     && (d.tempel === 'gambar' || d.tempel === 'kertas' || (d.tempel === 'petak' && typeof d.petak === 'string')) && ['garis', 'polyline', 'persegi', 'lingkaran', 'busur', 'teks', 'arsir', 'rujukan', 'simbol', 'legenda', 'putus', 'perbesar'].includes(d.bentuk)
     && (d.bentuk !== 'putus' || (d.tempel === 'gambar' && d.titik.length >= 2 && (d.arah === 'tegak' || d.arah === 'datar')))
@@ -1281,6 +1282,33 @@ const BAHAN_TIANG = {
 // Datum pasang surut disimpan sebagai elemen level ber-isian datum (agar bisa diatur lewat MCP); tidak ikut daftar level lantai
 const DATUM_PASUT = {hwl: 'HWL (air pasang tertinggi)', msl: 'MSL (muka air rata-rata)', lwl: 'LWL (air surut terendah)', dasar: 'Dasar laut'};
 const NAMA_DATUM = {hwl: 'HWL', msl: 'MSL', lwl: 'LWL', dasar: 'Dasar laut'};
+// Profil dasar laut (v0.40): datum 'dasar' boleh punya profil di sepanjang sumbu acuan awal → akhir (mis. dari pantai ke ujung dermaga),
+// titik = [[jarak dari awal (m), elevasi (m)], …] urut naik. Elevasi di titik mana pun = interpolasi dari proyeksi ke sumbu itu.
+const profilDasarSah = p => !!p && titikSah(p.awal) && titikSah(p.akhir) && Math.hypot(p.akhir.x - p.awal.x, p.akhir.y - p.awal.y) > 0.5
+  && Array.isArray(p.titik) && p.titik.length >= 2 && p.titik.every((q, i) => Array.isArray(q) && Number.isFinite(q[0]) && Number.isFinite(q[1]) && (i === 0 || q[0] > p.titik[i - 1][0]));
+function profilDasar() {
+  for (const d of S.elems.values()) if (d.jenis === 'level' && d.datum === 'dasar' && d.profil && profilDasarSah(d.profil)) return d.profil;
+  return null;
+}
+// elevasi dasar laut di (x, y): dari profil bila ada, selain itu elevasi datum dasar (atau null)
+function zDasarDi(x, y) {
+  const p = profilDasar();
+  if (!p) { const ps = pasutAktif(); return ps && Number.isFinite(ps.dasar) ? ps.dasar : null; }
+  const L = Math.hypot(p.akhir.x - p.awal.x, p.akhir.y - p.awal.y), t = ((x - p.awal.x) * (p.akhir.x - p.awal.x) + (y - p.awal.y) * (p.akhir.y - p.awal.y)) / L;
+  const T = p.titik;
+  if (t <= T[0][0]) return T[0][1];
+  for (let i = 1; i < T.length; i++) if (t <= T[i][0]) return T[i - 1][1] + (T[i][1] - T[i - 1][1]) * (t - T[i - 1][0]) / (T[i][0] - T[i - 1][0]);
+  return T[T.length - 1][1];
+}
+// titik-titik profil di dunia (x, y, z) untuk digambar, rapat tiap ≤ 1 m
+function titikProfilDasar() {
+  const p = profilDasar();
+  if (!p) return null;
+  const L = Math.hypot(p.akhir.x - p.awal.x, p.akhir.y - p.awal.y), ux = (p.akhir.x - p.awal.x) / L, uy = (p.akhir.y - p.awal.y) / L, r = [];
+  const t0 = Math.min(0, p.titik[0][0]), t1 = Math.max(L, p.titik[p.titik.length - 1][0]);
+  for (let t = t0; t <= t1 + 1e-6; t += Math.max(0.5, (t1 - t0) / 400)) { const x = p.awal.x + ux * t, y = p.awal.y + uy * t; r.push([x, y, zDasarDi(x, y)]); }
+  return r;
+}
 function pasutAktif() {
   const r = {};
   for (const d of S.elems.values()) if (d.jenis === 'level' && d.datum && DATUM_PASUT[d.datum] && Number.isFinite(d.z)) r[d.datum] = d.z;
@@ -11897,7 +11925,13 @@ function zonaPotong(pid) {
   return null;
 }
 // tampak sisi panjang = TAMPAK SAMPING, sisi pendek = TAMPAK DEPAN (dermaga); arah diambil dari kotak zona
-const tampakZona = kotak => ((kotak[2] - kotak[0]) >= (kotak[3] - kotak[1]) ? {samping: 'depan', depan: 'kiri'} : {samping: 'kanan', depan: 'depan'});
+const tampakZona = kotak => {
+  const datar = (kotak[2] - kotak[0]) >= (kotak[3] - kotak[1]), p = profilDasar();
+  // seperti gambar KP Sorong: pantai (ujung dangkal) di kiri, ujung dermaga (dalam) di kanan
+  let balik = false;
+  if (p) { const dangkalDiAwal = p.titik[0][1] >= p.titik[p.titik.length - 1][1], a = dangkalDiAwal ? p.awal : p.akhir, b = dangkalDiAwal ? p.akhir : p.awal; balik = datar ? a.x > b.x : a.y > b.y; }
+  return datar ? (balik ? {samping: 'belakang', depan: 'kiri'} : {samping: 'depan', depan: 'kiri'}) : (balik ? {samping: 'kiri', depan: 'depan'} : {samping: 'kanan', depan: 'depan'});
+};
 // susunan lembar per zona menurut profil; komponen dermaga (trestle, kepala dermaga, causeway) mendapat lembar sendiri
 function lembarZona(z) {
   const L = [], ada = jenis => z.isi.some(d => jenis.includes(d.jenis)), tz = tampakZona(z.kotak);
@@ -12444,13 +12478,26 @@ function buatSVGInti(o) {
   const garis = (x1, y1, x2, y2, w, warna = '#000') => `<line x1="${n2(x1)}" y1="${n2(y1)}" x2="${n2(x2)}" y2="${n2(y2)}" stroke="${warna}" stroke-width="${w}"/>`;
   const teks = (x, y, t, uk = 2.5, extra = '') => `<text x="${n2(x)}" y="${n2(y)}" font-size="${uk}" ${extra}>${esc(t)}</text>`;
   // Datum pasang surut (v0.39): garis HWL/MSL/LWL putus-putus biru dan garis dasar laut; tanpa datum = garis tanah ±0,00
-  const garisTanahAtauPasut = (xa, xb, X, Y) => {
+  const garisTanahAtauPasut = (xa, xb, X, Y, profilUZ = null) => {
     const ps = pasutAktif();
     if (!ps) return [garis(xa, Y(0), xb, Y(0), 0.7)];
     const out = [];
     for (const [k, nama] of [['hwl', 'HWL'], ['msl', 'MSL'], ['lwl', 'LWL']]) if (Number.isFinite(ps[k])) {
       out.push(`<line x1="${n2(xa)}" y1="${n2(Y(ps[k]))}" x2="${n2(xb)}" y2="${n2(Y(ps[k]))}" stroke="#1F6FD1" stroke-width="0.25" stroke-dasharray="3 1.2"/>`,
         `<path d="M${n2(xa + 3)} ${n2(Y(ps[k]) - 0.2)} l-1 -1.6 h2 z" fill="#1F6FD1"/>`, teks(xa + 4.5, Y(ps[k]) - 0.5, `${nama} ${fmtElev(ps[k])}`, 2, 'fill="#1F6FD1" stroke="#fff" stroke-width="0.7" paint-order="stroke"'));
+    }
+    if (profilUZ && profilUZ.length >= 2) {
+      // dasar laut berprofil: garis lengkung + arsir miring di bawahnya, dipangkas ke lebar gambar
+      const q = profilUZ.map(([u, z]) => [X(u), Y(z)]).filter(([x]) => x >= xa - 0.01 && x <= xb + 0.01).sort((a, b) => a[0] - b[0]);
+      if (q.length >= 2) {
+        out.push(`<polyline points="${q.map(([x, y]) => `${n2(x)},${n2(y)}`).join(' ')}" fill="none" stroke="#6B4E2E" stroke-width="0.6" stroke-linejoin="round"/>`);
+        for (let x = q[0][0] + 1; x < q[q.length - 1][0] - 1; x += 2.5) {
+          const i = q.findIndex(p => p[0] >= x), a = q[Math.max(0, i - 1)], b = q[i], y = a[1] + (b[1] - a[1]) * ((x - a[0]) / ((b[0] - a[0]) || 1));
+          out.push(garis(x, y, x - 1.4, y + 1.4, 0.15, '#6B4E2E'));
+        }
+        out.push(teks(q[0][0] + 1.5, q[0][1] - 0.8, 'Dasar laut (profil)', 2, 'fill="#6B4E2E" stroke="#fff" stroke-width="0.7" paint-order="stroke"'));
+        return out;
+      }
     }
     if (Number.isFinite(ps.dasar)) {
       const yd = Y(ps.dasar);
@@ -13268,7 +13315,8 @@ function buatSVGInti(o) {
             isi.push(svgKusen(polaKusen(m.kusen.tp, k.W, k.H, k.be, k.sisi), (u, z) => { const [x, y] = k.P(k.s + u, k.n); return [X(Hh(x, y)), Y(k.z0 + z)]; }, Math.min(1, s / 20)));
           }
         }
-        isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y));
+        const prf = profilDasar(), uzP = prf ? (() => { const r = [], n = 200; for (let i = 0; i <= n; i++) { const x = pt.awal.x + (pt.akhir.x - pt.awal.x) * (i / n), y = pt.awal.y + (pt.akhir.y - pt.awal.y) * (i / n); r.push([Hh(x, y), zDasarDi(x, y)]); } return r; })() : null;
+        isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y, uzP));
         // kuda-kuda terdekat di belakang bidang potong, dan penampang reng/gording yang terpotong
         for (const rk of rangkaL) {
           // atap yang tidak terpotong hanya tampak penutupnya; rangkanya tersembunyi
@@ -13450,7 +13498,8 @@ function buatSVGInti(o) {
           }
         }
       }
-      isi.push(...garisTanahAtauPasut(X(u0 - 0.8), X(u1 + 0.8), X, Y));
+      const tpD = titikProfilDasar();
+      isi.push(...garisTanahAtauPasut(X(u0 - 0.8), X(u1 + 0.8), X, Y, tpD ? tpD.map(([x, y, z]) => [pr.u(x, y), z]) : null));
       isi.push(...gambarPutus(pp, X, Y, X(u0 - 0.8), X(u1 + 0.8), Y(bz1 - 0.3), Y(bz0 + 0.3)));
       const level = [...new Set([0, ...daftar.filter(d => d.jenis !== 'lisplang').map(d => n2(d.z1))])].sort((a, b) => a - b).slice(-6);
       isi.push(...peilKanan(level, X(u1), X(u1) + 4, Y));
