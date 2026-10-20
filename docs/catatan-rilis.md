@@ -1,3 +1,13 @@
+## Yang baru di 0.42.1
+
+Perbaikan dari penyusunan gambar RAB dermaga BBP (20 Oktober 2026).
+
+- **Tulangan pelat ulir**: pelat dengan `tul.ulir: true` kini masuk RAB sebagai besi ulir (D13), sebelumnya selalu polos (Ø13).
+- **Kayu kelas I bawaan = kayu besi**: jeti kayu baru memakai *Kayu besi (kelas I)*; uraian RAB menjadi "tiang kayu Besi". Pilihan Merbau, Ulin, Bengkirai, dan Matoa tetap ada.
+- **Garis putus di lembar bagian**: garis putus yang dipasang pada tampak/rencana zona juga berlaku di lembar bagiannya, dan gambar yang dipendekkan tetap di tengah lembar.
+- **Dasar laut di tampak samping jeti**: tampak yang tidak sejajar profil dasar laut kini menggambar dasar laut dari profil di sepanjang gambar, bukan garis datum datar.
+- **Nama tipe balok** di rencana balok tanpa keterangan letak dan nomor urut (Tie beam 12 → Tie beam, Balok induk kepala y=-18 → Balok induk kepala), sehingga keterangan tidak berulang.
+
 ## Yang baru di 0.42.0
 
 Kebiasaan SketchUp dan LayOut untuk pendetilan, Fase 2 (20 Oktober 2026). Dibangun di atas cabang dermaga (v0.41).
