@@ -1,3 +1,12 @@
+## Yang baru di 0.44.1
+
+Perbaikan dari Potongan C–C Dermaga TUKS BBP (21 Oktober 2026): angka ukuran tidak lagi bertumpuk di garis putus.
+
+- **Rantai jarak tiang di potongan bergaris putus**: tiang yang jatuh di bagian yang dihilangkan tidak lagi diberi ukuran sendiri-sendiri (dulu "600 600 600…" bertumpuk di celah). Ukuran menyambung dari tiang terlihat terakhir ke tiang terlihat berikutnya dengan nilai sebenarnya (mis. 10200), dan angkanya diletakkan di samping celah agar tidak tertutup simbol putus.
+- **Tabel jarak dan elevasi dasar laut**: titik profil di bagian yang dihilangkan tidak diberi kolom, dan kolom yang terlalu rapat (< 9 mm) dilewati; kolom ujung tetap tampil.
+- **Ruas ukuran sempit**: angka pada ruas yang lebih pendek dari angkanya (mis. rantai tinggi pelat–balok–pile cap di skala kecil, atau ruas 50 cm di ujung) digeser keluar garis ukur berselang 1–3 baris, tidak saling menimpa.
+- Pasang **RANCANG-Setup-0.44.1.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.44.1 dari rilis yang sama.
+
 ## Yang baru di 0.44.0
 
 Detail perbesaran yang rapi dan informatif (21 Oktober 2026), acuan gambar konsultan dermaga KP Sorong.

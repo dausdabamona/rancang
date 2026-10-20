@@ -123,6 +123,14 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     const putih = /<g data-g2="L900"><rect [^>]*height="([\d.]+)"/.exec(svg);
     assert.ok(skala > 0 && putih, 'skala dan simbol garis putus ada di SVG');
     assert.ok(Math.abs(Number(putih[1]) - (10 * 1000 / skala + 4)) < 0.6, `tinggi penutup ${putih[1]} mm harus selebar trestle pada 1:${skala}`);
+    // v0.44.1: di potongan memanjang bergaris putus, rantai jarak tiang tidak bertumpuk di celah;
+    // ukuran menyambung dari tiang terlihat terakhir ke tiang terlihat berikutnya dengan nilai sebenarnya
+    const putusPot = {id: 'L901', data: {jenis: 'gambar2d', bentuk: 'putus', lembar: 'potongan:X2', tempel: 'gambar', arah: 'datar', titik: [{x: 4.5, y: 0, z: 0}, {x: 28.5, y: 0, z: 0}], gaya: {tebal: 0.3}}};
+    assert.equal(json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [putusPot]}})).ok, true);
+    const sp = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X2', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    const n300 = (sp.match(/>300</g) || []).length;
+    assert.ok(n300 >= 1 && n300 <= 6, `jarak 300 cm hanya untuk tiang terlihat (ada ${n300})`);
+    assert.ok(/>2700</.test(sp), 'jarak tiang menyambung melewati celah garis putus: 2700 cm');
     // v0.44.0: detail perbesaran dengan judul, bingkai persegi, garis penghubung, dan isi rinci (label tulangan, mutu bahan)
     const det = {jenis: 'gambar2d', bentuk: 'perbesar', lembar: 'potongan:X1', tempel: 'gambar', titik: [{x: 6, y: 4.5, z: 2.9}, {x: 6, y: 5.4, z: 2.9}],
       letak: {x: 300, y: 80}, skala: 20, nomor: '7', judul: 'Pertemuan pelat dan balok tepi', bingkai: 'persegi', rasio: 1.5, penghubung: true};
