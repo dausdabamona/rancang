@@ -6,6 +6,8 @@ Alat untuk bangunan dua lantai dan rangka baja profil (20 Oktober 2026, disiapka
 - **Kolom menerus**: kolom tidak lagi dipotong oleh balok lantai, sehingga satu kolom bisa naik dari pondasi sampai lantai atas (ring balk tetap memotong kolom seperti sebelumnya).
 - **Baja profil** untuk batang (kuda-kuda, gording, tiang, balok): bahan baru *Baja profil* dengan pilihan profil WF 150/200/250/300, H 150, kanal C 125/150, siku L 50/60, siku ganda 2L 60, pipa Ø76,3 dan Ø114,3, hollow 100×100 dan 50×100. Lebar dan tinggi penampang mengikuti profil; mengetik b/h sendiri melepas profil. Panel menampilkan berat (kg).
 - **RAB divisi Pekerjaan Struktur Baja**: berat per profil = panjang × kg/m + 10% (pelat sambung, baut, sisa potong), jumlah batang 12 m, dan baris pengecatan baja (perkiraan 25 m² per ton).
+- **Sekat modern**: bahan dinding baru *Panel PVC/WPC* (tanpa cat) dan *Kaca tempered 10 mm* (tembus pandang di 3D; RAB satu sisi + rangka aluminium, tidak masuk pengecatan).
+- **Naikkan dinding sampai atap** (klik kanan atau palet Ctrl+K): dinding terpilih, termasuk yang di dalam grup, dinaikkan sampai bidang dudukan atap di atasnya; tepi atas otomatis mengikuti kemiringan atap (gunungan/dinding di bawah bubungan) lewat `profilAtas`, disederhanakan ≤ 16 titik.
 - Panduan data (MCP `panduan_data`) bertambah: `peran:'balok'` pada ring balk dan `bahan:'baja'` + `profil` pada batang.
 
 ## Yang baru di 0.37.0
