@@ -31,7 +31,7 @@ export function modelKPSorong() {
     const panjang = miring ? +(tegak * Math.sqrt(1 + N_MIRING ** 2) / N_MIRING).toFixed(2) : +tegak.toFixed(2);
     tambah('Z', {jenis: 'tiang', nama: 'Tiang pancang', grup: g, bahan: 'baja', x, y, dLuar: 406.4, tebal: 12, panjang, zKepala: ZK, panjangSegmen: 12, coating: false,
       ...(miring ? {miring: {n: N_MIRING, arah: miring}} : {}),
-      selimut: {atas: ZPC, bawah: -0.3, tebal: 0.075, fc: 24.9},
+      selimut: {atas: ZPC, bawah: -0.3, tebal: 0.075, fc: 24.9}, isian: {panjang: 2.4, fc: 24.9, tul: {n: 8, d: 16}},
       catatan: `Ujung tiang ${zu.toFixed(2)} m (gambar). Tebal pipa 12 mm asumsi`});
   };
   const pc = (g, x, y, tipe) => tambah('F', {jenis: 'pondasi', tipe: 'pilecap', nama: tipe === 1 ? 'Pile cap PC-1 130×80×70' : 'Pile cap PC-2 80×80×70', grup: g, x, y,
@@ -108,6 +108,17 @@ export function modelKPSorong() {
   tambah('X', {jenis: 'potong', nama: 'B', awal: {x: -3, y: 0.25}, akhir: {x: 67, y: 0.25}, pandang: -1});
   tambah('X', {jenis: 'potong', nama: 'C', awal: {x: 61.5, y: 18}, akhir: {x: 61.5, y: -3}, pandang: 1, dalam: 2});
   tambah('X', {jenis: 'potong', nama: 'D', awal: {x: 15, y: 8}, akhir: {x: 15, y: -5}, pandang: 1, dalam: 2});
+
+  // ---- lembar detail (lembar 17–19 KP Sorong): balok, pile cap PC-1/PC-2, tiang, bollard
+  const cari = f => Object.keys(el).find(k => f(el[k]));
+  const det = (lembar, template, sumber, judul) => tambah('E', {jenis: 'detail', template, sumber, lembar, skala: 25, ...(judul ? {judul} : {})});
+  det('det:1', 'balokDermaga', cari(d => d.nama === 'Balok utama 40/70 as A'), 'Penampang balok utama 40/70');
+  det('det:1', 'balokDermaga', cari(d => d.nama === 'Balok tepi 25/70 sisi A'), 'Penampang balok tepi 25/70');
+  det('det:1', 'balokDermaga', cari(d => d.nama === 'Balok dudukan tiang lampu 40/45'), 'Penampang balok dudukan lampu 40/45');
+  det('det:2', 'pileCapDermaga', cari(d => d.nama === 'Pile cap PC-2 80×80×70'), 'Detail tulangan pile cap PC-2');
+  det('det:2', 'pileCapDermaga', cari(d => d.nama === 'Pile cap PC-1 130×80×70'), 'Detail tulangan pile cap PC-1');
+  det('det:3', 'tiangDermaga', cari(d => d.jenis === 'tiang' && !d.miring));
+  det('det:3', 'bollard', cari(d => d.tipe === 'bolder'));
 
   const setel = {nama: 'Dermaga Politeknik KP Sorong (model ulang dari gambar TA 2020)', faktorBesi: 5,
     sampul: {lokasi: 'Politeknik Kelautan dan Perikanan Sorong', pemilik: 'Politeknik KP Sorong', tahun: '2020', penggambar: 'Firdaus Dabamona'}, kop: {kodeLembar: 'PKP'}};
