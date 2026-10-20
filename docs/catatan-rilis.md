@@ -1,3 +1,52 @@
+## Yang baru di 0.39.0
+
+Elemen dermaga, Fase 1 (20 Oktober 2026, disiapkan untuk RAB dermaga TUKS trestle 150 × 10 m di Sorong).
+
+- **Tiang pancang** (alat *Tiang* di bilah Struktur, Tab mengganti bahan): pipa baja (diameter luar dan tebal dinding dalam mm, bawaan Ø508 × 12 mm = 20"), spun pile, tiang beton persegi, dan tiang kayu. Isian: elevasi kepala, panjang, panjang per segmen (sambungan las = segmen − 1), coating epoxy, dan isian beton bertulang di kepala tiang. Panel menampilkan berat pipa (0,02466 × t × (D − t) kg/m), elevasi ujung bawah, luas selimut, beton dan besi isian.
+- **Pile cap**: jenis pondasi baru (alat Pondasi, Tab sampai *Pile cap*). Bawaan 90 × 90 × 90 cm, D16-150 dua lapis dua arah, fc' 29 MPa; dipasang di atas tiang, dasarnya otomatis 10 cm di bawah kepala tiang. Bekisting dihitung sisi + dasar (cor di atas air).
+- **Perlengkapan dermaga** (alat *Bolder*, Tab: bolder → fender → lampu PJU → tangga monyet): kapasitas bolder (ton), panjang dan model fender, tinggi tiang PJU dan tangga monyet, rotasi (+Y lokal = arah ke laut).
+- **Datum pasang surut** di panel ringkasan (bagian *Datum pasang surut*): HWL, MSL, LWL, dan dasar laut. Potongan dan tampak menggambar garis air putus-putus biru dan garis dasar laut berarsir, menggantikan garis tanah ±0,00. Disimpan sebagai level ber-`datum`, jadi bisa diatur Claude lewat MCP dan tidak ikut daftar level lantai.
+- **RAB divisi Pekerjaan Dermaga**: pengadaan tiang per spesifikasi (kg untuk pipa baja, m' untuk spun/beton, m³ untuk kayu), pemancangan di laut (m'), sambungan las (titik), perataan kepala tiang (titik), coating (m²), jumlah pile cap, dan perlengkapan per buah. Beton, besi, dan bekisting pile cap, isian tiang, plat, dan balok tetap di divisi beton.
+- Gambar 2D: tiang tampil di denah dan denah pondasi (lingkaran bersilang, keterangan otomatis), tiang bulat di potongan digambar sebagai satu siluet, dan tampak kini memuat tiang, plat, pile cap, balok lantai, serta perlengkapan.
+- Diameter tulangan bertambah D22, D25, D29, D32. Panduan data (MCP `panduan_data`) bertambah jenis `tiang` (Z), `perlengkapan` (O), pondasi `pilecap`, dan `datum` pada level.
+
+## Yang baru di 0.38.0
+
+Alat untuk bangunan dua lantai dan rangka baja profil (20 Oktober 2026, disiapkan untuk Gedung Penunjang dua lantai dan atap Aula limas patah Masjid Agung Al-Mulk).
+
+- **Balok lantai**: tombol Slof kini berganti dengan Tab Slof → Ring balk → **Balok lantai**. Bawaan 25/40, 6D13, sengkang Ø10-150, fc' 20,75 MPa; puncak balok otomatis rata dengan level lantai berikutnya (atau puncak dinding bila belum ada level). Ring balk yang sudah ada bisa diubah perannya di panel Properti (*Peran*: Ring balk / Balok lantai). Detail penulangan memberi kode **B** untuk balok lantai.
+- **Kolom menerus**: kolom tidak lagi dipotong oleh balok lantai, sehingga satu kolom bisa naik dari pondasi sampai lantai atas (ring balk tetap memotong kolom seperti sebelumnya).
+- **Baja profil** untuk batang (kuda-kuda, gording, tiang, balok): bahan baru *Baja profil* dengan pilihan profil WF 150/200/250/300, H 150, kanal C 125/150, siku L 50/60, siku ganda 2L 60, pipa Ø76,3 dan Ø114,3, hollow 100×100 dan 50×100. Lebar dan tinggi penampang mengikuti profil; mengetik b/h sendiri melepas profil. Panel menampilkan berat (kg).
+- **RAB divisi Pekerjaan Struktur Baja**: berat per profil = panjang × kg/m + 10% (pelat sambung, baut, sisa potong), jumlah batang 12 m, dan baris pengecatan baja (perkiraan 25 m² per ton).
+- **Sekat modern**: bahan dinding baru *Panel PVC/WPC* (tanpa cat) dan *Kaca tempered 10 mm* (tembus pandang di 3D; RAB satu sisi + rangka aluminium, tidak masuk pengecatan).
+- **Naikkan dinding sampai atap** (klik kanan atau palet Ctrl+K): dinding terpilih, termasuk yang di dalam grup, dinaikkan sampai bidang dudukan atap di atasnya; tepi atas otomatis mengikuti kemiringan atap (gunungan/dinding di bawah bubungan) lewat `profilAtas`, disederhanakan ≤ 16 titik.
+- Panduan data (MCP `panduan_data`) bertambah: `peran:'balok'` pada ring balk dan `bahan:'baja'` + `profil` pada batang.
+
+## Yang baru di 0.37.0
+
+Atap denah bebas ala Roof by Footprint (Revit), penyatuan atap, dan rangka kayu otomatis untuk atap L (19 Oktober 2026, dikerjakan bersama untuk gambar Masjid 20 × 20 m).
+
+- **Atap denah bebas (L/T/U)**: bentuk atap baru *Denah bebas*. Gambar dengan alat Atap (Tab sampai *Denah bebas*): klik titik keliling denah, tutup dengan klik titik pertama, klik 2×, atau Enter. Tiap tepi diberi tanda **tritisan** (miring) atau **dinding/gunungan**, dengan overstek dan kemiringan sendiri; permukaan diambil dari bidang terendah sehingga jurai terbentuk sendiri. Boleh diputar dengan sudut bebas.
+- **Tinggi tepi atas rata**: isi satu elevasi; kemiringan tiap tritisan dihitung dari bentangnya sehingga jurai jatuh dari sudut ke sudut dan tepi atas semua sayap setinggi (mis. serambi 17,9° + sayap 10°).
+- **Gabung atap (satu denah)** dan **Jadikan atap denah** di menu klik kanan: union denah beberapa atap; tepi hasil mewarisi tritisan/gunungan atap asal.
+- **Rangka kayu otomatis atap denah**: murplat 8/12 di tritisan, balok dudukan atas 8/12 di dinding tepi atas, balok jurai 8/15, kuda-kuda sandar ±3 m (menempel ke dinding di bawahnya bila dekat), tiang penggantung di atas dinding yang dilintasi, tiang tengah bila bentang tak bertumpu > 3,5 m, sokong dari kaki tiang yang bertumpu ke puncak tiang berikutnya, gording pada ketinggian sama di semua bidang (berpasangan di jurai), klos di tiap kaki dan di jurai.
+- **Prioritas denah di pertemuan atap**: bagian atap di atas denah dindingnya sendiri tidak dipangkas overstek atap lain; overstek yang menyembul di atas denah atap lain dipangkas. Sakelar baru per atap: *Satukan dengan atap lain*.
+- **Perbaikan plafon miring**: ujung plafon tidak lagi menembus papan lisplang di tritisan (koreksi turun plafon × sin kemiringan).
+- Fase berikutnya: jurai dalam di sudut cekung antara dua tritisan (Fase 2), rangka baja ringan atap denah.
+
+## Yang baru di 0.36.0
+
+Ukur dan dimensi ala SketchUp, denah per lantai, dan kusen gabung (19 Oktober 2026).
+
+- **Meteran** (Shift+T, kelompok Anotasi, palet: *meteran*, *ukur*, *tape*): klik dua titik; jarak miring serta ΔX, ΔY, ΔZ tampil langsung di bilah bawah tanpa membuat elemen. Klik kedua mengunci hasil dan menyalin jaraknya; Ctrl+klik kedua menjadikannya garis bantu.
+- **Dimensi** (D, palet: *dimensi*, *DIM*): klik dua titik, tarik ke samping untuk menentukan jarak garis ukur dari benda, lalu klik (atau ketik jaraknya lalu Enter). Dimensi bergaris bantu tegak dan bertanda miring, tampil di 3D dan ikut ke denah, tampak, serta potongan. Data: anotasi `ukuran` dengan isian baru `geser` {x, y, z}; dimensi lama tetap terbaca.
+- **DXF semua lembar dalam 1 berkas**: tombol baru di Gambar 2D menyusun semua lembar yang dicentang dalam satu DXF seperti matriks (kolom ⌈√n⌉, kiri→kanan lalu turun, jarak 20 mm), kode dan nama lembar di layer `LEMBAR-JUDUL`. Tombol ZIP tetap ada. API: `rancangAPI.dxf({semua: true})`.
+- **Proyek contoh Kantor Utama 2 lantai** (478 elemen: gedung 30 × 12 m, hall tengah, tangga dogleg, teras mobil, kanopi dak, atap perisai + gable, kusen bertipe; sumber PDF CV. Wahana Multikarya Consultan 2015) — `app/contoh/kantor-utama.json`, dibangkitkan `scripts/contoh-kantor-utama.py`.
+- Denah per level kini juga menyaring anotasi menurut ketinggian (teks lantai 2 tidak muncul di denah lantai 1).
+- **Kusen gabung satu rangka**: pintu, jendela, dan angin-angin yang bersentuhan di dinding yang sama otomatis berbagi satu tiang/ambang kusen (3D, tampak, potongan), tidak lagi bertiang ganda.
+- **Isi bovenlicht jalusi**: tipe kusen kini bisa memakai boven jalusi (angin-angin) selain kaca — panel Tipe kusen → *Isi bovenlicht*.
+- **Lembar denah per lantai**: bila ada dua level atau lebih yang berdinding, set lembar (daftar gambar, PDF set, DXF) memuat *Denah Lantai 1*, *Denah Lantai 2*, … masing-masing dengan kode dan kopnya sendiri; denah gabungan tetap bisa dipilih di pratinjau. Lantai 3 cukup ditambah lewat panel Proyek → *Tambah level*. MCP `gambar_2d` menerima `jenis: "denah:4"`.
+
 ## Yang baru di 0.35.0
 
 Alat untuk bangunan bertingkat (disiapkan untuk menggambar Asrama Putri dua lantai, 18 Oktober 2026).

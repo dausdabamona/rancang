@@ -74,6 +74,7 @@ RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk kebutuhan PPK Poltek 
 | v0.34.0 | Tahap A desain ulang: pintasan ala SketchUp/AutoCAD, palet Ctrl+K, menu tiga keadaan, rel panel, mode fokus |
 | v0.34.1 (PR #24) | Plafon miring berhenti di lisplang; `mundurSeng` (jarak spandek menjorok, bawaan 20 cm) di Properti |
 | v0.35.0 | **Bangunan bertingkat**: alat Tangga (Y), plat lantai beton (W) dengan void, denah per level (`level` di gambar 2D dan MCP), RAB tangga dan plat |
+| v0.36.0 | **Ukur dan gambar**: alat Meteran (Shift+T) dan Dimensi (D) ala SketchUp (anotasi `ukuran` + `geser`), lembar denah per lantai (`denah:<elevasi>`), kusen gabung satu rangka, boven jalusi, proyek contoh Kantor Utama |
 
 ---
 

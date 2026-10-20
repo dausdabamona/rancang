@@ -1,0 +1,114 @@
+// Uji elemen dermaga (v0.39): tiang pancang, pile cap, perlengkapan, datum pasang surut, dan RAB divisi Pekerjaan Dermaga.
+// Bagian data (sah/tolak) diuji lewat mode berkas MCP; gambar dan RAB diuji bila RANCANG_UJI_ELECTRON=1.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {spawn} from 'node:child_process';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+import {Client} from '@modelcontextprotocol/sdk/client/index.js';
+import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
+
+const akar = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const serverMcp = path.join(akar, 'build', 'mcp', 'server', 'index.mjs');
+const require = createRequire(import.meta.url);
+const json = r => JSON.parse(r.content[0].text);
+
+// Dermaga contoh: trestle 4 baris tiang × 12 as (jarak 3 m) + kepala 4 × 6; ±0,00 = LWS
+export function modelDermaga() {
+  const ubah = [];
+  let nZ = 0, nF = 0, nR = 0, nO = 0;
+  const zPelat = 3.16, tPelat = 0.30, hPC = 0.9, zPC = zPelat - hPC, zKepala = zPC + 0.1;
+  const titik = [];
+  for (let i = 0; i < 12; i++) for (const y of [-4.5, -1.5, 1.5, 4.5]) titik.push([i * 3, y]);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 6; j++) titik.push([36 + i * 3, -7.5 + j * 3]);
+  for (const [x, y] of titik) {
+    ubah.push({id: 'Z' + ++nZ, data: {jenis: 'tiang', nama: 'Tiang ' + nZ, bahan: 'baja', x, y, dLuar: 508, tebal: 12, panjang: 40, zKepala, panjangSegmen: 12, coating: true,
+      isian: {panjang: 4, fc: 24.9, tul: {n: 10, d: 19}}}});
+    ubah.push({id: 'F' + ++nF, data: {jenis: 'pondasi', tipe: 'pilecap', nama: 'Pile cap ' + nF, x, y, p: 0.9, l: 0.9, tebal: hPC, z0: zPC, tulPlat: {d: 16, s: 0.15, ulir: true}, fc: 29, selimut: 0.075}});
+  }
+  const balok = (a, b) => ubah.push({id: 'R' + ++nR, data: {jenis: 'ringbalk', peran: 'balok', awal: {x: a[0], y: a[1]}, akhir: {x: b[0], y: b[1]}, b: 0.25, h: 0.5, z0: zPelat - 0.5,
+    tul: {n: 6, d: 16, ulir: true}, sengkang: {d: 10, s: 0.15}, fc: 29, selimut: 0.05}});
+  for (const y of [-4.5, -1.5, 1.5, 4.5]) balok([0, y], [33, y]);
+  for (let i = 0; i < 12; i++) balok([i * 3, -4.5], [i * 3, 4.5]);
+  ubah.push({id: 'W1', data: {jenis: 'plat', nama: 'Lantai trestle', alas: [{x: -0.5, y: -5}, {x: 34.5, y: -5}, {x: 34.5, y: 5}, {x: -0.5, y: 5}], z0: zPelat, tebal: tPelat, fc: 29, tul: {d: 13, s: 0.15}}});
+  ubah.push({id: 'W2', data: {jenis: 'plat', nama: 'Lantai kepala', alas: [{x: 34.5, y: -8}, {x: 45.5, y: -8}, {x: 45.5, y: 8}, {x: 34.5, y: 8}], z0: zPelat, tebal: tPelat, fc: 29, tul: {d: 13, s: 0.15}}});
+  for (const y of [-6, 0, 6]) {
+    ubah.push({id: 'O' + ++nO, data: {jenis: 'perlengkapan', tipe: 'bolder', kapasitas: 15, x: 45, y, z0: zPelat + tPelat, rotasi: 270}});
+    ubah.push({id: 'O' + ++nO, data: {jenis: 'perlengkapan', tipe: 'fender', panjang: 1.5, model: 'V 300H', x: 45.5, y, z0: zPelat + tPelat, rotasi: 270}});
+  }
+  ubah.push({id: 'O' + ++nO, data: {jenis: 'perlengkapan', tipe: 'pju', tinggi: 6, x: 20, y: 4.7, z0: zPelat + tPelat, rotasi: 180}});
+  ubah.push({id: 'O' + ++nO, data: {jenis: 'perlengkapan', tipe: 'tanggaMonyet', tinggi: 3.5, x: 45.5, y: 3, z0: zPelat + tPelat, rotasi: 270}});
+  ubah.push({id: 'M1', data: {jenis: 'level', nama: 'HWL', datum: 'hwl', z: 1.91}});
+  ubah.push({id: 'M2', data: {jenis: 'level', nama: 'MSL', datum: 'msl', z: 1.21}});
+  ubah.push({id: 'M3', data: {jenis: 'level', nama: 'LWL', datum: 'lwl', z: 0}});
+  ubah.push({id: 'M4', data: {jenis: 'level', nama: 'Dasar laut', datum: 'dasar', z: -2}});
+  ubah.push({id: 'X1', data: {jenis: 'potong', nama: 'A', awal: {x: 6, y: -10}, akhir: {x: 6, y: 10}, pandang: 1}});
+  ubah.push({id: 'X2', data: {jenis: 'potong', nama: 'B', awal: {x: -3, y: 0}, akhir: {x: 48, y: 0}, pandang: -1}});
+  return {ubah, nTiang: titik.length};
+}
+
+function siapkanFolder() {
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'rancang-dermaga-'));
+  const proyek = path.join(data, 'dermaga.rancang');
+  fs.writeFileSync(proyek, JSON.stringify({format: 'rancang-proyek', versi: 1, aplikasi: 'RANCANG', setel: {nama: 'Uji dermaga'}, elemen: {}, grup: {}, komponen: {}, kusen: {}}));
+  return {data, proyek};
+}
+async function sambung(dataDir) {
+  const client = new Client({name: 'uji-dermaga', version: '1.0.0'});
+  await client.connect(new StdioClientTransport({command: process.execPath, args: [serverMcp], env: {...process.env, RANCANG_DATA_DIR: dataDir}, stderr: 'inherit'}));
+  return client;
+}
+
+test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga', {skip: process.env.RANCANG_UJI_ELECTRON !== '1'}, async () => {
+  const {data, proyek} = siapkanFolder();
+  const electron = require('electron');
+  const argv = [akar, proyek, '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'];
+  if (process.platform === 'linux') argv.push('--no-sandbox');
+  const app = spawn(electron, argv, {env: {...process.env, RANCANG_DATA_DIR: data}, stdio: 'ignore'});
+  const c = await sambung(data);
+  const keluar = process.env.RANCANG_UJI_KELUAR || os.tmpdir();
+  try {
+    let info = null;
+    for (let i = 0; i < 120 && !(info && info.aplikasiBerjalan); i++) {
+      await new Promise(r => setTimeout(r, 500));
+      try { info = json(await c.callTool({name: 'info_proyek', arguments: {}})); } catch { info = null; }
+    }
+    assert.ok(info && info.aplikasiBerjalan, 'aplikasi tidak siap');
+    const {ubah, nTiang} = modelDermaga();
+    const r = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: ubah}}));
+    assert.equal(r.ok, true, JSON.stringify(r));
+    // data tidak sah ditolak: tiang pipa tanpa tebal, perlengkapan tipe asing, datum asing
+    for (const salah of [{id: 'Z900', data: {jenis: 'tiang', bahan: 'baja', x: 0, y: 0, dLuar: 508, panjang: 40, zKepala: 2}},
+      {id: 'O900', data: {jenis: 'perlengkapan', tipe: 'jangkar', x: 0, y: 0, z0: 0}},
+      {id: 'M900', data: {jenis: 'level', nama: 'X', datum: 'pasang', z: 1}}]) {
+      const t = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [salah]}}));
+      assert.equal(t.ok, false, salah.id);
+    }
+    const rab = json(await c.callTool({name: 'volume_rab', arguments: {}}));
+    const dermaga = rab.find(d => d.nama === 'PEKERJAAN DERMAGA');
+    assert.ok(dermaga, 'divisi Pekerjaan Dermaga ada');
+    const baris = k => dermaga.baris.find(b => b.kode === k);
+    // pipa Ø508 × 12: 0,02466 × 12 × 496 = 146,78 kg/m; 72 tiang × 40 m
+    assert.ok(Math.abs(baris('DM-011').vol - 0.02466 * 12 * 496 * 40 * nTiang) < 1, JSON.stringify(baris('DM-011')));
+    assert.equal(baris('DM-012').vol, 40 * nTiang);
+    assert.equal(baris('DM-013').vol, 3 * nTiang);
+    assert.equal(baris('DM-014').vol, nTiang);
+    assert.equal(baris('DM-090').vol, nTiang);
+    assert.equal(baris('DM-101').vol, 3);
+    assert.equal(baris('DM-102').vol, 3);
+    fs.writeFileSync(path.join(keluar, 'dermaga-rab.json'), JSON.stringify(rab, null, 1));
+    for (const jenis of ['denah', 'pondasi', 'potongan:X1', 'potongan:X2', 'depan']) {
+      const g = await c.callTool({name: 'gambar_2d', arguments: {jenis, kertas: 'A3'}});
+      assert.equal(g.content[0].type, 'image', jenis + ': ' + JSON.stringify(g.content[0]).slice(0, 200));
+      fs.writeFileSync(path.join(keluar, `dermaga-${jenis.replace(':', '-')}.png`), Buffer.from(g.content[0].data, 'base64'));
+    }
+    const t3 = await c.callTool({name: 'tangkap_layar_3d', arguments: {tampilan: 'iso'}});
+    fs.writeFileSync(path.join(keluar, 'dermaga-3d.png'), Buffer.from(t3.content[0].data, 'base64'));
+  } finally {
+    await c.close();
+    app.kill();
+  }
+});

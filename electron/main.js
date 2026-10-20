@@ -328,6 +328,23 @@ async function ujiAsap() {
     catat('buka contoh Asrama Putri', ct && ct.elemen > 300 && ct.kusen >= 9 && /Asrama/.test(ct.nama), {elemen: ct.elemen, kusen: ct.kusen, proyek: ct.nama});
     const dl3 = await metode.gambar2D({jenis: 'denah', level: 4});
     catat('denah lantai 2 contoh', dl3.svg.length > 20000 && /TURUN/.test(dl3.svg), {panjang: dl3.svg.length});
+    // v0.36: Meteran (tanpa elemen) dan Dimensi (anotasi ukuran bergeser, tampil di denah)
+    const mt = await halaman(`window.rancangUji.meteran({x: 0, y: 0, z: 0}, {x: 3, y: 4, z: 0})`);
+    catat('alat Meteran', /5,00|500/.test(mt.hasil) && /ΔZ/.test(mt.hasil) && mt.elemenBaru === 0, mt);
+    const mz = await halaman(`window.rancangUji.sumbuMeteran({x: 1, y: 1, z: 0}, {x: 1, y: 1, z: 2.5})`);
+    const mtp = await halaman(`window.rancangUji.meteranTepi({x: 0, y: 0, z: 0}, {x: 1, y: 0, z: 0}, {x: 2, y: 1.5, z: 0})`);
+    catat('Meteran: kunci sumbu Z dan garis bantu sejajar tepi', mz && mz.kunci === 'z' && Math.abs(mz.p[2] - 2.5) < 0.05 && mtp.elemenBaru === 1 && mtp.bantu && mtp.bantu.jenis === 'bantu' && Math.abs(mtp.bantu.awal.y - 1.5) < 0.01 && Math.abs(mtp.bantu.akhir.y - 1.5) < 0.01, {mz, bantu: mtp.bantu});
+    const dm = await halaman(`window.rancangUji.dimensi({x: 0, y: 0, z: 0}, {x: 6, y: 0, z: 0}, 0.8)`);
+    const dmSvg = await metode.gambar2D({jenis: 'denah'});
+    catat('alat Dimensi', !!dm.id && dm.data && dm.data.tipe === 'ukuran' && Math.abs(Math.hypot(dm.data.geser.x, dm.data.geser.y) - 0.8) < 0.01 && dmSvg.svg.includes('data-anot="' + dm.id + '"'), {id: dm.id, geser: dm.data && dm.data.geser});
+    // lembar denah per lantai: contoh Kantor Utama → Denah Lantai 1 dan Denah Lantai 2 sebagai lembar sendiri (level Ring balk dilewati)
+    const ku = await halaman(`window.rancangUji.contoh('kantor-utama', 'ganti')`);
+    const lbr = await halaman(`window.rancangAPI.daftarLembar().filter(l => l.jenis.startsWith('denah')).map(l => l.jenis + '|' + l.nama)`);
+    const dk2 = await metode.gambar2D({jenis: 'denah:4'});
+    catat('lembar denah per lantai', ku.elemen > 400 && lbr.join() === 'denah:0|Denah Lantai 1,denah:4|Denah Lantai 2' && /DENAH LANTAI 2/.test(dk2.svg), {elemen: ku.elemen, lembar: lbr});
+    // v0.36: DXF semua lembar dalam satu berkas, disusun matriks
+    const dg = await halaman(`window.rancangAPI.dxf({semua: true}).then(r => ({jumlah: r.jumlah, kolom: r.kolom, baris: r.baris, panjang: r.dxf.length, judul: (r.dxf.match(/LEMBAR-JUDUL/g) || []).length, eof: r.dxf.trim().endsWith('EOF')}))`);
+    catat('DXF gabungan satu berkas', dg.jumlah > 5 && dg.kolom === Math.ceil(Math.sqrt(dg.jumlah)) && dg.judul >= dg.jumlah && dg.eof, dg);
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
     hasil.ok = true;
   } catch (err) {
