@@ -1,3 +1,11 @@
+## Yang baru di 0.44.0
+
+Detail perbesaran yang rapi dan informatif (21 Oktober 2026), acuan gambar konsultan dermaga KP Sorong.
+
+- **Menu Atur detail**: pilih sebuah detail perbesaran di lembar, lalu atur nomor, judul, skala (1:5–1:50), bentuk bingkai (lingkaran atau persegi 1:1, 3:2, 2:1), tinggi bingkai di kertas (bagian yang diperbesar ikut menyesuaikan), dan garis penghubung ke lingkaran sumber.
+- **Isi rinci di detail potongan** (bisa dinyalakan/dimatikan per detail): beton terpotong diarsir kerikil dan pasir (bukan blok hitam); tulangan dari data elemen — balok (sengkang dan tulangan atas/bawah, atau tulangan memanjang dan sengkang tiap jarak), pelat dan pile cap (dua lapis), tiang pipa baja (dinding pipa dan isian beton bertulang); ukuran lebar/tinggi elemen dalam cm; label penunjuk di luar bingkai (mis. "Balok memanjang tiang 40/70 · 8D19 · Ø10-150"); mutu beton di bawah judul.
+- Pasang **RANCANG-Setup-0.44.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.44.0 dari rilis yang sama.
+
 ## Yang baru di 0.43.1
 
 Perbaikan dari gambar Layout Dermaga TUKS BBP (21 Oktober 2026).
