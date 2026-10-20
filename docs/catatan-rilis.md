@@ -1,3 +1,15 @@
+## Yang baru di 0.39.0
+
+Elemen dermaga, Fase 1 (20 Oktober 2026, disiapkan untuk RAB dermaga TUKS trestle 150 × 10 m di Sorong).
+
+- **Tiang pancang** (alat *Tiang* di bilah Struktur, Tab mengganti bahan): pipa baja (diameter luar dan tebal dinding dalam mm, bawaan Ø508 × 12 mm = 20"), spun pile, tiang beton persegi, dan tiang kayu. Isian: elevasi kepala, panjang, panjang per segmen (sambungan las = segmen − 1), coating epoxy, dan isian beton bertulang di kepala tiang. Panel menampilkan berat pipa (0,02466 × t × (D − t) kg/m), elevasi ujung bawah, luas selimut, beton dan besi isian.
+- **Pile cap**: jenis pondasi baru (alat Pondasi, Tab sampai *Pile cap*). Bawaan 90 × 90 × 90 cm, D16-150 dua lapis dua arah, fc' 29 MPa; dipasang di atas tiang, dasarnya otomatis 10 cm di bawah kepala tiang. Bekisting dihitung sisi + dasar (cor di atas air).
+- **Perlengkapan dermaga** (alat *Bolder*, Tab: bolder → fender → lampu PJU → tangga monyet): kapasitas bolder (ton), panjang dan model fender, tinggi tiang PJU dan tangga monyet, rotasi (+Y lokal = arah ke laut).
+- **Datum pasang surut** di panel ringkasan (bagian *Datum pasang surut*): HWL, MSL, LWL, dan dasar laut. Potongan dan tampak menggambar garis air putus-putus biru dan garis dasar laut berarsir, menggantikan garis tanah ±0,00. Disimpan sebagai level ber-`datum`, jadi bisa diatur Claude lewat MCP dan tidak ikut daftar level lantai.
+- **RAB divisi Pekerjaan Dermaga**: pengadaan tiang per spesifikasi (kg untuk pipa baja, m' untuk spun/beton, m³ untuk kayu), pemancangan di laut (m'), sambungan las (titik), perataan kepala tiang (titik), coating (m²), jumlah pile cap, dan perlengkapan per buah. Beton, besi, dan bekisting pile cap, isian tiang, plat, dan balok tetap di divisi beton.
+- Gambar 2D: tiang tampil di denah dan denah pondasi (lingkaran bersilang, keterangan otomatis), tiang bulat di potongan digambar sebagai satu siluet, dan tampak kini memuat tiang, plat, pile cap, balok lantai, serta perlengkapan.
+- Diameter tulangan bertambah D22, D25, D29, D32. Panduan data (MCP `panduan_data`) bertambah jenis `tiang` (Z), `perlengkapan` (O), pondasi `pilecap`, dan `datum` pada level.
+
 ## Yang baru di 0.38.0
 
 Alat untuk bangunan dua lantai dan rangka baja profil (20 Oktober 2026, disiapkan untuk Gedung Penunjang dua lantai dan atap Aula limas patah Masjid Agung Al-Mulk).
