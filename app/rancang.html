@@ -297,6 +297,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .lembar-daftar li:hover{background:var(--hover)}
 .lembar-daftar li.aktif{background:var(--panel);border-color:var(--accent)}
 .lembar-daftar li.keluar .nama{color:var(--muted);text-decoration:line-through}
+.lembar-daftar li.kelompok-lembar{cursor:default;padding:10px 8px 3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:0;background:transparent}
 .lembar-daftar li.seret-atas{box-shadow:inset 0 2px 0 var(--accent)}
 .lembar-daftar li.seret-bawah{box-shadow:inset 0 -2px 0 var(--accent)}
 .lembar-daftar .pegang{cursor:grab;color:var(--muted);font-size:14px;line-height:1;padding:0 2px}
@@ -991,7 +992,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * X — garis potong. `pandang` 1 = melihat ke kiri arah awal→akhir, −1 = ke kanan.
- * @typedef {DasarElemen & {jenis: 'potong', nama: string, awal: Titik2, akhir: Titik2, pandang: 1 | -1}} Potong
+ * @typedef {DasarElemen & {jenis: 'potong', nama: string, awal: Titik2, akhir: Titik2, pandang: 1 | -1, lingkup?: string}} Potong
  */
 
 /**
@@ -1038,7 +1039,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * G — grup (koleksi `grup`). `induk` null = grup teratas. `pecahan: 'atap'` menandai hasil Pecah atap.
- * @typedef {{nama: string, induk?: string | null, catatan?: string, pecahan?: 'atap', diubahOleh?: string, diubahPada?: string}} Grup
+ * @typedef {{nama: string, induk?: string | null, catatan?: string, pecahan?: 'atap', zona?: {profil: 'gedung' | 'dermaga' | 'jeti'}, diubahOleh?: string, diubahPada?: string}} Grup
  */
 /**
  * K — definisi komponen (koleksi `komponen`). Isi `elemen` dalam koordinat lokal, tanpa id dan tanpa `grup`;
@@ -10992,7 +10993,8 @@ function htmlGrup(id, g) {
   const {el} = ekspansi([id]);
   return `
   <section><h2>Grup terpilih</h2><p class="judul">${esc(g.nama || id)}</p><span class="lencana">${esc(id)} · ${el.size} elemen</span></section>
-  <section><h2>Properti</h2><div class="medan">${medanTeks('g-nama', 'Nama grup', g.nama)}${medanCatatan('g-catatan', g.catatan)}</div></section>
+  <section><h2>Properti</h2><div class="medan">${medanTeks('g-nama', 'Nama grup', g.nama)}${g.induk ? '' : `<label for="g-zona">Zona gambar 2D</label><select id="g-zona" ${dis()}><option value="">Bukan zona</option>${Object.entries(PROFIL_ZONA).map(([k, v]) => `<option value="${k}" ${g.zona && g.zona.profil === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`}${medanCatatan('g-catatan', g.catatan)}</div>
+  ${g.induk ? '' : '<p class="meta">Zona = satu bangunan atau dermaga dengan set lembar 2D sendiri. Anak grupnya (mis. trestle, kepala dermaga) menjadi komponen dengan lembar layout dan rencana tiang masing-masing.</p>'}</section>
   <section><h2>Ukuran grup</h2>${htmlTotal()}</section>
   ${htmlRekapBagian([id])}
   ${metaUbah(g)}
@@ -11420,7 +11422,8 @@ function ubahMedan(e) {
   }
   if (awal === 'g') {
     const b = salin(d);
-    if (f === 'nama') b.nama = t.value.trim() || d.nama; else b.catatan = t.value;
+    if (f === 'zona') { if (t.value) b.zona = {...(/** @type {any} */ (d).zona || {}), profil: t.value}; else delete b.zona; }
+    else if (f === 'nama') b.nama = t.value.trim() || d.nama; else b.catatan = t.value;
     terapkan([{id, sesudah: b}]);
     return;
   }
@@ -11687,6 +11690,7 @@ const KERTAS = {A4: [297, 210], A3: [420, 297]};
 const SKALA = [20, 50, 100, 150, 200, 500, 1000];
 const CELAH_PUTUS = 6;   // lebar celah garis putus di kertas (mm), v0.40
 function namaGambar(j) {
+  if (j && j.includes('@')) return namaLembarLingkup(j);
   if (j && j.startsWith('potongan:')) { const d = S.elems.get(j.slice(9)); return 'POTONGAN ' + (d ? d.nama + '–' + d.nama : ''); }
   if (j && j.startsWith('det:')) return 'LEMBAR DETAIL ' + nomorDet(j);
   if (j && j.startsWith('denah:')) { const l = levelDenah().find(x => x.kunci === j); return 'DENAH ' + (l ? l.nama.toUpperCase() : 'LEVEL ' + fmtElevasi(+j.slice(6))); }
@@ -11715,9 +11719,11 @@ function potongDenah(g) {
   if (L + t > u + 1e-6) bagian.push(kotak(u, L + t));
   return {bagian, cut, P, t};
 }
+// Lingkup gambar 2D (v0.40): himpunan id elemen yang boleh digambar (zona/komponen), null = seluruh model
+let LINGKUP = /** @type {Set<string> | null} */ (null);
 function geometriSemua() {
   const r = [];
-  for (const [id, d] of S.elems) { if (S.sembunyi.has(id)) continue; for (const g of geometriElemen(id, d)) r.push(g); }
+  for (const [id, d] of S.elems) { if (S.sembunyi.has(id) || (LINGKUP && !LINGKUP.has(id))) continue; for (const g of geometriElemen(id, d)) r.push(g); }
   return r;
 }
 // Benda model untuk potongan: dipakai gambar potongan 2D dan isian irisan 3D (satu sumber).
@@ -11831,8 +11837,158 @@ const LEMBAR_STRUKTUR = new Set(['pondasi', 'detail']);
 const rankLembar = j => { const i = LEMBAR_BAKU.indexOf(j.startsWith('potongan:') ? 'potongan:*' : j.startsWith('det:') ? 'det:*' : j.startsWith('denah:') ? 'denah' : j); return i < 0 ? 99 : i + (j.startsWith('det:') ? nomorDet(j) / 1000 : j.startsWith('denah:') ? (100 + +j.slice(6)) / 10000 : 0); };
 const ISIAN_SAMPUL = [['judul', 'Judul', 'GAMBAR KERJA'], ['nama', 'Nama proyek', ''], ['lokasi', 'Lokasi', ''], ['pemilik', 'Pemilik / instansi', ''],
   ['tahun', 'Tahun anggaran', ''], ['perencana', 'Perencana', ''], ['penggambar', 'Digambar oleh', ''], ['tanggal', 'Tanggal', '']];
+/* ---- Zona gambar 2D (v0.40): grup teratas bertanda zona = satu bangunan/dermaga dengan set lembarnya sendiri ---- */
+// Profil mengikuti susunan gambar dermaga KP Sorong (layout → per komponen → detail) dan gambar kerja gedung
+const PROFIL_ZONA = {gedung: 'Gedung', dermaga: 'Dermaga beton (tiang pancang)', jeti: 'Jeti / dermaga kayu'};
+const pisahLingkup = j => {
+  const i = String(j).lastIndexOf('@');
+  if (i <= 0) return {dasar: j, gid: null, bagian: 0};
+  const [gid, b] = j.slice(i + 1).split('#');
+  return {dasar: j.slice(0, i), gid, bagian: +b || 0};
+};
+// Bagian (v0.40): komponen yang terlalu panjang untuk skala kerja dipecah menjadi beberapa lembar sepanjang sumbu panjangnya
+const SKALA_BAGIAN = 200;
+function bagianLingkup(gid, kertas) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const id of anggotaGrup(gid)) for (const g of geometriElemen(id, S.elems.get(id))) { let p; try { p = poligon(g); } catch (_) { continue; } for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } }
+  if (!Number.isFinite(x0)) return [];
+  const [W, H] = KERTAS[kertas || 'A3'], area = areaGambar(W, H), datar = x1 - x0 >= y1 - y0;
+  const muat = (datar ? area.w - 50 : area.h - 40) * SKALA_BAGIAN / 1000, panjang = datar ? x1 - x0 : y1 - y0;
+  const n = Math.max(1, Math.ceil(panjang / Math.max(5, muat) - 1e-6));
+  if (n === 1) return [];
+  const step = panjang / n;
+  return Array.from({length: n}, (_, i) => datar ? {x0: x0 + i * step, x1: x0 + (i + 1) * step, y0, y1, datar, n, i} : {x0, x1, y0: y1 - (i + 1) * step, y1: y1 - i * step, datar, n, i});
+}
+// pemecahan selalu dihitung untuk kertas A4 agar daftar lembar tetap sama di A4 maupun A3
+const kertasLembar = () => 'A4';
+function anggotaGrup(gid) {
+  const r = new Set();
+  for (const id of S.elems.keys()) if (leluhur(id).includes(gid)) r.add(id);
+  return r;
+}
+// zona (grup teratas ber-zona) beserta komponennya (anak grup langsung yang berisi struktur)
+function daftarZona() {
+  const z = [];
+  for (const [gid, g] of S.grup) {
+    if (g.induk || !g.zona || !PROFIL_ZONA[g.zona.profil]) continue;
+    const anggota = anggotaGrup(gid);
+    if (!anggota.size) continue;
+    const komponen = [];
+    for (const [kid, k] of S.grup) {
+      if (k.induk !== gid) continue;
+      const isi = [...anggotaGrup(kid)].map(i => S.elems.get(i)).filter(Boolean);
+      if (isi.some(d => d.jenis === 'tiang' || d.jenis === 'plat' || /** @type {any} */ (d).jenis === 'jetiKayu' || d.jenis === 'dinding' || d.jenis === 'pondasi')) komponen.push({gid: kid, nama: k.nama || kid, isi});
+    }
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const id of anggota) for (const g of geometriElemen(id, S.elems.get(id))) { let p; try { p = poligon(g); } catch (_) { continue; } for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } }
+    z.push({gid, nama: g.nama || gid, profil: g.zona.profil, komponen, kotak: [x0, y0, x1, y1], isi: [...anggota].map(i => S.elems.get(i)).filter(Boolean)});
+  }
+  // urutan set gambar: dermaga beton, jeti, gedung; dalam profil yang sama menurut nama
+  const ur = {dermaga: 0, jeti: 1, gedung: 2};
+  return z.sort((a, b) => ur[a.profil] - ur[b.profil] || a.nama.localeCompare(b.nama));
+}
+// zona tempat garis potong berada: lingkup tertulis di garis potong, atau zona yang memuat titik tengahnya
+function zonaPotong(pid) {
+  const d = S.elems.get(pid);
+  if (!d || d.jenis !== 'potong') return null;
+  if (d.lingkup && S.grup.has(d.lingkup)) return d.lingkup;
+  const mx = (d.awal.x + d.akhir.x) / 2, my = (d.awal.y + d.akhir.y) / 2;
+  for (const z of daftarZona()) { const [x0, y0, x1, y1] = z.kotak; if (mx >= x0 - 0.5 && mx <= x1 + 0.5 && my >= y0 - 0.5 && my <= y1 + 0.5) return z.gid; }
+  return null;
+}
+// tampak sisi panjang = TAMPAK SAMPING, sisi pendek = TAMPAK DEPAN (dermaga); arah diambil dari kotak zona
+const tampakZona = kotak => ((kotak[2] - kotak[0]) >= (kotak[3] - kotak[1]) ? {samping: 'depan', depan: 'kiri'} : {samping: 'kanan', depan: 'depan'});
+// susunan lembar per zona menurut profil; komponen dermaga (trestle, kepala dermaga, causeway) mendapat lembar sendiri
+function lembarZona(z) {
+  const L = [], ada = jenis => z.isi.some(d => jenis.includes(d.jenis)), tz = tampakZona(z.kotak);
+  const pot = [...S.elems].filter(([pid, d]) => d.jenis === 'potong' && sah(d) && zonaPotong(pid) === z.gid).sort((a, b) => a[1].nama.localeCompare(b[1].nama)).map(([pid]) => 'potongan:' + pid);
+  if (z.profil === 'gedung') {
+    L.push('denah@' + z.gid);
+    if (ada(['atap', 'bidang'])) L.push('atap@' + z.gid);
+    if (ada(['plafon'])) L.push('plafon@' + z.gid);
+    if (ada(['pondasi', 'slof', 'kolom'])) L.push('pondasi@' + z.gid);
+    for (const t of ['depan', 'belakang', 'kanan', 'kiri']) L.push(t + '@' + z.gid);
+    L.push(...pot);
+    return L;
+  }
+  L.push('denah@' + z.gid, tz.samping + '@' + z.gid, tz.depan + '@' + z.gid);
+  if (z.profil === 'jeti' || !z.komponen.length) { if (ada(['tiang', 'pondasi', 'jetiKayu'])) L.push('pondasi@' + z.gid); L.push(...pot); return L; }
+  L.push(...pot);
+  for (const k of z.komponen) {
+    const bg = bagianLingkup(k.gid, kertasLembar()), adaTiang = k.isi.some(d => d.jenis === 'tiang' || d.jenis === 'pondasi' || d.jenis === 'jetiKayu');
+    L.push('denah@' + k.gid);
+    if (adaTiang) L.push('pondasi@' + k.gid);
+    // bagian: rencana tiang per segmen pada skala kerja (1:200), seperti lembar rencana pile cap KP Sorong
+    if (adaTiang) for (const b of bg) L.push(`pondasi@${k.gid}#${b.i + 1}`);
+  }
+  return L;
+}
+// nama lembar berlingkup, mengikuti istilah gambar dermaga (layout, rencana pile cap & pancang, tampak samping/depan)
+function namaLembarLingkup(j) {
+  const {dasar, gid, bagian} = pisahLingkup(j), g = S.grup.get(gid);
+  if (bagian) { const bg = bagianLingkup(gid, kertasLembar()); return `${namaLembarLingkup(dasar + '@' + gid)} — BAGIAN ${bagian}/${bg.length || bagian}`; }
+  if (!g) return (NAMA_2D[dasar] || dasar).toUpperCase();
+  const zona = g.induk ? S.grup.get(g.induk) : g, profil = zona && zona.zona ? zona.zona.profil : 'gedung', nm = (g.nama || gid).toUpperCase();
+  const zn = daftarZona().find(z => z.gid === (g.induk || gid)), tz = zn ? tampakZona(zn.kotak) : null;
+  if (profil === 'gedung') return `${NAMA_2D[dasar] || dasar.toUpperCase()} — ${nm}`;
+  const kayu = profil === 'jeti';
+  if (dasar === 'denah') return `LAYOUT ${nm}`;
+  if (dasar === 'pondasi') return `${kayu ? 'RENCANA TIANG & BALOK KEPALA' : 'RENCANA PILE CAP & TIANG PANCANG'} ${nm}`;
+  if (tz && dasar === tz.samping) return `TAMPAK SAMPING ${nm}`;
+  if (tz && dasar === tz.depan) return `TAMPAK DEPAN ${nm}`;
+  return `${NAMA_2D[dasar] || dasar.toUpperCase()} ${nm}`;
+}
 // semua lembar yang tersedia, mengikuti urutan tersimpan; lembar baru masuk di posisi bakunya
 function daftarLembar() {
+  const zona = daftarZona();
+  if (zona.length) return daftarLembarZona(zona);
+  return daftarLembarBiasa();
+}
+// set lembar bila ada zona: Gambar utama (sampul, daftar, layout gabungan, tampak gabungan) → tiap zona → komponen
+function daftarLembarZona(zona) {
+  const zIds = new Set(zona.flatMap(z => [...anggotaGrup(z.gid)]));
+  const luar = [...S.elems].some(([id, d]) => !zIds.has(id) && !S.sembunyi.has(id) && geometriElemen(id, d).length);
+  const utama = ['sampul', 'daftar', 'denah'];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const z of zona) { x0 = Math.min(x0, z.kotak[0]); y0 = Math.min(y0, z.kotak[1]); x1 = Math.max(x1, z.kotak[2]); y1 = Math.max(y1, z.kotak[3]); }
+  utama.push(tampakZona([x0, y0, x1, y1]).samping);
+  if (luar) {
+    // benda di luar zona: lembar biasa tetap tersedia untuknya
+    for (const j of ['atap', 'plafon', 'pondasi', 'detail', 'kusen', 'depan', 'belakang', 'kanan', 'kiri']) if (!utama.includes(j)) utama.push(j);
+    for (const [pid, d] of S.elems) if (d.jenis === 'potong' && sah(d) && !zonaPotong(pid)) utama.push('potongan:' + pid);
+  }
+  for (const j of lembarDetailAda()) utama.push(j);
+  const kelompok = new Map(utama.map(j => [j, 'Gambar utama']));
+  const bawaan = [...utama];
+  for (const z of zona) for (const j of lembarZona(z)) {
+    if (kelompok.has(j)) continue;
+    const g = pisahLingkup(j).gid, k = g && g !== z.gid ? z.komponen.find(c => c.gid === g) : null;
+    kelompok.set(j, k ? `${z.nama} › ${k.nama}` : z.nama); bawaan.push(j);
+  }
+  const sim = S.setel.lembar || {}, urut = (sim.urutan || []).filter(j => kelompok.has(j));
+  for (const j of bawaan) {
+    if (urut.includes(j)) continue;
+    const r = bawaan.indexOf(j), i = urut.findIndex(x => bawaan.indexOf(x) > r);
+    if (i < 0) urut.push(j); else urut.splice(i, 0, j);
+  }
+  return nomoriLembar(urut, sim, j => kelompok.get(j));
+}
+// nomor dan kode lembar; kode proyek (Data kop › Kode lembar) memberi kode berurutan seperti BBP-01, BBP-02, …
+function nomoriLembar(urut, sim, kelompokDari) {
+  const keluar = new Set(sim.keluar || []), awalan = ((S.setel.kop || {}).kodeLembar || '').trim();
+  let a = 0, st = 0, k = 0;
+  const masuk = urut.filter(j => !keluar.has(j) && j !== 'sampul').length;
+  return urut.map(j => {
+    const l = {jenis: j, nama: j === 'sampul' ? 'Sampul' : j === 'daftar' ? 'Daftar gambar' : judulLembar(j), masuk: !keluar.has(j), kode: '', urut: 0, total: masuk, kelompok: kelompokDari ? kelompokDari(j) : ''};
+    if (l.masuk && j !== 'sampul') {
+      l.urut = ++k;
+      const dasar = pisahLingkup(j).dasar;
+      l.kode = awalan ? `${awalan}-${String(k).padStart(2, '0')}` : LEMBAR_STRUKTUR.has(dasar) || j.startsWith('det:') ? 'S-' + String(++st).padStart(2, '0') : 'A-' + String(++a).padStart(2, '0');
+    }
+    return l;
+  });
+}
+function daftarLembarBiasa() {
   const ada = ['sampul', 'daftar', ...[...$('#m-jenis').options].map(op => op.value).filter(v => v !== 'sampul' && v !== 'daftar')];
   for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && !ada.includes('potongan:' + id)) ada.push('potongan:' + id);
   for (const j of lembarDetailAda()) if (!ada.includes(j)) ada.push(j);
@@ -11847,16 +12003,10 @@ function daftarLembar() {
     const r = rankLembar(j), i = urut.findIndex(x => rankLembar(x) > r);
     if (i < 0) urut.push(j); else urut.splice(i, 0, j);
   }
-  const keluar = new Set(sim.keluar || []);
-  let a = 0, st = 0, k = 0;
-  const masuk = urut.filter(j => !keluar.has(j) && j !== 'sampul').length;
-  return urut.map(j => {
-    const l = {jenis: j, nama: j === 'sampul' ? 'Sampul' : j === 'daftar' ? 'Daftar gambar' : judulLembar(j), masuk: !keluar.has(j), kode: '', urut: 0, total: masuk};
-    if (l.masuk && j !== 'sampul') { l.urut = ++k; l.kode = LEMBAR_STRUKTUR.has(j) || j.startsWith('det:') ? 'S-' + String(++st).padStart(2, '0') : 'A-' + String(++a).padStart(2, '0'); }
-    return l;
-  });
+  return nomoriLembar(urut, sim, null);
 }
 function judulLembar(j) {
+  if (j.includes('@')) { const n = namaLembarLingkup(j); return n.charAt(0) + n.slice(1).toLowerCase(); }
   if (j === 'sampul') return 'Sampul';
   if (j === 'daftar') return 'Daftar gambar';
   if (j.startsWith('denah:')) { const l = levelDenah().find(x => x.kunci === j); return 'Denah ' + (l ? l.nama : 'level ' + fmtElevasi(+j.slice(6))); }
@@ -11870,7 +12020,7 @@ function judulLembar(j) {
 function infoLembar(jenis) { return daftarLembar().find(l => l.jenis === jenis) || null; }
 /* ---- model kop gambar (v0.26.3): bawah, kanan sederhana, kanan lengkap ---- */
 const MODEL_KOP = {kanan: 'Kanan sederhana', kananLengkap: 'Kanan lengkap', bawah: 'Bawah (satu baris)'};
-const ISIAN_KOP = [['satker', 'Satuan kerja / instansi'], ['pekerjaan', 'Nama pekerjaan'], ['digambar', 'Digambar oleh'], ['pemeriksa', 'Diperiksa oleh'],
+const ISIAN_KOP = [['kodeLembar', 'Kode lembar (mis. BBP; kosong = A-/S-)'], ['satker', 'Satuan kerja / instansi'], ['pekerjaan', 'Nama pekerjaan'], ['digambar', 'Digambar oleh'], ['pemeriksa', 'Diperiksa oleh'],
   ['mengetahuiInstansi', 'Mengetahui/Menyetujui: instansi'], ['mengetahuiNama', 'Mengetahui: nama'], ['mengetahuiJabatan', 'Mengetahui: jabatan'],
   ['diperiksaJudul', 'Diperiksa/Diajukan: jabatan atas'], ['diperiksaNama', 'Diperiksa: nama'], ['diperiksaJabatan', 'Diperiksa: jabatan'],
   ['konsultan', 'Tim desain: konsultan'], ['konsultanKet', 'Tim desain: keterangan'], ['direktur', 'Tim desain: direktur']];
@@ -12241,7 +12391,41 @@ function lembarKhusus(o) {
  * @returns {{svg: string, info: string, skala: number | string, W: number, H: number, peta?: any, anotStat?: any, petak?: any[]}} `skala` angka penyebut, '-' (sampul/daftar) atau 'TERTERA' (lembar detail)
  */
 function buatSVG(o) {
-  if (o.jenis.startsWith('denah:')) o = {...o, lembar: o.lembar !== undefined ? o.lembar : infoLembar(o.jenis), jenisAsli: o.jenis, jenis: 'denah', level: +o.jenis.slice(6)};   // lembar denah per lantai
+  // lembar berlingkup zona/komponen: '<jenis>@<id grup>'; potongan otomatis ikut zona tempat garis potongnya berada
+  const pl = pisahLingkup(o.jenis), gid = pl.gid || (pl.dasar.startsWith('potongan:') ? zonaPotong(pl.dasar.slice(9)) : null);
+  if (!gid || !S.grup.has(gid)) return buatSVGInti(o);
+  const lama = LINGKUP;
+  LINGKUP = anggotaGrup(gid);
+  try {
+    const oo = {...o, lembar: o.lembar !== undefined ? o.lembar : infoLembar(o.jenis), jenis: pl.dasar, jenisAsli: o.jenisAsli || o.jenis};
+    return pl.bagian ? svgBagian(oo, gid, pl.bagian) : buatSVGInti(oo);
+  } finally { LINGKUP = lama; }
+}
+// Lembar bagian: gambar lingkup pada skala kerja, dipusatkan di segmen ke-n dan dipotong di batas bidang gambar;
+// garis sambung putus-putus di ujung segmen dengan rujukan ke lembar bagian sebelah
+function svgBagian(o, gid, nomor) {
+  const bg = bagianLingkup(gid, kertasLembar())[nomor - 1];
+  if (!bg) return buatSVGInti(o);
+  const [W, H] = KERTAS[o.kertas], area = areaGambar(W, H), sk = o.skala || SKALA_BAGIAN, s = 1000 / sk;
+  const cx = (bg.x0 + bg.x1) / 2, cy = (bg.y0 + bg.y1) / 2, kx = area.x + area.w / 2, ky = area.y + area.h / 2;
+  const r = buatSVGInti({...o, skala: sk, hanyaIsi: true, fokus: {titik: {x: cx, y: cy}, kertas: {x: kx, y: ky}}});
+  const X = x => kx + (x - cx) * s, Y = y => ky - (y - cy) * s, gs = [];
+  const kodeDari = n => { const l = infoLembar(`${pisahLingkup(o.jenisAsli).dasar}@${gid}#${n}`); return l && l.kode ? l.kode : 'bagian ' + n; };
+  const sambung = (xa, ya, xb, yb, teks, tx, ty) => gs.push(`<line x1="${n2k(xa)}" y1="${n2k(ya)}" x2="${n2k(xb)}" y2="${n2k(yb)}" stroke="#C0392B" stroke-width="0.35" stroke-dasharray="4 1.5 1 1.5"/>`,
+    `<text x="${n2k(tx)}" y="${n2k(ty)}" font-size="2.2" fill="#C0392B" text-anchor="middle">${esk(teks)}</text>`);
+  if (bg.datar) {
+    if (bg.i > 0) sambung(X(bg.x0), area.y + 4, X(bg.x0), area.y + area.h - 4, `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i)}`, X(bg.x0), area.y + area.h - 1.5);
+    if (bg.i < bg.n - 1) sambung(X(bg.x1), area.y + 4, X(bg.x1), area.y + area.h - 4, `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i + 2)}`, X(bg.x1), area.y + area.h - 1.5);
+  } else {
+    if (bg.i > 0) sambung(area.x + 4, Y(bg.y1), area.x + area.w - 4, Y(bg.y1), `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i)}`, area.x + area.w / 2, Y(bg.y1) - 1);
+    if (bg.i < bg.n - 1) sambung(area.x + 4, Y(bg.y0), area.x + area.w - 4, Y(bg.y0), `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i + 2)}`, area.x + area.w / 2, Y(bg.y0) + 3);
+  }
+  const kop = kopGambar(o, W, H, `1 : ${sk}`), cid = 'potong-bagian-' + nomor;
+  return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/><defs><clipPath id="${cid}"><rect x="${area.x}" y="${area.y}" width="${area.w}" height="${area.h}"/></clipPath></defs><g clip-path="url(#${cid})">${r.svg}${gs.join('')}</g>${kop}</svg>`,
+    info: `Bagian ${nomor} dari ${bg.n}: segmen ini saja, skala 1 : ${sk}.`, skala: sk, W, H, peta: null, anotStat: null};
+}
+function buatSVGInti(o) {
+  if (o.jenis.startsWith('denah:')) o = {...o, lembar: o.lembar !== undefined ? o.lembar : infoLembar(o.jenis), jenisAsli: o.jenisAsli || o.jenis, jenis: 'denah', level: +o.jenis.slice(6)};   // lembar denah per lantai
   if (o.jenis === 'sampul' || o.jenis === 'daftar') return lembarKhusus(o);
   if (o.jenis.startsWith('det:')) return lembarDetail(o);
   const [W, H] = KERTAS[o.kertas], m = 10;
@@ -13361,6 +13545,8 @@ function isiPilihan2D(pilih) {
   const daftar = [...S.elems].filter(([, d]) => d.jenis === 'potong' && sah(d)).sort((a, b) => a[1].nama.localeCompare(b[1].nama));
   for (const [id, d] of daftar) { const op = document.createElement('option'); op.value = 'potongan:' + id; op.textContent = `Potongan ${d.nama}–${d.nama}`; sel.appendChild(op); }
   for (const j of lembarDetailAda()) { const op = document.createElement('option'); op.value = j; op.textContent = 'Lembar detail ' + nomorDet(j); sel.appendChild(op); }
+  for (const op of [...sel.options]) if (op.value.includes('@')) op.remove();
+  for (const z of daftarZona()) for (const j of lembarZona(z)) if (j.includes('@')) { const op = document.createElement('option'); op.value = j; op.textContent = judulLembar(j); sel.appendChild(op); }
   sel.value = [...sel.options].some(op => op.value === lama) ? lama : 'denah';
 }
 /* ---- daftar lembar di panel kiri ---- */
@@ -13373,7 +13559,8 @@ function renderLembar() {
   const ol = $('#m-lembar');
   if (!ol) return;
   const aktif = $('#m-jenis').value, daftar = daftarLembar();
-  ol.innerHTML = daftar.map(l => `<li draggable="true" data-lembar="${esk(l.jenis)}" class="${l.jenis === aktif ? 'aktif' : ''} ${l.masuk ? '' : 'keluar'}">
+  let kl = null;
+  ol.innerHTML = daftar.map(l => (l.kelompok && l.kelompok !== kl ? `<li class="kelompok-lembar" aria-hidden="true">${esk(kl = l.kelompok)}</li>` : '') + `<li draggable="true" data-lembar="${esk(l.jenis)}" class="${l.jenis === aktif ? 'aktif' : ''} ${l.masuk ? '' : 'keluar'}">
     <span class="pegang" title="Seret untuk mengubah urutan" aria-hidden="true">⋮⋮</span>
     <input type="checkbox" ${l.masuk ? 'checked' : ''} ${dis()} title="Masuk PDF" aria-label="${esk(l.nama)} masuk PDF">
     <span class="kode">${l.kode || (l.jenis === 'sampul' ? '—' : '')}</span><span class="nama" title="${esk(l.nama)}">${esk(l.nama)}</span></li>`).join('');
@@ -15981,6 +16168,8 @@ function jenisGambar2D() {
   // lembar detail (det:N) dibaca langsung dari model, bukan dari pilihan layar yang bisa usang
   for (const j of lembarDetailAda()) if (!daftar.some(x => x.jenis === j)) daftar.push({jenis: j, nama: judulLembar(j)});
   for (const l of levelDenah()) if (!daftar.some(x => x.jenis === l.kunci)) daftar.push({jenis: l.kunci, nama: `Denah ${l.nama} (${fmtElevasi(l.z)})`});
+  // lembar zona/komponen (v0.40): '<jenis>@<id grup>'
+  for (const z of daftarZona()) for (const j of lembarZona(z)) if (j.includes('@') && !daftar.some(x => x.jenis === j)) daftar.push({jenis: j, nama: judulLembar(j)});
   return daftar;
 }
 /**
