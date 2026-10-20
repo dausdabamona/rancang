@@ -436,6 +436,52 @@ async function ujiAsap() {
     catat('skala grafis dan panah utara', okPanjang && s20.label.join() === '0,0,5,1' && s20.mm === 50 && s100.label.join() === '0,1,2,5' && s100.mm === 50 && s50.mm === 50 && sg.detail.skala === 10 && !sg.detail.utara
       && ['denah', 'atap', 'pondasi', 'plafon'].every(j => sg[j].utara) && !sg.depan.utara && !mati && lbrSet.skalaGrafis === true && Array.isArray(lbrSet.urutan),
       {sg, s20, s100, s50, mati});
+    // v0.42: as grid manual (garis bantu ber-label): Kantor Utama 11x3 ke timur dan 5;2;5 ke selatan; B diganti B'
+    await halaman(`window.rancangUji.contoh('kantor-utama', 'ganti')`);
+    const bulat = svg => (svg.match(/<circle [^>]*r="4"/g) || []).length;
+    const sebelumAs = bulat((await metode.gambar2D({jenis: 'denah:0'})).svg);
+    const asX = await halaman(`window.rancangUji.asGrid({x: 0, y: 0}, 0, '11x3')`);
+    const asY = await halaman(`window.rancangUji.asGrid({x: 0, y: 12}, -90, '5;2;5')`);
+    const mAs = (await halaman(`window.rancangAPI.model()`)).elemen;
+    const labelAs = [...asX, ...asY].map(i => mAs[i] && mAs[i].as && mAs[i].as.label);
+    const idB = asY.find(i => mAs[i].as.label === 'B');
+    await halaman(`window.rancangUji.pilih(['${idB}'])`);
+    const ubahAs = await halaman(`window.rancangUji.isiMedan('bn-as', "B'")`);
+    const dAs = (await metode.gambar2D({jenis: 'denah:0'})).svg, pAs = (await metode.gambar2D({jenis: 'pondasi'})).svg, tAs = (await metode.gambar2D({jenis: 'depan'})).svg;
+    catat('as grid manual menggantikan as otomatis', asX.length === 11 && asY.length === 4 && labelAs.join() === '1,2,3,4,5,6,7,8,9,10,11,A,B,C,D'
+      && ubahAs.data && ubahAs.data.as.label === "B'" && ubahAs.data.nama === "As B'" && bulat(dAs) === 15 && />B(&#39;|')</.test(dAs) && dAs.includes('>11<') && !dAs.includes('>E<')
+      && bulat(pAs) === 15 && />B(&#39;|')</.test(pAs) && tAs.includes('>11<'),
+      {sebelumAs, label: labelAs, denah: bulat(dAs), pondasi: bulat(pAs), tampak11: tAs.includes('>11<')});
+    // v0.42: Jadikan komponen + salinan kembar (Asrama Putri: kolom lt.2 + foot plat), RAB sebelum = sesudah
+    await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
+    const petaRab = rr => { const m = new Map(); for (const b of rr.flatMap(dv => dv.baris)) m.set(b.kode + '|' + b.uraian, (m.get(b.kode + '|' + b.uraian) || 0) + (b.vol || 0)); return m; };
+    const rab0 = petaRab(await metode.rab({}));
+    const kotak = await halaman(`window.rancangUji.kotakKomponen(['C2', 'F1'])`);
+    await halaman(`(() => { document.getElementById('mk-batal').click(); return true; })()`);
+    const kp = await halaman(`window.rancangUji.komponen(['C2', 'F1'], {nama: 'Kolom + foot plat R1', sisip: 'tengah'})`);
+    const rab1 = petaRab(await metode.rab({}));
+    const beda = [...new Set([...rab0.keys(), ...rab1.keys()])].map(k => [k, Math.abs((rab0.get(k) || 0) - (rab1.get(k) || 0))]).filter(([, v]) => v > 0.011);
+    const mk = (await halaman(`window.rancangAPI.model()`));
+    const inst = Object.values(mk.elemen).filter(d => d.jenis === 'instance' && d.definisi === kp.kid);
+    catat('jadikan komponen dengan salinan kembar', kotak.tampil && /Ganti juga \d+ salinan/.test(kotak.kembar) && kp.kid && kp.kembar >= 30 && inst.length === kp.kembar + 1 && !beda.length
+      && inst.every(d => d.nama === 'Kolom + foot plat R1') && !Object.values(mk.elemen).some(d => d.jenis === 'kolom' && d.x === 0 && d.y === 0 && d.z0 === 4),
+      {kotak, kembar: kp.kembar, instance: inst.length, beda: beda.slice(0, 6)});
+    // v0.42: viewport bebas di Ruang Lembar: denah 1:50 di lembar tampak depan, ikut perubahan model; tampak 1:200 di lembar denah
+    await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
+    const rvp = await metode.terapkan({perubahan: [
+      {id: 'L901', data: {jenis: 'gambar2d', bentuk: 'viewport', lembar: 'depan', tempel: 'kertas', titik: [{x: 20, y: 120}, {x: 90, y: 180}], sumber: 'denah:0', skala: 50, pusat: {x: 2, y: 3, z: 0}, gaya: {tebal: 0.35}}},
+      {id: 'L902', data: {jenis: 'gambar2d', bentuk: 'viewport', lembar: 'denah:0', tempel: 'kertas', titik: [{x: 20, y: 20}, {x: 120, y: 60}], sumber: 'depan', skala: 200, pusat: {x: 18, y: 0, z: 3}, gaya: {tebal: 0.35}}}
+    ]});
+    const v1 = (await metode.gambar2D({jenis: 'depan'})).svg, v2 = (await metode.gambar2D({jenis: 'denah:0'})).svg;
+    const mB = (await halaman(`window.rancangAPI.model()`)).elemen.B1, bB = {...mB, kode: 'PX9'};
+    delete bB.diubahOleh; delete bB.diubahPada;
+    await metode.terapkan({perubahan: [{id: 'B1', data: bB}]});
+    const v1b = (await metode.gambar2D({jenis: 'depan'})).svg;
+    const potong = svg => { const i = svg.indexOf('clip-path="url(#vp-L901)"'); return i < 0 ? '' : svg.slice(i, svg.indexOf('</g><rect', i)); };
+    const geser = await halaman(`window.rancangUji.geserViewport('L901', 10, -5)`);
+    catat('viewport bebas di Ruang Lembar', rvp && rvp.ok && v1.includes('clip-path="url(#vp-L901)"') && v1.includes('DENAH LANTAI 1') && v1.includes('SKALA 1 : 50')
+      && v2.includes('clip-path="url(#vp-L902)"') && /TAMPAK DEPAN/.test(v2) && v2.includes('SKALA 1 : 200') && potong(v1).length > 2000 && !potong(v1).includes('>PX9<') && potong(v1b).includes('>PX9<') && Math.abs(geser.x - 1.5) < 0.02 && Math.abs(geser.y - 2.75) < 0.02,
+      {rvp, isi1: potong(v1).length, px9: potong(v1b).includes('>PX9<'), geser});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;
