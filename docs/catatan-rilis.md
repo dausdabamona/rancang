@@ -1,3 +1,10 @@
+## Yang baru di 0.43.0
+
+Rilis penyelaras (20 Oktober 2026): aplikasi desktop, ekstensi Claude (RANCANG.mcpb), dan artefak RANCANG di Claude kini memakai versi kode yang sama, sehingga model dan gambar yang dibuat Claude tampil persis sama di aplikasi Bapak.
+
+- Isi fitur sama dengan 0.42.1 (alat dermaga v0.41, Fase 2 SketchUp/LayOut v0.42, perbaikan 0.42.1).
+- Pasang **RANCANG-Setup-0.43.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.43.0 dari rilis yang sama.
+
 ## Yang baru di 0.42.1
 
 Perbaikan dari penyusunan gambar RAB dermaga BBP (20 Oktober 2026).
