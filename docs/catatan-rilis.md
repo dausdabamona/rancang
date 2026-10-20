@@ -1,3 +1,31 @@
+## Yang baru di 0.41.0
+
+Alat gambar dermaga beton, dari model sampai gambar kerja dan detail (20 Oktober 2026, diuji dengan model ulang Dermaga Poltek KP Sorong TA 2020).
+
+- **Dermaga kayu (jeti)**: elemen *Jeti kayu* satu ruas lurus dengan portal tiang, balok kepala ganda, gelagar, papan lantai berjarak, dan skor silang; RAB kayu DM-201 s.d. DM-208.
+- **Tiang miring dan selimut**: tiang pancang bisa miring 1 : n ke arah tertentu (RAB DM-091), dan diberi selimut beton anti karat di zona pasang surut (beton, bekisting, besi + spiral masuk RAB).
+- **Causeway / timbunan**: penampang trapesium sepanjang as dengan talud 1 : n yang dasarnya mengikuti dasar laut (RAB DM-301 timbunan, DM-302 armour talud).
+- **Profil dasar laut**: datum dasar laut boleh berupa profil (jarak, elevasi) sepanjang garis; tampak dan potongan menggambar dasar laut miring, dan tabel elevasi dasar laut muncul di bawah tampak/potongan memanjang.
+- **Zona gambar 2D**: grup ber-zona (gedung, dermaga, jeti) memiliki set lembarnya sendiri, dengan kode lembar proyek (mis. PKP-01).
+- **Lembar gabungan**: beberapa gambar dalam satu lembar dengan simbol judul dan skala seragam (mis. layout + rencana pile cap, tampak samping + depan, rencana balok + penulangan pelat). Lembar bagian memecah gambar panjang (rencana pondasi dan tampak samping) pada 1 : 200 dengan garis sambung di as.
+- **Grid as dermaga otomatis** dari tiang (nomor dari ujung laut, huruf melintang) di layout, rencana, tampak, dan potongan; **kedalaman pandang potongan** agar potongan melintang tidak memperlihatkan tiang jauh di belakangnya.
+- **Rencana balok** dan **rencana penulangan pelat** dermaga.
+- **Detail penulangan dermaga** di Pustaka Detail: penampang balok T, tulangan pile cap PC-1/PC-2 dengan beton isian dan stek, selimut dan isian tiang, penulangan bollard.
+- **Garis putus** (pemendekan tiang dan bagian berulang) dan **detail perbesaran** di Ruang Lembar; garis putus tiang bisa dibuat otomatis dari panel garis potong.
+- **Dimensi, sudut, kemiringan, dan label** baru di Ruang Lembar: dimensi tunggal atau berantai yang angkanya dihitung dari model (cm di potongan, m di denah/tampak), sudut berbusur, kemiringan 1 : n (°), label penunjuk yang teksnya diambil dari data benda. Semua alat 2D kini juga berfungsi di lembar gabungan.
+- **Keterangan otomatis dermaga**: potongan melintang langsung diberi ukuran lebar dan jarak tiang, rantai tinggi, label komponen, dan kemiringan tiang; potongan causeway diberi lebar puncak, tinggi, dan talud. Sakelar *Keterangan otomatis* per lembar.
+- Skala otomatis bertambah 1 : 250 dan 1 : 300.
+
+## Yang baru di 0.40.0
+
+Kebiasaan SketchUp dan LayOut untuk pendetilan, Fase 1 (20 Oktober 2026, hasil mempelajari berkas .skp dan .layout di Google Drive).
+
+- **Larik salinan dengan Pindah + Ctrl**: sesudah menyalin, ketik **24x** lalu Enter untuk 24 salinan berjarak sama, atau **/4** untuk membagi jarak salinan pertama menjadi 4. Angka boleh diganti berkali-kali (6x, lalu /3, …) dan **satu Ctrl+Z menghapus seluruh deret** beserta salinan pertamanya. Cocok untuk deret tiang + pile cap dermaga, kolom, atau kusen.
+- **Label terhubung data elemen**: label berpanah yang ujung panahnya diklik pada benda otomatis terhubung ke benda itu dan teksnya dibaca dari data: pintu/jendela `{kode}`, lantai `{nama} · {luas} m²`, kolom `K {b}/{h} · {tulangan}`, slof/balok `{b}/{h} · {tulangan}`, dinding `Dinding t={tebal} cm`, atap `{penutup} {kemiringan}°`, tiang `Ø{diameter} · L {panjang} m`, plat `Plat t={tebal} cm · {tulangan}`. Pola bisa diubah di Properti (3D) atau kotak teks anotasi (Gambar 2D, khusus denah). Kode pintu, nama ruang, dan ukuran yang diubah langsung ikut di label. Bila bendanya dihapus, label memakai teks terakhir dan ditandai *sumber hilang*; tombol *Lepas tautan* menjadikannya teks bebas. MCP: tambahkan `sumber` dan `isi` pada anotasi label.
+- **Revisi di kop**: panel Kop bertambah bagian *Revisi gambar* (tanggal, uraian, Tambah revisi). Berlaku untuk semua lembar: kop kanan menampilkan tiga revisi terakhir (paraf dibiarkan kosong untuk ditandatangani), dan kolom tanggal di ketiga model kop menjadi tanggal revisi terakhir + *Rev. n*.
+- **Skala grafis** di pojok kanan bawah setiap lembar berskala (denah, denah atap, pondasi, plafon, tampak, potongan, detail penulangan): batang ±50 mm, mis. 0·1·2·5 m pada 1:100 dan 0·0,5·1 m pada 1:20, tetap benar walau lembar dicetak diperkecil. Bisa dimatikan lewat centang *Skala grafis* (tersimpan di pengaturan lembar).
+- **Panah utara** kini juga di denah atap, denah pondasi, dan rencana plafon.
+
 ## Yang baru di 0.39.1
 
 Perbaikan plafon miring dari PR #24 (v0.34.1) yang tertinggal, dipasang ulang di atas 0.39.0 (20 Oktober 2026). Rinciannya ada di bagian *Yang baru di 0.34.1* di bawah: plafon miring berhenti di sisi dalam lisplang, bawaan *Mundur dari ujung seng* 20 cm untuk semua rangka (atap baja ringan lama ikut bergeser 20 cm ke dalam), isian *Jarak tepi plafon dari ujung seng* di Properti plafon miring, dan papan lisplang sebagai batas Perpanjang/Pangkas.
