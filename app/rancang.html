@@ -1048,7 +1048,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * Pengaturan proyek (dokumen `pengaturan/proyek`).
  * @typedef {{nama: string, tebalDinding: number, tinggiDinding: number, kemiringanAtap: number, overstekAtap: number, faktorBesi: number, bahanDinding?: 'bata' | 'tripleks' | 'grc' | 'gypsum',
- *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[]}} Setelan
+ *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[], revisi?: {no: number, tanggal: string, uraian?: string}[]}} Setelan
  */
 
 /** Satu perubahan dari luar (MCP, panel Claude): `data` null = hapus. @typedef {{id: string, data?: DokumenRancang | null, sesudah?: DokumenRancang | null}} PerubahanLuar */
@@ -7828,7 +7828,7 @@ function tautkanLabel(d, sid) {
   return d;
 }
 function lepasLabel(id) {
-  const d = S.elems.get(id);
+  const d = /** @type {any} */ (S.elems.get(id));
   if (!d || !d.sumber) return;
   const b = salin(d);
   b.teks = teksAnotasi(d) || d.teks || 'Keterangan';
@@ -14483,10 +14483,10 @@ function segarAnot2D() {
   const d = ANOT2D.pilih && S.elems.get(ANOT2D.pilih);
   $('#m-anot-edit').hidden = !d;
   if (d && document.activeElement !== $('#m-anot-teks')) {
-    const tautan = d.tipe === 'label' && d.sumber && d.isi;
-    $('#m-anot-teks').value = tautan ? d.isi : d.teks || '';
+    const da = /** @type {any} */ (d), tautan = da.tipe === 'label' && da.sumber && da.isi;
+    $('#m-anot-teks').value = tautan ? da.isi : da.teks || '';
     $('#m-anot-teks').placeholder = d.tipe === 'ukuran' ? 'Kosong = jarak otomatis' : d.tipe === 'peil' ? 'Kosong = elevasi otomatis' : 'Teks';
-    $('#m-anot-teks').title = tautan ? `Pola label terhubung ke ${namaSumberLabel(d.sumber)}${sumberLabelHilang(d) ? ' (sumber hilang)' : ''}. Kunci: ${KUNCI_LABEL.map(k => '{' + k + '}').join(' ')}` : '';
+    $('#m-anot-teks').title = tautan ? `Pola label terhubung ke ${namaSumberLabel(da.sumber)}${sumberLabelHilang(d) ? ' (sumber hilang)' : ''}. Kunci: ${KUNCI_LABEL.map(k => '{' + k + '}').join(' ')}` : '';
   }
   const st = hasil2D.anotStat || {disembunyikan: 0, terhalang: 0}, bagian = [];
   if (st.disembunyikan) bagian.push(`${st.disembunyikan} disembunyikan di gambar ini`);
@@ -14526,8 +14526,9 @@ function elemenDiDenah(x, y, zl = null) {
         q = polyDinding({awal: a, akhir: b, tebal: w.tebal + 0.02}); z0 = (w.z0 || 0) + (d.ambang || 0); t = d.tinggi;
       } else {
         q = poligon(d);
-        z0 = d.jenis === 'tiang' ? d.zKepala - d.panjang : d.z0 ?? 0;
-        t = d.jenis === 'tiang' ? d.panjang : d.tinggi ?? d.tebal ?? d.h ?? 0;
+        const da = /** @type {any} */ (d);
+        z0 = da.jenis === 'tiang' ? da.zKepala - da.panjang : da.z0 ?? 0;
+        t = da.jenis === 'tiang' ? da.panjang : da.tinggi ?? da.tebal ?? da.h ?? 0;
       }
     } catch (_) { q = null; }
     if (!q || q.length < 3 || !dalam(q)) continue;
@@ -14612,9 +14613,9 @@ $('#m-anot-teks').addEventListener('keydown', e => { if (e.key === 'Enter') e.ta
 $('#m-anot-teks').addEventListener('change', e => {
   const id = ANOT2D.pilih, d = id && S.elems.get(id);
   if (!d) return;
-  const t = e.target.value.trim();
-  if (!t && (d.tipe === 'teks' || d.tipe === 'label')) { toast('Teks anotasi tidak boleh kosong.'); e.target.value = d.sumber && d.isi ? d.isi : d.teks; return; }
-  if (d.tipe === 'label' && d.sumber && d.isi) { const b = {...salin(d), isi: t}; b.teks = teksAnotasi(b) || d.teks; terapkan([{id, sesudah: b}]); segar2D(); return; }
+  const t = e.target.value.trim(), da = /** @type {any} */ (d);
+  if (!t && (d.tipe === 'teks' || d.tipe === 'label')) { toast('Teks anotasi tidak boleh kosong.'); e.target.value = da.sumber && da.isi ? da.isi : da.teks; return; }
+  if (da.tipe === 'label' && da.sumber && da.isi) { const b = {...salin(da), isi: t}; b.teks = teksAnotasi(b) || da.teks; terapkan([{id, sesudah: b}]); segar2D(); return; }
   terapkan([{id, sesudah: {...salin(d), teks: t}}]);
   segar2D();
 });

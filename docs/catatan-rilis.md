@@ -1,3 +1,13 @@
+## Yang baru di 0.40.0
+
+Kebiasaan SketchUp dan LayOut untuk pendetilan, Fase 1 (20 Oktober 2026, hasil mempelajari berkas .skp dan .layout di Google Drive).
+
+- **Larik salinan dengan Pindah + Ctrl**: sesudah menyalin, ketik **24x** lalu Enter untuk 24 salinan berjarak sama, atau **/4** untuk membagi jarak salinan pertama menjadi 4. Angka boleh diganti berkali-kali (6x, lalu /3, …) dan **satu Ctrl+Z menghapus seluruh deret** beserta salinan pertamanya. Cocok untuk deret tiang + pile cap dermaga, kolom, atau kusen.
+- **Label terhubung data elemen**: label berpanah yang ujung panahnya diklik pada benda otomatis terhubung ke benda itu dan teksnya dibaca dari data: pintu/jendela `{kode}`, lantai `{nama} · {luas} m²`, kolom `K {b}/{h} · {tulangan}`, slof/balok `{b}/{h} · {tulangan}`, dinding `Dinding t={tebal} cm`, atap `{penutup} {kemiringan}°`, tiang `Ø{diameter} · L {panjang} m`, plat `Plat t={tebal} cm · {tulangan}`. Pola bisa diubah di Properti (3D) atau kotak teks anotasi (Gambar 2D, khusus denah). Kode pintu, nama ruang, dan ukuran yang diubah langsung ikut di label. Bila bendanya dihapus, label memakai teks terakhir dan ditandai *sumber hilang*; tombol *Lepas tautan* menjadikannya teks bebas. MCP: tambahkan `sumber` dan `isi` pada anotasi label.
+- **Revisi di kop**: panel Kop bertambah bagian *Revisi gambar* (tanggal, uraian, Tambah revisi). Berlaku untuk semua lembar: kop kanan menampilkan tiga revisi terakhir (paraf dibiarkan kosong untuk ditandatangani), dan kolom tanggal di ketiga model kop menjadi tanggal revisi terakhir + *Rev. n*.
+- **Skala grafis** di pojok kanan bawah setiap lembar berskala (denah, denah atap, pondasi, plafon, tampak, potongan, detail penulangan): batang ±50 mm, mis. 0·1·2·5 m pada 1:100 dan 0·0,5·1 m pada 1:20, tetap benar walau lembar dicetak diperkecil. Bisa dimatikan lewat centang *Skala grafis* (tersimpan di pengaturan lembar).
+- **Panah utara** kini juga di denah atap, denah pondasi, dan rencana plafon.
+
 ## Yang baru di 0.39.1
 
 Perbaikan plafon miring dari PR #24 (v0.34.1) yang tertinggal, dipasang ulang di atas 0.39.0 (20 Oktober 2026). Rinciannya ada di bagian *Yang baru di 0.34.1* di bawah: plafon miring berhenti di sisi dalam lisplang, bawaan *Mundur dari ujung seng* 20 cm untuk semua rangka (atap baja ringan lama ikut bergeser 20 cm ke dalam), isian *Jarak tepi plafon dari ujung seng* di Properti plafon miring, dan papan lisplang sebagai batas Perpanjang/Pangkas.
