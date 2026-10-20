@@ -4934,10 +4934,11 @@ function keluarKomponen() {
  * @param {number} [dz]
  * @param {((d: ElemenRancang) => ElemenRancang) | null} [ubah] pengubah tambahan tiap salinan (mis. putar)
  * @param {((d: ElemenRancang) => ElemenRancang) | null} [ubahBuk] pengubah tambahan tiap pintu/jendela yang ikut tersalin (mis. cermin)
+ * @param {(awalan: string) => string} [nid] pemberi id bersama, agar beberapa salinan berturut-turut (larik) dalam satu langkah tidak berbagi id
  * @returns {{tulis: Perubahan[], baruAtas: string[]}}
  */
-function buatSalinan(items, dx, dy, dz = 0, ubah = null, ubahBuk = null) {
-  const nid = pemberiId(), tulis = [], baruAtas = [];
+function buatSalinan(items, dx, dy, dz = 0, ubah = null, ubahBuk = null, nid = pemberiId()) {
+  const tulis = [], baruAtas = [];
   const salinEl = (eid, grupBaru) => {
     const d = S.elems.get(eid);
     if (!d) return null;
@@ -5789,9 +5790,12 @@ function infoPilihan() {
 
 const alatPindah = {
   petunjukDasar: '<b>Pindah:</b> klik titik acuan (bila sudah ada pilihan, titik acuan boleh di benda lain; Esc mengosongkan pilihan) (kotak hijau = ujung, bulat biru muda = titik tengah, belah ketupat merah = pada tepi), lalu arahkan; gerakan mulus mengikuti zoom. Sentuh sebentar titik benda lain lalu geser menjauh: garis ungu putus-putus muncul saat sejajar titik itu. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Sentuh muka lalu tahan Shift: gerakan terkunci pada bidang muka itu; sentuh tepi lalu tahan Shift: sejajar tepi (garis ungu). Ketik jarak lalu Enter. Ctrl untuk menyalin.',
-  get petunjuk() { return this.salin ? '<b>Pindah + Salin:</b> klik tujuan salinan. Tekan Ctrl lagi untuk kembali ke memindah.' : this.petunjukDasar; },
+  get petunjuk() {
+    if (this.terakhir && !this.dasar) return '<b>Salinan jadi.</b> Ketik <b>4x</b> lalu Enter untuk 4 salinan berjarak sama, atau <b>/4</b> untuk membagi jarak menjadi 4. Klik benda lain untuk memindah lagi.';
+    return this.salin ? '<b>Pindah + Salin:</b> klik tujuan salinan, lalu ketik 4x atau /4 untuk salinan berderet. Tekan Ctrl lagi untuk kembali ke memindah.' : this.petunjukDasar;
+  },
   vcb: 'Jarak',
-  dasar: null, items: null, asli: null, delta: null, salin: false,
+  dasar: null, items: null, asli: null, delta: null, salin: false, terakhir: null,
   sibuk() { return !!this.dasar; },
   batal() {
     const lama = this.bukaan && this.bukaan.b.dinding;
@@ -5976,6 +5980,7 @@ const alatPindah = {
   },
   down(e) {
     if (this.dasar) { this.selesai(); return; }
+    this.terakhir = null;   // aksi baru: larik hanya berlaku langsung sesudah satu salinan
     // titik acuan: ujung/tengah/tepi benda bila ada; bila tidak, titik pada muka benda yang diklik (lengkap dengan tingginya),
     // bukan titik lantai di belakangnya. Klik tepat di pojok (di luar muka) tetap memilih benda pemilik pojok itu.
     const s0 = titikSnap(e, null, {atas: true, tengah: true, tepi: true, halus: true});
@@ -6021,10 +6026,43 @@ const alatPindah = {
       const {tulis, baruAtas} = buatSalinan(items, dx, dy, dz);
       terapkan(tulis);
       S.sel = new Set(baruAtas); segarPilihan();
-      toast(`${baruAtas.length} objek disalin.`);
-    } else terapkan([...asli].map(([id, d]) => ({id, sesudah: geser(d, dx, dy, dz)})));
+      // bahan larik (v0.40): ketik 4x atau /4 sesudah ini untuk salinan berderet
+      this.terakhir = {asal: [...items], d: {dx, dy, dz}, ids: tulis.map(t => t.id), atas: baruAtas, entri: S.undo[S.undo.length - 1]};
+      tulisPetunjuk();
+      toast(`${baruAtas.length} objek disalin. Ketik 4x lalu Enter untuk salinan berderet, atau /4 untuk membagi jaraknya.`);
+    } else { this.terakhir = null; terapkan([...asli].map(([id, d]) => ({id, sesudah: geser(d, dx, dy, dz)}))); }
+  },
+  /**
+   * Larik seperti SketchUp (v0.40): `n x` = n salinan berjarak sama dengan salinan pertama; `/n` = jarak salinan pertama dibagi n.
+   * Salinan pertama (atau deret sebelumnya) diganti, dan seluruh deret digabung dengan langkah salin pertama menjadi satu langkah Undo.
+   * @param {number} n
+   * @param {boolean} bagi
+   */
+  larik(n, bagi) {
+    const t = this.terakhir;
+    if (!t) return toast('Salin dulu dengan Pindah + Ctrl, lalu ketik 4x atau /4.');
+    if (!(n >= 1 && n <= 200)) return toast('Jumlah salinan antara 1 dan 200.');
+    if (t.asal.some(id => !ambil(id)) || t.ids.some(id => !ambil(id))) { this.terakhir = null; return toast('Salinan atau benda asalnya sudah berubah. Salin lagi lalu ketik 4x.'); }
+    const k = bagi ? 1 / n : 1, sx = t.d.dx * k, sy = t.d.dy * k, sz = t.d.dz * k;
+    const nid = pemberiId(), tulis = t.ids.map(id => ({id, sesudah: null}));
+    let atas = [];
+    for (let i = 1; i <= n; i++) {
+      const s = buatSalinan(t.asal, r2(sx * i), r2(sy * i), r2(sz * i), null, null, nid);
+      tulis.push(...s.tulis); atas = s.baruAtas;
+    }
+    terapkan(tulis);
+    // gabung dengan langkah salin pertama agar satu Ctrl+Z menghapus seluruh deret
+    const kini = S.undo[S.undo.length - 1], lalu = S.undo[S.undo.length - 2];
+    if (kini && lalu && lalu === t.entri) { S.undo.pop(); lalu.push(...kini); }
+    const baru = tulis.filter(x => x.sesudah).map(x => x.id);
+    this.terakhir = {...t, ids: baru, atas, entri: S.undo[S.undo.length - 1]};
+    S.sel = new Set(atas); segarPilihan(); tulisPetunjuk();
+    const jarak = Math.hypot(sx, sy, sz);
+    toast(`${n} salinan berderet, jarak ${fmt(jarak)} m. Ketik angka lain (mis. 6x) untuk mengganti, Ctrl+Z menghapus seluruh deret.`);
   },
   ketik(v) {
+    const m = /^\s*(?:[x*×]\s*(\d+)|(\d+)\s*[x*×]|\/\s*(\d+))\s*$/i.exec(v);
+    if (m && !this.dasar) return this.larik(Number(m[1] || m[2] || m[3]), !!m[3]);
     if (!this.dasar) return toast('Klik objek dan titik acuannya dulu, lalu ketik jaraknya.');
     const L = angka(v);
     if (!Number.isFinite(L)) return toast(`Tulis jarak dalam ${namaSatuan()}, misalnya ${cth(2.5)}.`);
@@ -10069,6 +10107,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Control' && S.tool === 'putar' && !e.repeat) { alatPutar.ubahSalin(); return; }
   if (e.key === 'Control' && S.tool === 'cermin' && !e.repeat) { alatCermin.ubahSalin(); return; }
   // salinan putar berderet: 4x atau x4
+  if (S.tool === 'pindah' && alatPindah.terakhir && !alatPindah.dasar && (k === 'x' || e.key === '*' || e.key === '/') && !ctrl) { e.preventDefault(); S.ketik = true; vcb.value = e.key; vcb.focus(); return; }
   if (S.tool === 'putar' && alatPutar.terakhir && !alatPutar.pusat && (k === 'x' || e.key === '*') && !ctrl) { e.preventDefault(); S.ketik = true; vcb.value = e.key; vcb.focus(); return; }
   // Shift saat Pindah: kunci ke yang sedang disentuh/terdeteksi, seperti SketchUp — muka → "pada bidang",
   // tepi → "sejajar tepi", selain itu sumbu merah/hijau/biru yang sedang terdeteksi
@@ -15686,6 +15725,20 @@ window.rancangAPI = Object.freeze({
 // Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
 window.rancangUji = Object.freeze({
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
+  // alat Pindah + Ctrl (v0.40): salin pilihan sejauh (dx, dy, dz) seperti klik dua titik, lalu teks larik (mis. '24x' atau '/4')
+  // diketik di kotak ukur; hasil: jumlah elemen dan langkah Undo sesudahnya
+  pindahSalin: (ids, d, larik) => {
+    setAlat('pindah'); S.sel = new Set(ids); segarPilihan();
+    const P = alatPindah, {el} = ekspansi([...S.sel]);
+    P.terakhir = null; P.salin = true; P.lacak = []; P.dasar = {x: 0, y: 0, z: 0}; P.items = [...S.sel];
+    P.asli = new Map([...el].map(id => [id, salin(S.elems.get(id))])); P.delta = {dx: d.dx || 0, dy: d.dy || 0, dz: d.dz || 0};
+    P.selesai(); P.salin = false;
+    const sesudahSalin = S.elems.size;
+    if (larik) P.ketik(larik);
+    return {sesudahSalin, elemen: S.elems.size, undo: S.undo.length, petunjuk: P.petunjuk};
+  },
+  ketikPindah: v => { alatPindah.ketik(v); return {elemen: S.elems.size, undo: S.undo.length}; },
+  urungkan: () => { urungkan(); return {elemen: S.elems.size, undo: S.undo.length}; },
   // plafon miring yang akan dibuat alat Plafon (mode miring) untuk atap/bidang tertentu: daftar bidang beserta titiknya
   plafonMiring: id => (alatPlafon.miringDari(id) || []).map(b => b.titik),
   // buat plafon miring sungguhan dari atap/bidang (seperti klik di mode Miring), lalu pilih yang pertama; hasil: id yang dibuat

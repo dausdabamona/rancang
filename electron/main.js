@@ -371,6 +371,23 @@ async function ujiAsap() {
     const dg = await halaman(`window.rancangAPI.dxf({semua: true}).then(r => ({jumlah: r.jumlah, kolom: r.kolom, baris: r.baris, panjang: r.dxf.length, judul: (r.dxf.match(/LEMBAR-JUDUL/g) || []).length, eof: r.dxf.trim().endsWith('EOF')}))`);
     catat('DXF gabungan satu berkas', dg.jumlah > 5 && dg.kolom === Math.ceil(Math.sqrt(dg.jumlah)) && dg.judul >= dg.jumlah && dg.eof, dg);
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
+    // v0.40: Pindah + Ctrl lalu ketik 24x → 25 pasang tiang + pile cap berjarak 6 m; ganti 4x; satu Ctrl+Z menghapus seluruh deret
+    await halaman(`window.rancangUji.contoh('kantor-utama', 'ganti')`);
+    const rt = await metode.terapkan({perubahan: [
+      {id: 'Z901', data: {jenis: 'tiang', nama: 'Tiang uji', bahan: 'baja', x: 100, y: 0, zKepala: 0, panjang: 18, dLuar: 609.6, tebal: 12}},
+      {id: 'F901', data: {jenis: 'pondasi', tipe: 'pilecap', nama: 'Pile cap uji', x: 100, y: 0, p: 1.2, l: 1.2, tebal: 0.8, z0: -0.1, tulPlat: {d: 16, s: 150, ulir: true}, fc: 30}}
+    ]});
+    catat('buat tiang + pile cap uji', rt && rt.ok, {r: rt});
+    const n0 = (await halaman(`window.rancangAPI.model()`)), e0 = Object.keys(n0.elemen).length;
+    const lk = await halaman(`window.rancangUji.pindahSalin(['Z901', 'F901'], {dx: 6}, '24x')`);
+    const kini = await halaman(`(() => { const m = window.rancangAPI.model().elemen; const xs = Object.values(m).filter(d => d.jenis === 'tiang' && d.y === 0 && d.x >= 100).map(d => d.x).sort((a, b) => a - b); return {xs, cap: Object.values(m).filter(d => d.tipe === 'pilecap' && d.x >= 100).length}; })()`);
+    const u24 = await halaman(`window.rancangUji.urungkan()`);
+    const lk4 = await halaman(`window.rancangUji.pindahSalin(['Z901', 'F901'], {dx: 6}, '4x')`);
+    const lk6 = await halaman(`window.rancangUji.ketikPindah('/3')`);
+    const un = await halaman(`window.rancangUji.urungkan()`);
+    catat('larik Pindah: 24x, ganti /3, satu Ctrl+Z', lk.sesudahSalin === e0 + 2 && lk.elemen === e0 + 48 && kini.xs.length === 25 && kini.xs[24] === 244 && kini.cap === 25
+      && u24.elemen === e0 && lk4.elemen === e0 + 8 && lk6.elemen === e0 + 6 && lk6.undo === lk4.undo && un.elemen === e0,
+      {e0, larik24: lk.elemen, xsAkhir: kini.xs.slice(-2), cap: kini.cap, urung24: u24.elemen, larik4: lk4.elemen, bagi3: lk6, urung: un});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;
