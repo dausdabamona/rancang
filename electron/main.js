@@ -482,6 +482,30 @@ async function ujiAsap() {
     catat('viewport bebas di Ruang Lembar', rvp && rvp.ok && v1.includes('clip-path="url(#vp-L901)"') && v1.includes('DENAH LANTAI 1') && v1.includes('SKALA 1 : 50')
       && v2.includes('clip-path="url(#vp-L902)"') && /TAMPAK DEPAN/.test(v2) && v2.includes('SKALA 1 : 200') && potong(v1).length > 2000 && !potong(v1).includes('>PX9<') && potong(v1b).includes('>PX9<') && Math.abs(geser.x - 1.5) < 0.02 && Math.abs(geser.y - 2.75) < 0.02,
       {rvp, isi1: potong(v1).length, px9: potong(v1b).includes('>PX9<'), geser});
+    {
+    // v0.44 (M3a): massa bangunan futuristik — meruncing + berpilin (kaca) dan lengkung masif; luas lantai tepat; denah/tampak/potongan; tidak mengubah RAB
+    const rabSebelum = JSON.stringify((await metode.rab({})).flatMap(dv => dv.baris.map(b => [b.kode, b.vol])));
+    const rm = await metode.terapkan({perubahan: [
+      {id: 'V91', data: {jenis: 'massa', nama: 'Menara A', alas: [{x: 40, y: 0}, {x: 60, y: 0}, {x: 60, y: 20}, {x: 40, y: 20}], z0: 0, jumlahLantai: 10, tinggiLantai: 4, skalaAtas: 0.6, putar: 60, fasad: 'kaca', biayaM2: 6000000}},
+      {id: 'V92', data: {jenis: 'massa', nama: 'Podium', alas: [{x: 70, y: 0}, {x: 90, y: 0}, {x: 95, y: 15}, {x: 75, y: 20}], z0: 0, jumlahLantai: 3, tinggiLantai: 5, lengkung: true, miring: {x: 3, y: 0}, fasad: 'masif'}},
+      {id: 'X99', data: {jenis: 'potong', nama: 'MM', awal: {x: 35, y: 10}, akhir: {x: 100, y: 10}, pandang: 1}}]});
+    catat('buat massa bangunan', rm && rm.ok, {r: rm});
+    const uz = await halaman(`window.rancangUji.pilih(['V91']) && window.rancangUji.isiMedan('ms-nama', 'Menara A')`);
+    // luas lantai k = 400 × (1 − 0,4·k/10)², k = 0…9
+    let harap = 0; for (let k = 0; k < 10; k++) harap += 400 * (1 - 0.4 * k / 10) ** 2;
+    const ukur = await metode.ukur({id: 'V91'});
+    catat('massa: luas lantai kotor tepat', !!ukur && Math.abs(ukur.luasKotor - harap) < 0.01 && Math.abs(ukur.biaya - harap * 6e6) < 1, {luas: ukur && ukur.luasKotor, harap, uz: !!uz});
+    const mp = await halaman(`window.rancangUji.isiMedan('ms-putar', '90')`);
+    catat('panel Massa: putaran diubah', mp.data && mp.data.putar === 90, {putar: mp.data && mp.data.putar});
+    const ma = await halaman(`window.rancangUji.massa([{x: 40, y: 30}, {x: 52, y: 30}, {x: 52, y: 42}, {x: 40, y: 42}], true)`);
+    catat('alat Massa (lengkung)', !!ma.id && ma.data.jenis === 'massa' && ma.data.lengkung === true && ma.ukur.luasKotor > 6 * 100, {id: ma.id, ukur: ma.ukur});
+    const md = await metode.gambar2D({jenis: 'denah'}), mt = await metode.gambar2D({jenis: 'depan'}), mpt = await metode.gambar2D({jenis: 'potongan:X99'});
+    catat('massa di denah, tampak, potongan', /Menara A/.test(md.svg) && mt.svg.length > 5000 && mpt.svg.length > 5000 && !mpt.info, {denah: md.svg.length, tampak: mt.svg.length, potongan: mpt.svg.length, info: mpt.info});
+    const rabSesudah = JSON.stringify((await metode.rab({})).flatMap(dv => dv.baris.map(b => [b.kode, b.vol])));
+    catat('massa tidak mengubah RAB', rabSebelum === rabSesudah, {});
+    const cm = await halaman(`window.rancangUji.contoh('massa-futuristik', 'ganti')`);
+    catat('buka contoh massa futuristik', cm && cm.elemen === 6 && /futuristik/.test(cm.nama), {elemen: cm.elemen});
+    }
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;

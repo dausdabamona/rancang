@@ -1,3 +1,14 @@
+## Yang baru di 0.44.0
+
+Tahap M3a pengembangan master plan (keputusan 20 Oktober 2026): massa bangunan futuristik untuk tahap presentasi.
+
+- **Alat Massa** (kelompok Bangunan, palet: *massa*, *MS*): klik titik-titik alas di denah, klik titik pertama / klik 2× / Enter untuk menutup. Tab mengganti alas sudut tajam ⇄ lengkung halus. Pilih volume lalu Enter (atau tombol *Jadikan massa bangunan* di panel volume) untuk mengubah volume yang ada menjadi massa.
+- **Elemen massa** (jenis `massa`, id `V…` dipakai bersama volume): jumlah lantai × tinggi lantai, dengan bentuk parametrik **meruncing/melebar** (skala puncak), **berpilin** (putaran total dibagi rata per lantai), dan **miring** (geser puncak). Fasad: dinding tirai kaca (pelat lantai tampak di balik kaca, mullion), masif beton putih, panel aluminium, atau panel GRC.
+- **Luas tepat tanpa jaring segitiga**: luas lantai kotor, luas per lantai, luas fasad, volume, dan perkiraan biaya (luas × biaya per m²) di panel Properti. Massa tidak masuk RAB rinci.
+- **Gambar 2D**: denah memotong massa pada bidang denah tiap lantai (nama, luas lantai, elevasi; tepi puncak putus-putus bila bergeser/berputar), tampak menggambar pita per lantai, potongan memotong kulit fasad dan pelat beton tiap lantai. Irisan 3D ikut memotong massa.
+- **Proyek contoh Massa futuristik**: menara berpilin kaca 16 lantai, menara runcing aluminium, podium lengkung masif, paviliun miring. Buka lewat palet Ctrl+K *Buka contoh*.
+- Panduan data bertambah baris massa; Claude bisa membuat dan mengubah massa lewat MCP.
+
 ## Yang baru di 0.43.0
 
 Rilis penyelaras (20 Oktober 2026): aplikasi desktop, ekstensi Claude (RANCANG.mcpb), dan artefak RANCANG di Claude kini memakai versi kode yang sama, sehingga model dan gambar yang dibuat Claude tampil persis sama di aplikasi Bapak.
