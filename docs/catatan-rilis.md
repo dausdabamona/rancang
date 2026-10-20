@@ -1,3 +1,12 @@
+## Yang baru di 0.42.0
+
+Kebiasaan SketchUp dan LayOut untuk pendetilan, Fase 2 (20 Oktober 2026). Dibangun di atas cabang dermaga (v0.41).
+
+- **As grid manual** (alat *As grid* di kelompok Gambar): klik titik as pertama, arahkan, lalu ketik **6x5** (6 as berjarak 5 m) atau **5;5;4,5** (jarak berturut-turut). As tegak diberi angka 1, 2, 3 dari barat; as mendatar diberi huruf A, B, C dari utara, melanjutkan label yang sudah ada. Garis as adalah garis bantu ber-label: tetap menjadi titik tangkap semua alat, bisa miring, dan labelnya bisa diganti di panel (mis. B'); garis bantu biasa bisa dijadikan as dengan mengisi labelnya. Gambar 2D (denah, denah pondasi, rencana balok/pelat, tampak, potongan) memakai as manual dengan gelembung dan ukuran antar as, menggantikan as otomatis dari kolom/tiang. MCP: `as: {label}` pada garis bantu.
+- **Jadikan komponen yang lebih mudah**: G kini membuka kotak isian berisi nama komponen, titik sisip (pojok kiri bawah, tengah alas, atau klik titik di model), dan centang **Ganti juga salinan yang sama** (menyala bawaan). Kelompok elemen lain yang isinya sama, hanya bergeser atau berputar 90°/180°/270°, ikut menjadi salinan komponen; RAB tidak berubah. Contoh: di Asrama Putri, satu kolom lantai 2 + foot plat dijadikan komponen, 37 pasangan kembar lain ikut menjadi salinan.
+- **Komponen proyek** di panel ringkasan (juga dari palet Ctrl+K): ganti nama definisi, *Pilih semua* salinan, hapus definisi yang tidak terpakai. Panel salinan komponen bertambah *Ganti dengan komponen* untuk menukar definisi salinan terpilih.
+- **Viewport bebas di Ruang Lembar** (alat *Viewport* di bilah Gambar 2D): klik dua sudut kotak di kertas; isinya gambar lain (denah per lantai, denah atap, rencana plafon, denah pondasi, rencana balok/pelat, tampak, potongan) dengan skala dan pusat sendiri, judul bergaris bawah dan skala otomatis di bawahnya. Isi dan skala diganti di bilah atas, seret memindah kotak, **Alt + seret** menggeser isinya. Isinya dirender ulang dari model, jadi ikut berubah bila model berubah, dan ikut ke PDF. Detail perbesaran memakai jalur render yang sama. MCP: benda gambar 2D `bentuk:'viewport'`.
+- Perbaikan: benda gambar 2D yang dibuat di lembar denah per lantai kini ikut tampil di lembarnya; skala grafis bertambah calon panjang untuk skala seperti 1:300.
 ## Yang baru di 0.41.0
 
 Alat gambar dermaga beton, dari model sampai gambar kerja dan detail (20 Oktober 2026, diuji dengan model ulang Dermaga Poltek KP Sorong TA 2020).
