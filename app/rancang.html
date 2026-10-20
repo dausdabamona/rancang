@@ -12998,7 +12998,7 @@ function buatSVGInti(o) {
   const kumpulPutus = (keU, keV, u0, u1, v0, v1) => {
     const u = [], v = [];
     if (!o.tanpaPutus) for (const [id, d] of S.elems) {
-      if (d.jenis !== 'gambar2d' || d.bentuk !== 'putus' || d.lembar !== (o.jenisAsli || o.jenis) || S.sembunyi.has(id) || !sah(d)) continue;
+      if (d.jenis !== 'gambar2d' || d.bentuk !== 'putus' || (d.lembar !== (o.jenisAsli || o.jenis) && d.lembar !== String(o.jenisAsli || o.jenis).replace(/#\d+$/, '')) || S.sembunyi.has(id) || !sah(d)) continue;
       const [a, b] = d.titik, tegak = d.arah === 'tegak', ta = tegak ? keV(a) : keU(a), tb = tegak ? keV(b) : keU(b);
       (tegak ? v : u).push({id, a: Math.min(ta, tb), b: Math.max(ta, tb)});
     }
@@ -13719,7 +13719,7 @@ function buatSVGInti(o) {
       const pts = p => p.map(q => `${n2(X(q[0]))},${n2(Y(q[1]))}`).join(' ');
       const ket = new Map();
       // tipe balok dari nama elemen ("Balok utama 40/70 as A" → "Balok utama 40/70"), selain itu dari ukurannya
-      const tipeBalok = g => String(g.nama || `Balok ${Math.round(g.b * 100)}/${Math.round(g.h * 100)}`).replace(/\s+(as|sisi|ujung|pangkal)\b.*$/i, '').trim();
+      const tipeBalok = g => String(g.nama || `Balok ${Math.round(g.b * 100)}/${Math.round(g.h * 100)}`).replace(/\s+(?:(?:as|sisi|ujung|pangkal|kiri|kanan)\b|[xy]=).*$/i, '').replace(/\s+\d+$/, '').trim();
       for (const g of pelatL) isi.push(`<polygon points="${pts(poligon(g))}" fill="none" stroke="#000" stroke-width="0.35"/>`);
       if (o.jenis === 'balok') {
         for (const g of capL) isi.push(`<polygon points="${pts(rectPusat(g.x, g.y, g.p, g.l))}" fill="none" stroke="#666" stroke-width="0.15" stroke-dasharray="1.2 0.8"/>`);
@@ -16440,7 +16440,7 @@ function susunDetail(d) {
     baris(nB, zb + ins); baris(nA, zt - ins);
     if (t && pl.tul) { const dp = pl.tul.d / 1000; for (let u = -b / 2 - sy + 0.06; u <= b / 2 + sy - 0.05; u += pl.tul.s) if (Math.abs(u) > b / 2 - 0.02) { titikBesi(u, zt - 0.04 - dp / 2, pl.tul.d); titikBesi(u, zb + h + 0.04 + dp / 2, pl.tul.d); } }
     label.push([ub, zt - ins, `${nA}${labelBesi(G.tul.d, G.tul.ulir)} (atas)`], [ub, zb + ins, `${nB}${labelBesi(G.tul.d, G.tul.ulir)} (bawah)`], [-b / 2 + c, (zb + zt) / 2, `Sengkang Ø${G.sengkang.d}-${Math.round(G.sengkang.s * 1000)}`],
-      [0, zb + h * 0.35, `${String(G.nama || 'Balok').replace(/\s+(as|sisi|ujung|pangkal)\b.*$/i, '')}, ${labelMutu(G.fc).split(' (')[0]}`]);
+      [0, zb + h * 0.35, `${String(G.nama || 'Balok').replace(/\s+(?:(?:as|sisi|ujung|pangkal|kiri|kanan)\b|[xy]=).*$/i, '').replace(/\s+\d+$/, '')}, ${labelMutu(G.fc).split(' (')[0]}`]);
     if (t) label.push([b / 2 + sy * 0.6, zb + h + t / 2, `Pelat t = ${Math.round(t * 100)} cm${pl.tul ? `, ${labelBesi(pl.tul.d, pl.tul.ulir)}-${Math.round(pl.tul.s * 1000)} atas & bawah` : ''}`]);
     dim.push({a: [-b / 2, zb], b: [b / 2, zb], sisi: 'bawah'});
     dim.push({rantai: t ? [zb, zb + h, zt] : [zb, zt], sisi: 'kiri', u: -b / 2 - sy});
@@ -16471,7 +16471,7 @@ function susunDetail(d) {
       for (const sg of [-1, 1]) garisM([sg * (w / 2 - c), zc0 + c + dp], [sg * (w / 2 - c), zc1 - c - dp], Math.max(0.3, dp * 25));
       label.push([w / 2 - c, zc1 - c - dp, `Pile cap ${Math.round(cap.p * 100)}×${Math.round(cap.l * 100)}×${Math.round(cap.tebal * 100)} cm, ${labelBesi(cap.tulPlat.d, cap.tulPlat.ulir)}-${Math.round(cap.tulPlat.s * 1000)} dua lapis, ${labelMutu(cap.fc).split(' (')[0]}`]);
     }
-    if (bl) label.push([lb * 0.7, (zc1 + zDeck) / 2, `${String(bl.nama || 'Balok').replace(/\s+(as|sisi|ujung|pangkal)\b.*$/i, '')} dan pelat (lihat detail balok)`]);
+    if (bl) label.push([lb * 0.7, (zc1 + zDeck) / 2, `${String(bl.nama || 'Balok').replace(/\s+(?:(?:as|sisi|ujung|pangkal|kiri|kanan)\b|[xy]=).*$/i, '').replace(/\s+\d+$/, '')} dan pelat (lihat detail balok)`]);
     const ps = pasutAktif();
     if (d.template === 'tiangDermaga' && ps) for (const k of ['hwl', 'lwl']) if (Number.isFinite(ps[k]) && ps[k] < zc0 && ps[k] > zBawah) { garisM([-lb, ps[k]], [lb, ps[k]], 0.15, 'stroke-dasharray="2.4 1"'); peil.push(ps[k]); label.push([-lb * 0.8, ps[k], k === 'hwl' ? 'Muka air pasang tertinggi (HWS)' : 'Muka air surut terendah (LWS)']); }
     dim.push({a: [-w / 2, zc0], b: [w / 2, zc0], sisi: 'bawah'});
@@ -16506,7 +16506,7 @@ function susunDetail(d) {
     isi.push({k: 'teks', u: uP - 0.22, z: zP - R - 0.12, t: 'Tampak atas', uk: 2});
     label.push([R - c, zD + H * 0.6, '8D16 menerus ke balok dudukan'], [0, zD + H * 0.3, 'Beugel spiral Ø10-150'], [R + 0.07, zD + H - 0.22, 'Pipa GIP Ø2,5"'],
       [-R * 0.5, zD + H - 0.1, `Bollard beton ${G.kapasitas ? `kapasitas ${G.kapasitas} ton` : ''}, ${labelMutu(29).split(' (')[0]}`]);
-    if (bl) label.push([-bw / 2, (zBb + zD) / 2, `${String(bl.nama || 'Balok dudukan').replace(/\s+(as|sisi|ujung|pangkal)\b.*$/i, '')} (lihat detail balok)`]);
+    if (bl) label.push([-bw / 2, (zBb + zD) / 2, `${String(bl.nama || 'Balok dudukan').replace(/\s+(?:(?:as|sisi|ujung|pangkal|kiri|kanan)\b|[xy]=).*$/i, '').replace(/\s+\d+$/, '')} (lihat detail balok)`]);
     dim.push({a: [-R, zD + H], b: [R, zD + H], sisi: 'atas', geser: 0.05});
     dim.push({rantai: [zBb, ...(pl ? [pl.z0] : []), zD, zD + H], sisi: 'kiri', u: -lb});
     peil.push(zD);
