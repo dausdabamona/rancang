@@ -120,6 +120,12 @@ export function modelKPSorong() {
   det('det:3', 'tiangDermaga', cari(d => d.jenis === 'tiang' && !d.miring));
   det('det:3', 'bollard', cari(d => d.tipe === 'bolder'));
 
+  // ---- keterangan 2D manual (v0.41 Tahap 4); dimensi, label, dan kemiringan potongan dibuat otomatis (Tahap B)
+  const L2 = (lembar, bentuk, titik, lain) => tambah('L', {jenis: 'gambar2d', bentuk, lembar, tempel: 'gambar', titik, gaya: {tebal: 0.18}, ...lain});
+  const P = (y, z) => ({x: 41, y, z});
+  L2('potongan:X1', 'sudut', [P(0.5, ZK), P(0.5, -10), P(0.5 + (ZK + 10) / N_MIRING, -10)], {bidang: 'tegak'});
+  L2('kiri@G1', 'kemiringan', [{x: 0, y: 4.2, z: ZD}, {x: 0, y: 8.2, z: ZD - 2}], {bidang: 'tegak'});
+
   const setel = {nama: 'Dermaga Politeknik KP Sorong (model ulang dari gambar TA 2020)', faktorBesi: 5,
     sampul: {lokasi: 'Politeknik Kelautan dan Perikanan Sorong', pemilik: 'Politeknik KP Sorong', tahun: '2020', penggambar: 'Firdaus Dabamona'}, kop: {kodeLembar: 'PKP'}};
   return {setel, grup, elemen: el};

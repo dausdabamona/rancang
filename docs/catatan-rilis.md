@@ -7,6 +7,23 @@ Kebiasaan SketchUp dan LayOut untuk pendetilan, Fase 2 (20 Oktober 2026). Dibang
 - **Komponen proyek** di panel ringkasan (juga dari palet Ctrl+K): ganti nama definisi, *Pilih semua* salinan, hapus definisi yang tidak terpakai. Panel salinan komponen bertambah *Ganti dengan komponen* untuk menukar definisi salinan terpilih.
 - **Viewport bebas di Ruang Lembar** (alat *Viewport* di bilah Gambar 2D): klik dua sudut kotak di kertas; isinya gambar lain (denah per lantai, denah atap, rencana plafon, denah pondasi, rencana balok/pelat, tampak, potongan) dengan skala dan pusat sendiri, judul bergaris bawah dan skala otomatis di bawahnya. Isi dan skala diganti di bilah atas, seret memindah kotak, **Alt + seret** menggeser isinya. Isinya dirender ulang dari model, jadi ikut berubah bila model berubah, dan ikut ke PDF. Detail perbesaran memakai jalur render yang sama. MCP: benda gambar 2D `bentuk:'viewport'`.
 - Perbaikan: benda gambar 2D yang dibuat di lembar denah per lantai kini ikut tampil di lembarnya; skala grafis bertambah calon panjang untuk skala seperti 1:300.
+## Yang baru di 0.41.0
+
+Alat gambar dermaga beton, dari model sampai gambar kerja dan detail (20 Oktober 2026, diuji dengan model ulang Dermaga Poltek KP Sorong TA 2020).
+
+- **Dermaga kayu (jeti)**: elemen *Jeti kayu* satu ruas lurus dengan portal tiang, balok kepala ganda, gelagar, papan lantai berjarak, dan skor silang; RAB kayu DM-201 s.d. DM-208.
+- **Tiang miring dan selimut**: tiang pancang bisa miring 1 : n ke arah tertentu (RAB DM-091), dan diberi selimut beton anti karat di zona pasang surut (beton, bekisting, besi + spiral masuk RAB).
+- **Causeway / timbunan**: penampang trapesium sepanjang as dengan talud 1 : n yang dasarnya mengikuti dasar laut (RAB DM-301 timbunan, DM-302 armour talud).
+- **Profil dasar laut**: datum dasar laut boleh berupa profil (jarak, elevasi) sepanjang garis; tampak dan potongan menggambar dasar laut miring, dan tabel elevasi dasar laut muncul di bawah tampak/potongan memanjang.
+- **Zona gambar 2D**: grup ber-zona (gedung, dermaga, jeti) memiliki set lembarnya sendiri, dengan kode lembar proyek (mis. PKP-01).
+- **Lembar gabungan**: beberapa gambar dalam satu lembar dengan simbol judul dan skala seragam (mis. layout + rencana pile cap, tampak samping + depan, rencana balok + penulangan pelat). Lembar bagian memecah gambar panjang (rencana pondasi dan tampak samping) pada 1 : 200 dengan garis sambung di as.
+- **Grid as dermaga otomatis** dari tiang (nomor dari ujung laut, huruf melintang) di layout, rencana, tampak, dan potongan; **kedalaman pandang potongan** agar potongan melintang tidak memperlihatkan tiang jauh di belakangnya.
+- **Rencana balok** dan **rencana penulangan pelat** dermaga.
+- **Detail penulangan dermaga** di Pustaka Detail: penampang balok T, tulangan pile cap PC-1/PC-2 dengan beton isian dan stek, selimut dan isian tiang, penulangan bollard.
+- **Garis putus** (pemendekan tiang dan bagian berulang) dan **detail perbesaran** di Ruang Lembar; garis putus tiang bisa dibuat otomatis dari panel garis potong.
+- **Dimensi, sudut, kemiringan, dan label** baru di Ruang Lembar: dimensi tunggal atau berantai yang angkanya dihitung dari model (cm di potongan, m di denah/tampak), sudut berbusur, kemiringan 1 : n (°), label penunjuk yang teksnya diambil dari data benda. Semua alat 2D kini juga berfungsi di lembar gabungan.
+- **Keterangan otomatis dermaga**: potongan melintang langsung diberi ukuran lebar dan jarak tiang, rantai tinggi, label komponen, dan kemiringan tiang; potongan causeway diberi lebar puncak, tinggi, dan talud. Sakelar *Keterangan otomatis* per lembar.
+- Skala otomatis bertambah 1 : 250 dan 1 : 300.
 
 ## Yang baru di 0.40.0
 

@@ -44,6 +44,13 @@ test('dermaga KP Sorong: tiang miring, selimut, causeway', {skip: process.env.RA
       const s = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: d.jenis === 'tiang' ? 'Z999' : 'U999', data: d}]}}));
       assert.equal(s.ok, false, JSON.stringify(d));
     }
+    for (const d of [
+      {jenis: 'gambar2d', bentuk: 'dimensi', lembar: 'potongan:X1', tempel: 'gambar', titik: [{x: 41, y: 0, z: 3.5}], arah: 'datar'},
+      {jenis: 'gambar2d', bentuk: 'dimensi', lembar: 'potongan:X1', tempel: 'gambar', titik: [{x: 41, y: 0, z: 3.5}, {x: 41, y: 3, z: 3.5}], arah: 'miring'},
+      {jenis: 'gambar2d', bentuk: 'sudut', lembar: 'potongan:X1', tempel: 'gambar', titik: [{x: 41, y: 0, z: 3.5}, {x: 41, y: 3, z: 3.5}]}]) {
+      const s2 = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'L999', data: d}]}}));
+      assert.equal(s2.ok, false, JSON.stringify(d));
+    }
     const rab = json(await c.callTool({name: 'volume_rab', arguments: {}}));
     fs.writeFileSync(path.join(keluar, 'kps-rab.json'), JSON.stringify(rab, null, 1));
     const dm = rab.find(d => d.nama === 'PEKERJAAN DERMAGA');
@@ -53,7 +60,7 @@ test('dermaga KP Sorong: tiang miring, selimut, causeway', {skip: process.env.RA
     assert.ok(b('DM-301').vol > 500 && b('DM-302').vol > 100, JSON.stringify([b('DM-301'), b('DM-302')]));
     assert.equal(b('DM-090').vol, Object.values(m.elemen).filter(d => d.tipe === 'pilecap').length);
     // lembar gabungan, lembar bagian tampak, dan gabungan bebas (v0.41)
-    for (const jenis of ['gabung:denah@G3+pondasi@G3', 'gabung:denah@G4+pondasi@G4', 'gabung:depan@G1+kiri@G1', 'depan@G1#1', 'depan@G1#2', 'gabung:potongan:X1+potongan:X3', 'gabung:balok@G3+pelat@G3', 'gabung:balok@G4+pelat@G4', 'det:1', 'det:2', 'det:3']) {
+    for (const jenis of ['gabung:denah@G3+pondasi@G3', 'gabung:denah@G4+pondasi@G4', 'gabung:depan@G1+kiri@G1', 'depan@G1#1', 'depan@G1#2', 'gabung:potongan:X1+potongan:X3', 'gabung:balok@G3+pelat@G3', 'gabung:balok@G4+pelat@G4', 'det:1', 'det:2', 'det:3', 'gabung:depan@G1+kiri@G1']) {
       const g = await c.callTool({name: 'gambar_2d', arguments: {jenis, kertas: 'A3'}});
       assert.equal(g.content[0].type, 'image', jenis + ': ' + JSON.stringify(g.content[0]).slice(0, 200));
       fs.writeFileSync(path.join(keluar, `kps-${jenis.replace(/[:@#+]/g, '-')}.png`), Buffer.from(g.content[0].data, 'base64'));
