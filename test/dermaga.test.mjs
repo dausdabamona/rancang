@@ -123,6 +123,26 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     const putih = /<g data-g2="L900"><rect [^>]*height="([\d.]+)"/.exec(svg);
     assert.ok(skala > 0 && putih, 'skala dan simbol garis putus ada di SVG');
     assert.ok(Math.abs(Number(putih[1]) - (10 * 1000 / skala + 4)) < 0.6, `tinggi penutup ${putih[1]} mm harus selebar trestle pada 1:${skala}`);
+    // v0.44.0: detail perbesaran dengan judul, bingkai persegi, garis penghubung, dan isi rinci (label tulangan, mutu bahan)
+    const det = {jenis: 'gambar2d', bentuk: 'perbesar', lembar: 'potongan:X1', tempel: 'gambar', titik: [{x: 6, y: 4.5, z: 2.9}, {x: 6, y: 5.4, z: 2.9}],
+      letak: {x: 300, y: 80}, skala: 20, nomor: '7', judul: 'Pertemuan pelat dan balok tepi', bingkai: 'persegi', rasio: 1.5, penghubung: true};
+    const rd = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'L901', data: det}]}}));
+    assert.equal(rd.ok, true, JSON.stringify(rd));
+    const sd = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X1', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    assert.ok(/>DETAIL 7</.test(sd) && />Pertemuan pelat dan balok tepi</.test(sd), 'judul detail tampil');
+    assert.ok(/<clipPath id="kp-L901"><rect /.test(sd), 'bingkai persegi');
+    fs.writeFileSync(path.join(keluar, 'dermaga-detail.svg'), sd);
+    assert.ok(/Ø13-150 atas &amp; bawah/.test(sd), 'label tulangan pelat dari data elemen');
+    assert.ok(/6D16 · Ø10-150/.test(sd), 'label tulangan balok dari data elemen');
+    assert.ok(/Mutu beton fc&#39; [^<]*29 MPa/.test(sd), 'keterangan mutu bahan');
+    assert.ok(!/url\(#arsir-beton/.test(sd), 'arsir digambar langsung, tanpa pola SVG');
+    // isi rinci bisa dimatikan per detail
+    const rm = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'L901', data: {...det, rinci: {label: false, bahan: false}}}]}}));
+    assert.equal(rm.ok, true, JSON.stringify(rm));
+    const sm = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X1', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    assert.ok(!/atas &amp; bawah/.test(sm) && !/Mutu beton/.test(sm), 'label dan mutu bahan dimatikan');
+    const g7 = await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X1', kertas: 'A3'}});
+    fs.writeFileSync(path.join(keluar, 'dermaga-detail-perbesaran.png'), Buffer.from(g7.content[0].data, 'base64'));
     const t3 = await c.callTool({name: 'tangkap_layar_3d', arguments: {tampilan: 'iso'}});
     fs.writeFileSync(path.join(keluar, 'dermaga-3d.png'), Buffer.from(t3.content[0].data, 'base64'));
   } finally {
