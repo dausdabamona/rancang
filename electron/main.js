@@ -466,6 +466,22 @@ async function ujiAsap() {
     catat('jadikan komponen dengan salinan kembar', kotak.tampil && /Ganti juga \d+ salinan/.test(kotak.kembar) && kp.kid && kp.kembar >= 30 && inst.length === kp.kembar + 1 && !beda.length
       && inst.every(d => d.nama === 'Kolom + foot plat R1') && !Object.values(mk.elemen).some(d => d.jenis === 'kolom' && d.x === 0 && d.y === 0 && d.z0 === 4),
       {kotak, kembar: kp.kembar, instance: inst.length, beda: beda.slice(0, 6)});
+    // v0.42: viewport bebas di Ruang Lembar: denah 1:50 di lembar tampak depan, ikut perubahan model; tampak 1:200 di lembar denah
+    await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
+    const rvp = await metode.terapkan({perubahan: [
+      {id: 'L901', data: {jenis: 'gambar2d', bentuk: 'viewport', lembar: 'depan', tempel: 'kertas', titik: [{x: 20, y: 120}, {x: 90, y: 180}], sumber: 'denah:0', skala: 50, pusat: {x: 2, y: 3, z: 0}, gaya: {tebal: 0.35}}},
+      {id: 'L902', data: {jenis: 'gambar2d', bentuk: 'viewport', lembar: 'denah:0', tempel: 'kertas', titik: [{x: 20, y: 20}, {x: 120, y: 60}], sumber: 'depan', skala: 200, pusat: {x: 18, y: 0, z: 3}, gaya: {tebal: 0.35}}}
+    ]});
+    const v1 = (await metode.gambar2D({jenis: 'depan'})).svg, v2 = (await metode.gambar2D({jenis: 'denah:0'})).svg;
+    const mB = (await halaman(`window.rancangAPI.model()`)).elemen.B1, bB = {...mB, kode: 'PX9'};
+    delete bB.diubahOleh; delete bB.diubahPada;
+    await metode.terapkan({perubahan: [{id: 'B1', data: bB}]});
+    const v1b = (await metode.gambar2D({jenis: 'depan'})).svg;
+    const potong = svg => { const i = svg.indexOf('clip-path="url(#vp-L901)"'); return i < 0 ? '' : svg.slice(i, svg.indexOf('</g><rect', i)); };
+    const geser = await halaman(`window.rancangUji.geserViewport('L901', 10, -5)`);
+    catat('viewport bebas di Ruang Lembar', rvp && rvp.ok && v1.includes('clip-path="url(#vp-L901)"') && v1.includes('DENAH LANTAI 1') && v1.includes('SKALA 1 : 50')
+      && v2.includes('clip-path="url(#vp-L902)"') && /TAMPAK DEPAN/.test(v2) && v2.includes('SKALA 1 : 200') && potong(v1).length > 2000 && !potong(v1).includes('>PX9<') && potong(v1b).includes('>PX9<') && Math.abs(geser.x - 1.5) < 0.02 && Math.abs(geser.y - 2.75) < 0.02,
+      {rvp, isi1: potong(v1).length, px9: potong(v1b).includes('>PX9<'), geser});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;
