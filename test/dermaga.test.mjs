@@ -105,6 +105,24 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
       assert.equal(g.content[0].type, 'image', jenis + ': ' + JSON.stringify(g.content[0]).slice(0, 200));
       fs.writeFileSync(path.join(keluar, `dermaga-${jenis.replace(':', '-')}.png`), Buffer.from(g.content[0].data, 'base64'));
     }
+    // v0.43.1: as di bagian yang dihilangkan garis putus tidak digambar (gelembung tidak bertumpuk di celah),
+    // ukuran antar as menyambung ke as terlihat berikutnya dengan nilai sebenarnya
+    const asUji = [];
+    for (let i = 0; i < 12; i++) asUji.push({id: 'Q' + (900 + i), data: {jenis: 'bantu', nama: 'As T' + (i + 1), awal: {x: i * 3, y: -10}, akhir: {x: i * 3, y: 10}, as: {label: 'T' + (i + 1)}}});
+    asUji.push({id: 'L900', data: {jenis: 'gambar2d', bentuk: 'putus', lembar: 'denah', tempel: 'gambar', arah: 'datar', titik: [{x: 4.5, y: 0, z: 0}, {x: 28.5, y: 0, z: 0}], gaya: {tebal: 0.3}}});
+    const ra = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: asUji}}));
+    assert.equal(ra.ok, true, JSON.stringify(ra));
+    const sv = await c.callTool({name: 'gambar_2d', arguments: {jenis: 'denah', kertas: 'A3', format: 'svg'}});
+    const svg = sv.content.map(k => k.text || '').join('');
+    const ada = l => new RegExp(`>${l}</text>`).test(svg);
+    for (const l of ['T1', 'T2', 'T11', 'T12']) assert.ok(ada(l), `as ${l} terlihat harus digambar`);
+    for (const l of ['T3', 'T5', 'T8', 'T10']) assert.ok(!ada(l), `as ${l} di bagian yang dihilangkan tidak boleh digambar`);
+    assert.ok(/>27,00</.test(svg), 'ukuran T2–T11 menyambung dengan nilai sebenarnya 27,00');
+    // simbol garis putus datar hanya selebar benda yang dipendekkan (pelat trestle 10 m) ± 2 mm, bukan setinggi seluruh gambar
+    const skala = Number((/1 : (\d+)/.exec(svg) || [])[1]);
+    const putih = /<g data-g2="L900"><rect [^>]*height="([\d.]+)"/.exec(svg);
+    assert.ok(skala > 0 && putih, 'skala dan simbol garis putus ada di SVG');
+    assert.ok(Math.abs(Number(putih[1]) - (10 * 1000 / skala + 4)) < 0.6, `tinggi penutup ${putih[1]} mm harus selebar trestle pada 1:${skala}`);
     const t3 = await c.callTool({name: 'tangkap_layar_3d', arguments: {tampilan: 'iso'}});
     fs.writeFileSync(path.join(keluar, 'dermaga-3d.png'), Buffer.from(t3.content[0].data, 'base64'));
   } finally {
