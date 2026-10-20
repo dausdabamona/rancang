@@ -371,6 +371,71 @@ async function ujiAsap() {
     const dg = await halaman(`window.rancangAPI.dxf({semua: true}).then(r => ({jumlah: r.jumlah, kolom: r.kolom, baris: r.baris, panjang: r.dxf.length, judul: (r.dxf.match(/LEMBAR-JUDUL/g) || []).length, eof: r.dxf.trim().endsWith('EOF')}))`);
     catat('DXF gabungan satu berkas', dg.jumlah > 5 && dg.kolom === Math.ceil(Math.sqrt(dg.jumlah)) && dg.judul >= dg.jumlah && dg.eof, dg);
     catat('RAB plafon miring menyatu dengan plafon datar', !!pvc && pvc.vol > 0 && !!hollow && hollow.vol > 0 && !lama, {pvc: pvc && pvc.vol, hollow: hollow && hollow.vol});
+    // v0.40: Pindah + Ctrl lalu ketik 24x → 25 pasang tiang + pile cap berjarak 6 m; ganti 4x; satu Ctrl+Z menghapus seluruh deret
+    await halaman(`window.rancangUji.contoh('kantor-utama', 'ganti')`);
+    const rt = await metode.terapkan({perubahan: [
+      {id: 'Z901', data: {jenis: 'tiang', nama: 'Tiang uji', bahan: 'baja', x: 100, y: 0, zKepala: 0, panjang: 18, dLuar: 609.6, tebal: 12}},
+      {id: 'F901', data: {jenis: 'pondasi', tipe: 'pilecap', nama: 'Pile cap uji', x: 100, y: 0, p: 1.2, l: 1.2, tebal: 0.8, z0: -0.1, tulPlat: {d: 16, s: 150, ulir: true}, fc: 30}}
+    ]});
+    catat('buat tiang + pile cap uji', rt && rt.ok, {r: rt});
+    const n0 = (await halaman(`window.rancangAPI.model()`)), e0 = Object.keys(n0.elemen).length;
+    const lk = await halaman(`window.rancangUji.pindahSalin(['Z901', 'F901'], {dx: 6}, '24x')`);
+    const kini = await halaman(`(() => { const m = window.rancangAPI.model().elemen; const xs = Object.values(m).filter(d => d.jenis === 'tiang' && d.y === 0 && d.x >= 100).map(d => d.x).sort((a, b) => a - b); return {xs, cap: Object.values(m).filter(d => d.tipe === 'pilecap' && d.x >= 100).length}; })()`);
+    const u24 = await halaman(`window.rancangUji.urungkan()`);
+    const lk4 = await halaman(`window.rancangUji.pindahSalin(['Z901', 'F901'], {dx: 6}, '4x')`);
+    const lk6 = await halaman(`window.rancangUji.ketikPindah('/3')`);
+    const un = await halaman(`window.rancangUji.urungkan()`);
+    catat('larik Pindah: 24x, ganti /3, satu Ctrl+Z', lk.sesudahSalin === e0 + 2 && lk.elemen === e0 + 48 && kini.xs.length === 25 && kini.xs[24] === 244 && kini.cap === 25
+      && u24.elemen === e0 && lk4.elemen === e0 + 8 && lk6.elemen === e0 + 6 && lk6.undo === lk4.undo && un.elemen === e0,
+      {e0, larik24: lk.elemen, xsAkhir: kini.xs.slice(-2), cap: kini.cap, urung24: u24.elemen, larik4: lk4.elemen, bagi3: lk6, urung: un});
+    // v0.40: label terhubung data elemen (Asrama Putri): kode pintu dan luas lantai ikut berubah; sumber dihapus → teks terakhir
+    await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
+    const lb1 = await halaman(`window.rancangUji.labelTerhubung('B1', {x: 0, y: 0, z: 1}, {x: -1, y: -1, z: 1})`);
+    const lv1 = await halaman(`window.rancangUji.labelTerhubung('V1', {x: 1.75, y: 4.1, z: 0}, {x: 1.75, y: 4.6, z: 0})`);
+    const m0 = (await halaman(`window.rancangAPI.model()`)).elemen;
+    const ubahB = {...m0.B1, kode: 'P9'}, ubahV = {...m0.V1, alas: m0.V1.alas.map(q => ({x: q.x > 1 ? 4 : q.x, y: q.y}))};
+    for (const k of ['diubahOleh', 'diubahPada']) { delete ubahB[k]; delete ubahV[k]; }
+    const ru = await metode.terapkan({perubahan: [{id: 'B1', data: ubahB}, {id: 'V1', data: ubahV}]});
+    const tb = await halaman(`window.rancangUji.teksLabel('${lb1.id}')`), tv = await halaman(`window.rancangUji.teksLabel('${lv1.id}')`);
+    const svgL = (await metode.gambar2D({jenis: 'denah'})).svg;
+    const di2D = await halaman(`window.rancangUji.elemenDiDenah(1.75, 4.1, 0)`);
+    await metode.terapkan({perubahan: [{id: 'V1', data: null}]});
+    const th = await halaman(`window.rancangUji.teksLabel('${lv1.id}')`);
+    const pnl = await halaman(`(() => { window.rancangUji.pilih(['${lv1.id}']); const t = document.getElementById('panel').textContent; return {lepas: t.includes('Lepas tautan'), hilang: t.includes('Sumber hilang')}; })()`);
+    catat('label terhubung: P1 dan Kamar 1 ikut data', lb1.data && lb1.data.sumber === 'B1' && lb1.teks === 'P4' && lv1.data.isi === '{nama} · {luas} m²'
+      && lv1.teks === 'Lantai Kamar 1 · 14,84 m²' && ru && ru.ok && tb.teks === 'P9' && tv.teks === 'Lantai Kamar 1 · 16,96 m²'
+      && svgL.includes('Lantai Kamar 1 · 16,96 m²') && di2D === 'V1' && th.hilang && th.teks === 'Lantai Kamar 1 · 16,96 m²' && pnl.lepas && pnl.hilang,
+      {lb1: lb1.teks, lv1: lv1.teks, tb, tv, di2D, hilang: th, pnl, ru});
+    // v0.40: revisi di kop: tampil di semua lembar (tiga model kop), tanggal revisi terakhir + Rev. n
+    await halaman(`window.rancangUji.revisi('12/10/2026', 'Ubah pintu P1 dua daun')`);
+    const rv = await halaman(`window.rancangUji.revisi('20/10/2026', 'Tambah kanopi teras')`);
+    const jenisL = await halaman(`window.rancangAPI.daftarLembar().map(l => l.jenis)`);
+    const tanpaRev = [];
+    for (const j of jenisL.filter(x => x !== 'sampul')) { const g = await metode.gambar2D({jenis: j}); if (!g || !g.svg || !g.svg.includes('20/10/2026 · Rev. 2') || !g.svg.includes('2. Tambah kanopi teras')) tanpaRev.push(j); }
+    await halaman(`window.rancangUji.revisi(null, null, 'bawah')`);
+    const sB = (await metode.gambar2D({jenis: 'denah'})).svg;
+    await halaman(`window.rancangUji.revisi(null, null, 'kananLengkap')`);
+    const sL = (await metode.gambar2D({jenis: 'denah'})).svg;
+    await halaman(`window.rancangUji.revisi(null, null, 'kanan')`);
+    await new Promise(r2 => setTimeout(r2, 1500));
+    const tersimpan = JSON.parse(fs.readFileSync(proyek.jalur, 'utf8'));
+    const revBerkas = JSON.stringify(tersimpan).includes('Tambah kanopi teras');
+    catat('revisi di kop semua lembar', rv.length === 2 && rv[1].no === 2 && jenisL.length > 5 && !tanpaRev.length && sB.includes('20/10/2026 · Rev. 2')
+      && sL.includes('1. Ubah pintu P1 dua daun') && sL.includes('2. Tambah kanopi teras') && revBerkas,
+      {lembar: jenisL.length, tanpaRev, revBerkas});
+    // v0.40: skala grafis di lembar berskala (panjang batang = L × 1000 / skala mm) dan panah utara di denah atap/pondasi/plafon
+    const batang = svg => { const g = (svg.match(/<g class="skala-grafis">([\s\S]*?)<\/g>/) || [])[1] || ''; const w = [...g.matchAll(/<rect [^>]* width="([\d.]+)"/g)].reduce((a, x) => a + Number(x[1]), 0); const sk = (g.match(/SKALA 1 : (\d+)/) || [])[1]; return {mm: Math.round(w * 10) / 10, skala: Number(sk), label: [...g.matchAll(/text-anchor="middle">([^<]+)</g)].map(x => x[1])}; };
+    const sg = {};
+    for (const j of ['denah', 'atap', 'pondasi', 'plafon', 'depan']) { const g = await metode.gambar2D({jenis: j}); sg[j] = {...batang(g.svg), utara: g.svg.includes('panah-utara')}; }
+    const s20 = batang(await halaman(`window.rancangUji.skalaGrafis(20)`)), s100 = batang(await halaman(`window.rancangUji.skalaGrafis(100)`)), s50 = batang(await halaman(`window.rancangUji.skalaGrafis(50)`));
+    const gd = await metode.gambar2D({jenis: 'detail', kertas: 'A3'}); sg.detail = {...batang(gd.svg), utara: gd.svg.includes('panah-utara')};
+    await halaman(`window.rancangUji.lembar({skalaGrafis: false})`);
+    const mati = (await metode.gambar2D({jenis: 'denah'})).svg.includes('skala-grafis');
+    const lbrSet = await halaman(`window.rancangUji.lembar({skalaGrafis: true})`);
+    const okPanjang = Object.values(sg).every(x => x.skala > 0 && x.mm >= 35 && x.mm <= 70);
+    catat('skala grafis dan panah utara', okPanjang && s20.label.join() === '0,0,5,1' && s20.mm === 50 && s100.label.join() === '0,1,2,5' && s100.mm === 50 && s50.mm === 50 && sg.detail.skala === 10 && !sg.detail.utara
+      && ['denah', 'atap', 'pondasi', 'plafon'].every(j => sg[j].utara) && !sg.depan.utara && !mati && lbrSet.skalaGrafis === true && Array.isArray(lbrSet.urutan),
+      {sg, s20, s100, s50, mati});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;

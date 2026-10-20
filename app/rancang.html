@@ -325,6 +325,8 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .kop-logo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
 .kop-logo img{height:40px;width:40px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:2px}
 .kop-logo label.tombol{display:inline-flex;cursor:pointer;color:var(--fg);font-size:12px}
+.baris-rev{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)}
+.baris-rev span{min-width:0;overflow-wrap:anywhere}
 .lembar-kop select,.lembar-kop input{background:var(--panel);border:1px solid var(--line);border-radius:2px;padding:6px 8px;color:var(--fg);font-size:13px}
 .lembar-kop summary{cursor:pointer;font-size:12.5px;color:var(--fg);padding:2px 0}
 .lembar-kop details[open] summary{margin-bottom:6px}
@@ -638,7 +640,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | U | timbunan | Causeway/timbunan batu (v0.41; id U dipakai bersama sapuan, dibedakan dari jenis): awal{x,y}, akhir{x,y} (as), lebarAtas, zAtas (elevasi puncak), talud (1:talud, mendatar per tegak), opsional zDasar (bila kosong mengikuti profil dasar laut). RAB DM-301 timbunan m³, DM-302 armour talud m² | `{"jenis":"timbunan","awal":{"x":0,"y":1.5},"akhir":{"x":30,"y":1.5},"lebarAtas":5.4,"zAtas":3.5,"talud":2}` |
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'/'tripleks4'/'tripleks6'/'pvc' = plafon sunda), rangka ('hollow'/'kayu'/'bajaringan'), lis ('tanpa'/'kayu'/'gypsum'/'pvc'; kosong = hanya dihitung PL-010). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
 | X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya). Opsional dalam (m, v0.41) = kedalaman pandang: benda yang seluruhnya lebih jauh dari bidang potong tidak digambar | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
-| N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik, ujung, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah' | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
+| N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik = ujung panah, ujung = posisi teks, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah'. Label terhubung: tambahkan sumber (id elemen yang ditunjuk) dan isi (pola teks) — teks dibaca ulang dari data elemen; kunci {nama} {kode} {lebar} {tinggi} {b} {h} (cm) {tebal} (cm) {luas} {panjang} {volume} {fc} {tulangan} {elevasi} {kemiringan} {penutup} {diameter}; contoh isi "{nama} · {luas} m²" | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
 | Q | bantu | awal{x,y,z?}, akhir{x,y,z?} (garis tak terbatas melalui dua titik; bila kedua titik punya z = garis bertinggi/miring; tinggi di titik lain = interpolasi sepanjang garis di denah), nama. Acuan snap saja: tidak masuk RAB, volume, atau gambar | `{"jenis":"bantu","nama":"Bantu 1","awal":{"x":0,"y":2},"akhir":{"x":1,"y":2}}` |
 | M | level | nama, z (elevasi dalam meter). Opsional datum 'hwl'/'msl'/'lwl'/'dasar' = datum pasang surut (digambar sebagai garis air/dasar laut di potongan dan tampak, tidak ikut daftar level lantai). Pindah dan Push/Pull menempel ke elevasinya; tidak masuk RAB. Datum 'dasar' boleh profil {awal{x,y}, akhir{x,y}, titik [[jarak, z]…]} = dasar laut miring sepanjang garis awal→akhir (jarak dari awal; di luar rentang = titik ujung) | `{"jenis":"level","nama":"Lantai 2","z":3.2}` |
 | Y | tangga | Tangga beton lurus: awal{x,y} (sudut kiri bawah anak tangga pertama dilihat dari arah naik), arah (° dari sumbu X), lebar, tinggi (naik total), jumlahAnak (optrede), antrede (lebar injakan), tebalPlat, z0, railing ('tanpa'/'kiri'/'kanan'/'dua'). Panjang denah = antrede × (jumlahAnak − 1). Masuk RAB beton, besi, bekisting | `{"jenis":"tangga","awal":{"x":30,"y":9},"arah":180,"lebar":1.2,"tinggi":4,"jumlahAnak":22,"antrede":0.28,"tebalPlat":0.12,"z0":0,"railing":"kanan"}` |
@@ -752,6 +754,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
       <label class="cek" for="m-dimensi"><input type="checkbox" id="m-dimensi" checked> Garis ukuran</label>
       <label class="cek" for="m-dimdinding"><input type="checkbox" id="m-dimdinding"> Ukuran tiap dinding</label>
       <label class="cek" for="m-terhalang"><input type="checkbox" id="m-terhalang" checked> Sembunyikan anotasi terhalang</label>
+      <label class="cek" for="m-skala-grafis" title="Batang skala di pojok kanan bawah setiap lembar berskala; tetap benar walau dicetak diperkecil"><input type="checkbox" id="m-skala-grafis" checked> Skala grafis</label>
     </div>
     <div class="anot-bar" id="m-anot">
       <span class="judul-kecil">Anotasi</span>
@@ -1012,7 +1015,8 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * N — anotasi (teks, label berpanah, ukuran dua titik, peil).
  * @typedef {DasarElemen & {jenis: 'anotasi', tipe: 'teks' | 'label' | 'ukuran' | 'peil', titik: Titik3Opsional, ujung?: Titik3Opsional,
- *   teks?: string, pada?: 'semua' | 'denah' | 'tampak' | 'potongan', sembunyiDi?: string[], geser?: {x: number, y: number, z?: number}}} Anotasi
+ *   teks?: string, pada?: 'semua' | 'denah' | 'tampak' | 'potongan', sembunyiDi?: string[], geser?: {x: number, y: number, z?: number},
+ *   sumber?: string, isi?: string}} Anotasi Label terhubung (v0.40): `sumber` = id elemen yang ditunjuk, `isi` = pola teks berkunci {nama}, {luas}, …
  */
 
 /**
@@ -1057,7 +1061,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * Pengaturan proyek (dokumen `pengaturan/proyek`).
  * @typedef {{nama: string, tebalDinding: number, tinggiDinding: number, kemiringanAtap: number, overstekAtap: number, faktorBesi: number, bahanDinding?: 'bata' | 'tripleks' | 'grc' | 'gypsum',
- *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[]}} Setelan
+ *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[], revisi?: {no: number, tanggal: string, uraian?: string}[]}} Setelan
  */
 
 /** Satu perubahan dari luar (MCP, panel Claude): `data` null = hapus. @typedef {{id: string, data?: DokumenRancang | null, sesudah?: DokumenRancang | null}} PerubahanLuar */
@@ -1236,7 +1240,9 @@ function sah(d) {
     if (!['teks', 'label', 'ukuran', 'peil'].includes(d.tipe) || !pt(d.titik)) return false;
     if ((d.tipe === 'label' || d.tipe === 'ukuran') && !pt(d.ujung)) return false;
     if (d.geser && !(Number.isFinite(d.geser.x) && Number.isFinite(d.geser.y) && Number.isFinite(d.geser.z ?? 0))) return false;
-    return d.tipe === 'ukuran' || d.tipe === 'peil' || (typeof d.teks === 'string' && d.teks.length > 0);
+    if ((d.sumber != null && typeof d.sumber !== 'string') || (d.isi != null && typeof d.isi !== 'string')) return false;
+    const terhubung = d.tipe === 'label' && !!d.sumber && !!(d.isi && d.isi.trim());
+    return d.tipe === 'ukuran' || d.tipe === 'peil' || terhubung || (typeof d.teks === 'string' && d.teks.length > 0);
   }
   const tulSah = t => t && t.n >= 1 && t.d > 0, skSah = s => s && s.d > 0 && s.s > 0;
   if (d.jenis === 'kolom') return Number.isFinite(d.x) && Number.isFinite(d.y) && d.b > 0 && d.h > 0 && d.tinggi > 0 && tulSah(d.tul) && skSah(d.sengkang) && d.fc > 0;
@@ -5138,10 +5144,11 @@ function keluarKomponen() {
  * @param {number} [dz]
  * @param {((d: ElemenRancang) => ElemenRancang) | null} [ubah] pengubah tambahan tiap salinan (mis. putar)
  * @param {((d: ElemenRancang) => ElemenRancang) | null} [ubahBuk] pengubah tambahan tiap pintu/jendela yang ikut tersalin (mis. cermin)
+ * @param {(awalan: string) => string} [nid] pemberi id bersama, agar beberapa salinan berturut-turut (larik) dalam satu langkah tidak berbagi id
  * @returns {{tulis: Perubahan[], baruAtas: string[]}}
  */
-function buatSalinan(items, dx, dy, dz = 0, ubah = null, ubahBuk = null) {
-  const nid = pemberiId(), tulis = [], baruAtas = [];
+function buatSalinan(items, dx, dy, dz = 0, ubah = null, ubahBuk = null, nid = pemberiId()) {
+  const tulis = [], baruAtas = [];
   const salinEl = (eid, grupBaru) => {
     const d = S.elems.get(eid);
     if (!d) return null;
@@ -5993,9 +6000,12 @@ function infoPilihan() {
 
 const alatPindah = {
   petunjukDasar: '<b>Pindah:</b> klik titik acuan (bila sudah ada pilihan, titik acuan boleh di benda lain; Esc mengosongkan pilihan) (kotak hijau = ujung, bulat biru muda = titik tengah, belah ketupat merah = pada tepi), lalu arahkan; gerakan mulus mengikuti zoom. Sentuh sebentar titik benda lain lalu geser menjauh: garis ungu putus-putus muncul saat sejajar titik itu. Garis merah/hijau/biru = sejajar sumbu; tahan Shift atau tekan panah untuk mengunci sumbu, lalu sentuh titik benda lain untuk mengambil jaraknya. Sentuh muka lalu tahan Shift: gerakan terkunci pada bidang muka itu; sentuh tepi lalu tahan Shift: sejajar tepi (garis ungu). Ketik jarak lalu Enter. Ctrl untuk menyalin.',
-  get petunjuk() { return this.salin ? '<b>Pindah + Salin:</b> klik tujuan salinan. Tekan Ctrl lagi untuk kembali ke memindah.' : this.petunjukDasar; },
+  get petunjuk() {
+    if (this.terakhir && !this.dasar) return '<b>Salinan jadi.</b> Ketik <b>4x</b> lalu Enter untuk 4 salinan berjarak sama, atau <b>/4</b> untuk membagi jarak menjadi 4. Klik benda lain untuk memindah lagi.';
+    return this.salin ? '<b>Pindah + Salin:</b> klik tujuan salinan, lalu ketik 4x atau /4 untuk salinan berderet. Tekan Ctrl lagi untuk kembali ke memindah.' : this.petunjukDasar;
+  },
   vcb: 'Jarak',
-  dasar: null, items: null, asli: null, delta: null, salin: false,
+  dasar: null, items: null, asli: null, delta: null, salin: false, terakhir: null,
   sibuk() { return !!this.dasar; },
   batal() {
     const lama = this.bukaan && this.bukaan.b.dinding;
@@ -6180,6 +6190,7 @@ const alatPindah = {
   },
   down(e) {
     if (this.dasar) { this.selesai(); return; }
+    this.terakhir = null;   // aksi baru: larik hanya berlaku langsung sesudah satu salinan
     // titik acuan: ujung/tengah/tepi benda bila ada; bila tidak, titik pada muka benda yang diklik (lengkap dengan tingginya),
     // bukan titik lantai di belakangnya. Klik tepat di pojok (di luar muka) tetap memilih benda pemilik pojok itu.
     const s0 = titikSnap(e, null, {atas: true, tengah: true, tepi: true, halus: true});
@@ -6225,10 +6236,43 @@ const alatPindah = {
       const {tulis, baruAtas} = buatSalinan(items, dx, dy, dz);
       terapkan(tulis);
       S.sel = new Set(baruAtas); segarPilihan();
-      toast(`${baruAtas.length} objek disalin.`);
-    } else terapkan([...asli].map(([id, d]) => ({id, sesudah: geser(d, dx, dy, dz)})));
+      // bahan larik (v0.40): ketik 4x atau /4 sesudah ini untuk salinan berderet
+      this.terakhir = {asal: [...items], d: {dx, dy, dz}, ids: tulis.map(t => t.id), atas: baruAtas, entri: S.undo[S.undo.length - 1]};
+      tulisPetunjuk();
+      toast(`${baruAtas.length} objek disalin. Ketik 4x lalu Enter untuk salinan berderet, atau /4 untuk membagi jaraknya.`);
+    } else { this.terakhir = null; terapkan([...asli].map(([id, d]) => ({id, sesudah: geser(d, dx, dy, dz)}))); }
+  },
+  /**
+   * Larik seperti SketchUp (v0.40): `n x` = n salinan berjarak sama dengan salinan pertama; `/n` = jarak salinan pertama dibagi n.
+   * Salinan pertama (atau deret sebelumnya) diganti, dan seluruh deret digabung dengan langkah salin pertama menjadi satu langkah Undo.
+   * @param {number} n
+   * @param {boolean} bagi
+   */
+  larik(n, bagi) {
+    const t = this.terakhir;
+    if (!t) return toast('Salin dulu dengan Pindah + Ctrl, lalu ketik 4x atau /4.');
+    if (!(n >= 1 && n <= 200)) return toast('Jumlah salinan antara 1 dan 200.');
+    if (t.asal.some(id => !ambil(id)) || t.ids.some(id => !ambil(id))) { this.terakhir = null; return toast('Salinan atau benda asalnya sudah berubah. Salin lagi lalu ketik 4x.'); }
+    const k = bagi ? 1 / n : 1, sx = t.d.dx * k, sy = t.d.dy * k, sz = t.d.dz * k;
+    const nid = pemberiId(), tulis = t.ids.map(id => ({id, sesudah: null}));
+    let atas = [];
+    for (let i = 1; i <= n; i++) {
+      const s = buatSalinan(t.asal, r2(sx * i), r2(sy * i), r2(sz * i), null, null, nid);
+      tulis.push(...s.tulis); atas = s.baruAtas;
+    }
+    terapkan(tulis);
+    // gabung dengan langkah salin pertama agar satu Ctrl+Z menghapus seluruh deret
+    const kini = S.undo[S.undo.length - 1], lalu = S.undo[S.undo.length - 2];
+    if (kini && lalu && lalu === t.entri) { S.undo.pop(); lalu.push(...kini); }
+    const baru = tulis.filter(x => x.sesudah).map(x => x.id);
+    this.terakhir = {...t, ids: baru, atas, entri: S.undo[S.undo.length - 1]};
+    S.sel = new Set(atas); segarPilihan(); tulisPetunjuk();
+    const jarak = Math.hypot(sx, sy, sz);
+    toast(`${n} salinan berderet, jarak ${fmt(jarak)} m. Ketik angka lain (mis. 6x) untuk mengganti, Ctrl+Z menghapus seluruh deret.`);
   },
   ketik(v) {
+    const m = /^\s*(?:[x*×]\s*(\d+)|(\d+)\s*[x*×]|\/\s*(\d+))\s*$/i.exec(v);
+    if (m && !this.dasar) return this.larik(Number(m[1] || m[2] || m[3]), !!m[3]);
     if (!this.dasar) return toast('Klik objek dan titik acuannya dulu, lalu ketik jaraknya.');
     const L = angka(v);
     if (!Number.isFinite(L)) return toast(`Tulis jarak dalam ${namaSatuan()}, misalnya ${cth(2.5)}.`);
@@ -7708,7 +7752,58 @@ function arahPandang(d) {
   const {L, ux, uy} = infoDinding(d), s = d.pandang === -1 ? -1 : 1;
   return {L, ux, uy, vx: -uy * s, vy: ux * s};
 }
+/* ============ Label terhubung data elemen (v0.40) ============ */
+// Label berpanah yang ujungnya diklik pada elemen menyimpan `sumber` (id) dan `isi` (pola). Teksnya dibaca ulang dari data
+// elemen setiap kali digambar, jadi ikut berubah saat kode pintu, nama ruang, atau ukuran kolom diubah.
+const KUNCI_LABEL = ['nama', 'kode', 'lebar', 'tinggi', 'b', 'h', 'tebal', 'luas', 'panjang', 'volume', 'fc', 'tulangan', 'elevasi', 'kemiringan', 'penutup', 'diameter'];
+function polaLabelBawaan(d) {
+  if (!d) return '{nama}';
+  if (d.jenis === 'bukaan') return d.kode ? '{kode}' : '{nama}';
+  if (d.jenis === 'volume' && d.lantai) return '{nama} · {luas} m²';
+  if (d.jenis === 'kolom') return 'K {b}/{h} · {tulangan}';
+  if (d.jenis === 'slof' || d.jenis === 'ringbalk') return '{b}/{h} · {tulangan}';
+  if (d.jenis === 'dinding') return 'Dinding t={tebal} cm';
+  if (d.jenis === 'atap') return '{penutup} {kemiringan}°';
+  if (d.jenis === 'tiang') return BAHAN_TIANG[d.bahan] && BAHAN_TIANG[d.bahan].bulat ? 'Ø{diameter} · L {panjang} m' : '{nama} · L {panjang} m';
+  if (d.jenis === 'plat') return 'Plat t={tebal} cm · {tulangan}';
+  return '{nama}';
+}
+/** Nilai kunci label untuk satu elemen; kunci yang tidak berlaku bernilai undefined. */
+function nilaiLabel(d) {
+  let u = {};
+  try { u = ukur(d) || {}; } catch (_) { u = {}; }
+  const cm = v => Number.isFinite(v) ? String(Math.round(v * 100)) : undefined, m = v => Number.isFinite(v) ? fmt(v) : undefined;
+  const tp = d.tulPlat || d.tul;
+  const tulangan = d.tul && Number.isFinite(d.tul.n) ? `${d.tul.n}${labelBesi(d.tul.d, d.tul.ulir)}`
+    : tp && tp.d > 0 && tp.s > 0 ? `${labelBesi(tp.d, !!tp.ulir)}-${Math.round(tp.s * 1000)}` : undefined;
+  return {
+    nama: d.nama || namaJenis(d), kode: d.kode || undefined,
+    lebar: m(d.lebar), tinggi: m(d.tinggi), b: cm(d.b), h: cm(d.h), tebal: cm(d.tebal),
+    luas: m(u.luasAlas ?? u.luas ?? u.luasB), panjang: m(d.jenis === 'tiang' ? d.panjang : u.panjang ?? d.panjang), volume: m(u.volume),
+    fc: Number.isFinite(d.fc) ? labelMutu(d.fc).split(' (')[0] : undefined, tulangan,
+    elevasi: m(d.z0 ?? d.zKepala ?? d.z), kemiringan: Number.isFinite(d.kemiringan) ? String(d.kemiringan).replace('.', ',') : undefined,
+    penutup: d.jenis === 'atap' ? PENUTUP_ATAP[d.penutup || 'spandek'] : d.penutupLantai ? ((PENUTUP_LANTAI[d.penutupLantai] || {}).nama || d.penutupLantai) : undefined,
+    diameter: Number.isFinite(d.dLuar) ? String(d.dLuar) : undefined
+  };
+}
+function isiPolaLabel(pola, d) {
+  const v = nilaiLabel(d);
+  return pola.replace(/\{(\w+)\}/g, (x, k) => (KUNCI_LABEL.includes(k) ? (v[k] ?? '–') : x)).trim();
+}
+// teks terakhir tiap label terhubung: dipakai bila elemen sumbernya sudah dihapus
+const memoLabel = new Map();
+const sumberLabelHilang = d => !!(d && d.tipe === 'label' && d.sumber && !S.elems.has(d.sumber));
+// elemen yang boleh menjadi sumber label (bukan penanda/bantu/anotasi)
+function sumberLabelSah(id) {
+  const d = id && S.elems.get(id);
+  return !!d && !NONFISIK.has(d.jenis) && d.jenis !== 'gambar2d' && d.jenis !== 'detail';
+}
 function teksAnotasi(d) {
+  if (d.tipe === 'label' && d.sumber && d.isi) {
+    const kunci = d.sumber + '|' + d.isi, src = S.elems.get(d.sumber);
+    if (src) { const t = isiPolaLabel(d.isi, src) || d.teks || ''; memoLabel.set(kunci, t); return t; }
+    return memoLabel.get(kunci) || d.teks || d.isi;
+  }
   if (d.teks) return d.teks;
   if (d.tipe === 'ukuran' && d.ujung) return fmt(Math.hypot(d.ujung.x - d.titik.x, d.ujung.y - d.titik.y, zDari(d.ujung) - zDari(d.titik)));
   if (d.tipe === 'peil') { const z = zDari(d.titik); return Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z); }
@@ -7888,13 +7983,13 @@ const alatAnotasi = {
   },
   vcb: 'Ukuran',
   sibuk() { return !!this.a; },
-  batal() { this.a = null; reset(); tulisPetunjuk(); },
+  batal() { this.a = null; this.aSumber = null; reset(); tulisPetunjuk(); },
   ganti() { this.batal(); this.tipe = URUT_ANOT[(URUT_ANOT.indexOf(this.tipe) + 1) % URUT_ANOT.length]; tulisPetunjuk(); toast('Anotasi: ' + TIPE_ANOT[this.tipe].toLowerCase()); },
   ambilTitik(e) {
     const s = titikSnap(e, null, {atas: true});
-    if (s && s.jenis === 'ujung') return s;
-    const h = pilihObjek(e);
-    if (h && h.object.userData.face !== 'penanda') return {x: r2(h.point.x), y: r2(h.point.y), z: r2(h.point.z), jenis: 'muka'};
+    const h = pilihObjek(e), hid = h && h.object.userData.face !== 'penanda' ? h.object.userData.elemId : null;
+    if (s && s.jenis === 'ujung') return {...s, elemId: s.id || hid};
+    if (hid || (h && h.object.userData.face !== 'penanda')) return {x: r2(h.point.x), y: r2(h.point.y), z: r2(h.point.z), jenis: 'muka', elemId: hid};
     return s;
   },
   move(e) {
@@ -7911,13 +8006,15 @@ const alatAnotasi = {
     const s = this.titik;
     if (!s) return;
     const p = {x: r2(s.x), y: r2(s.y), z: r2(zDari(s))};
-    if ((this.tipe === 'label' || this.tipe === 'ukuran') && !this.a) { this.a = p; tulisPetunjuk(); return; }
+    if ((this.tipe === 'label' || this.tipe === 'ukuran') && !this.a) { this.a = p; this.aSumber = this.tipe === 'label' && sumberLabelSah(s.elemId) ? s.elemId : null; tulisPetunjuk(); return; }
     if (this.tipe === 'ukuran' && Math.hypot(p.x - this.a.x, p.y - this.a.y, p.z - this.a.z) < 0.01) return;
     const id = idBaru('N');
     const d = {jenis: 'anotasi', tipe: this.tipe, teks: this.tipe === 'teks' || this.tipe === 'label' ? 'Keterangan' : '', titik: this.a || p, pada: 'semua', catatan: ''};
     if (this.a) d.ujung = p;
+    if (this.tipe === 'label' && this.aSumber) tautkanLabel(d, this.aSumber);
     terapkan([{id, sesudah: denganKonteks(d)}]);
-    this.a = null; reset(); tulisPetunjuk();
+    if (d.sumber) toast(`Label terhubung ke ${namaSumberLabel(d.sumber)}: teksnya ikut berubah bila datanya berubah.`);
+    this.a = null; this.aSumber = null; reset(); tulisPetunjuk();
     S.sel = new Set([id]); segarPilihan();
     // fokus ke kolom teks setelah klik selesai, agar tidak direbut kanvas
     setTimeout(() => { const inp = $('#n-teks'); if (inp) { inp.focus(); inp.select(); } }, 80);
@@ -8015,19 +8112,39 @@ function ubahBantu(id, d, f, t) {
   }
   terapkan([{id, sesudah: b}]);
 }
+function tautkanLabel(d, sid) {
+  const src = S.elems.get(sid);
+  d.sumber = sid; d.isi = polaLabelBawaan(src);
+  d.teks = isiPolaLabel(d.isi, src) || d.teks || 'Keterangan';
+  return d;
+}
+function lepasLabel(id) {
+  const d = /** @type {any} */ (S.elems.get(id));
+  if (!d || !d.sumber) return;
+  const b = salin(d);
+  b.teks = teksAnotasi(d) || d.teks || 'Keterangan';
+  delete b.sumber; delete b.isi;
+  terapkan([{id, sesudah: b}]);
+  toast('Tautan dilepas. Teks label sekarang bisa disunting bebas.');
+}
+function namaSumberLabel(sid) { const d = S.elems.get(sid); return d ? `${d.nama || namaJenis(d)} (${sid})` : sid; }
 function htmlAnotasi(id, d) {
   const opsi = (nilai, obj) => Object.entries(obj).map(([v, t]) => `<option value="${v}" ${v === nilai ? 'selected' : ''}>${esc(t)}</option>`).join('');
   const otomatis = d.tipe === 'ukuran' ? 'Kosongkan teks untuk jarak otomatis.' : d.tipe === 'peil' ? 'Kosongkan teks untuk elevasi otomatis.' : '';
+  const tautan = d.tipe === 'label' && d.sumber && d.isi;
+  const infoTautan = !tautan ? '' : sumberLabelHilang(d)
+    ? `<p class="meta"><b>Sumber hilang:</b> elemen ${esc(d.sumber)} sudah dihapus. Label memakai teks terakhirnya; tekan Lepas tautan untuk menyuntingnya bebas.</p>`
+    : `<p class="meta">Terhubung ke <b>${esc(namaSumberLabel(d.sumber))}</b>. Kunci yang bisa dipakai: ${KUNCI_LABEL.map(k => '{' + k + '}').join(' ')}.</p>`;
   return `
-  <section><h2>Anotasi terpilih</h2><p class="judul">${esc(teksAnotasi(d) || TIPE_ANOT[d.tipe])}</p><span class="lencana">${esc(id.replace('_', ''))} · ${TIPE_ANOT[d.tipe]}</span></section>
+  <section><h2>Anotasi terpilih</h2><p class="judul">${esc(teksAnotasi(d) || TIPE_ANOT[d.tipe])}</p><span class="lencana">${esc(id.replace('_', ''))} · ${TIPE_ANOT[d.tipe]}${tautan ? ' · terhubung' : ''}</span></section>
   <section><h2>Properti</h2><div class="medan">
-    ${medanTeks('n-teks', 'Teks', d.teks)}
+    ${tautan ? medanTeks('n-isi', 'Isi label (pola)', d.isi) : medanTeks('n-teks', 'Teks', d.teks)}
     <label for="n-pada">Tampil di</label><select id="n-pada" ${dis()}>${opsi(d.pada || 'semua', PADA_ANOT)}</select>
     ${medanAngka('n-z', 'Elevasi titik (m)', zDari(d.titik))}
     ${medanCatatan('n-catatan', d.catatan)}
-  </div>${otomatis ? `<p class="meta">${otomatis}</p>` : ''}<p class="meta">Pindah (M) menggeser anotasi.</p></section>
+  </div>${infoTautan}${otomatis ? `<p class="meta">${otomatis}</p>` : ''}<p class="meta">Pindah (M) menggeser anotasi.${d.tipe === 'label' && !tautan ? ' Label yang ujung panahnya diklik pada benda otomatis terhubung ke data benda itu.' : ''}</p></section>
   ${metaUbah(d)}
-  <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
+  <div class="aksi-panel">${tautan ? tombol('lepas-label', 'Lepas tautan') : ''}${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
 function ubahPenanda(id, d, awal, f, t) {
   const b = salin(d);
@@ -8042,6 +8159,11 @@ function ubahPenanda(id, d, awal, f, t) {
     else if (f === 'catatan') b.catatan = t.value;
   } else {
     if (f === 'teks') b.teks = t.value.trim();
+    else if (f === 'isi') {
+      const v = t.value.trim();
+      if (!v) return tolakAngka('Isi label tidak boleh kosong. Tekan Lepas tautan untuk menulis teks bebas.');
+      b.isi = v; b.teks = teksAnotasi(b) || b.teks;
+    }
     else if (f === 'pada') b.pada = t.value;
     else if (f === 'catatan') b.catatan = t.value;
     else if (f === 'z') {
@@ -10361,6 +10483,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Control' && S.tool === 'putar' && !e.repeat) { alatPutar.ubahSalin(); return; }
   if (e.key === 'Control' && S.tool === 'cermin' && !e.repeat) { alatCermin.ubahSalin(); return; }
   // salinan putar berderet: 4x atau x4
+  if (S.tool === 'pindah' && alatPindah.terakhir && !alatPindah.dasar && (k === 'x' || e.key === '*' || e.key === '/') && !ctrl) { e.preventDefault(); S.ketik = true; vcb.value = e.key; vcb.focus(); return; }
   if (S.tool === 'putar' && alatPutar.terakhir && !alatPutar.pusat && (k === 'x' || e.key === '*') && !ctrl) { e.preventDefault(); S.ketik = true; vcb.value = e.key; vcb.focus(); return; }
   // Shift saat Pindah: kunci ke yang sedang disentuh/terdeteksi, seperti SketchUp — muka → "pada bidang",
   // tepi → "sejajar tepi", selain itu sumbu merah/hijau/biru yang sedang terdeteksi
@@ -11416,6 +11539,7 @@ panel.addEventListener('click', e => {
   else if (aksi === 'lihat-potongan' && id) buka2D('potongan:' + id);
   else if (aksi === 'putus-otomatis' && id) putusOtomatis(id);
   else if (aksi === 'putus-hapus' && id) terapkan([...S.elems].filter(([, x]) => x.jenis === 'gambar2d' && x.bentuk === 'putus' && x.lembar === 'potongan:' + id).map(([lid]) => ({id: lid, sesudah: null})));
+  else if (aksi === 'lepas-label' && id) lepasLabel(id);
   else if (aksi === 'iris-3d' && id) aturIris(id);
   else if (aksi === 'kuda-reset' && id) { const b = salin(S.elems.get(id)); delete b.kuda; terapkan([{id, sesudah: b}]); }
   else if ((aksi === 'lis-reset' || aksi === 'lis-reset-sisi') && id) {
@@ -12245,6 +12369,10 @@ function dataKop() {
     konsultan: k.konsultan || sp.perencana || '', digambar: k.digambar || sp.penggambar || '',
     tanggal: sp.tanggal || new Date().toLocaleDateString('id-ID')};
 }
+// revisi gambar (v0.40): berlaku untuk semua lembar; kop menampilkan tiga revisi terakhir dan tanggal revisi terakhir
+const daftarRevisi = () => (Array.isArray(S.setel.revisi) ? S.setel.revisi : []).filter(r => r && r.tanggal);
+const revisiAkhir = () => { const r = daftarRevisi(); return r.length ? r[r.length - 1] : null; };
+const tanggalKop = dk => { const r = revisiAkhir(); return r ? `${r.tanggal} · Rev. ${r.no}` : dk.tanggal; };
 // pecah teks menjadi baris yang muat di lebar tertentu (perkiraan lebar huruf: 0,56 × ukuran, huruf besar 0,68)
 function bungkusTeks(t, lebar, uk, maks = 3) {
   const lebarHuruf = String(t || '') === String(t || '').toUpperCase() ? 0.68 : 0.56;
@@ -12268,7 +12396,7 @@ function kopGambar(o, W, H, skalaTeks) {
     const kopH = 22, ky = H - m - kopH;
     const nomor = l && l.kode ? `${l.kode} · ${l.urut}/${l.total}` : '–';
     const kolom = [['PROYEK', S.setel.nama, 0.31], ['GAMBAR', judulG, 0.24], ['SKALA', skalaTeks, 0.10], ['KERTAS', o.kertas, 0.07],
-      ['TANGGAL', dk.tanggal, 0.10], ['LEMBAR', nomor, 0.10], ['DIBUAT', 'RANCANG', 0.08]];
+      ['TANGGAL', tanggalKop(dk), 0.10], ['LEMBAR', nomor, 0.10], ['DIBUAT', 'RANCANG', 0.08]];
     let kop = bingkai + gr(m, ky, W - m, ky, 0.5);
     let kx = m;
     kolom.forEach(([lbl, nilai, lebar], i) => {
@@ -12318,6 +12446,14 @@ function kopGambar(o, W, H, skalaTeks) {
     pisah(y + 5 * f, 0.2);
     for (let i = 1; i <= 3; i++) pisah(y + 5 * f + bt * i, 0.12);
     for (const xk of kol.slice(1, 3)) out.push(gr(xk, y, xk, y + h, 0.15));
+    // tiga revisi terakhir, terbaru di baris paling bawah; paraf dibiarkan kosong untuk ditandatangani
+    const rv = daftarRevisi().slice(-3);
+    rv.forEach((r, i) => {
+      const yb = y + 5 * f + bt * i + bt * 0.68, t0 = `${r.no}${r.uraian ? '. ' + r.uraian : ''}`, w0 = kol[1] - kol[0] - 2.4, w1 = kol[2] - kol[1] - 2;
+      const b0 = bungkusTeks(t0, w0, 1.7 * fu, 1)[0] || '';
+      out.push(tk(kol[0] + 1.2, yb, b0, Math.min(1.7 * fu, w0 / Math.max(1, b0.length * 0.56))));
+      out.push(tk(kol[1] + 1, yb, r.tanggal, Math.min(1.7 * fu, w1 / Math.max(1, String(r.tanggal).length * 0.56))));
+    });
     return h;
   };
   const blokTtd = (judul, atas, nama, jabatan) => h => (y) => {
@@ -12385,8 +12521,9 @@ function kopGambar(o, W, H, skalaTeks) {
     bawah.push([blokParaf, 16], [blokJudul(true), 22], [blokSel([['KODE GAMBAR', kodeL, 0.36], ['JUMLAH GAMBAR', jumlahL, 0.34], ['HALAMAN', nomorL, 0.30]]), 15]);
   } else {
     atas.push([blokSatker, 40], [blokDokumen, 26]);
+    if (daftarRevisi().length) atas.push([blokRevisi, 20]);
     bawah.push([blokParaf, 16], [blokJudul(false), 20], [blokSel([['SKALA', skalaTeks, 0.55], ['KERTAS', o.kertas, 0.45]]), 13],
-      [blokSel([['KODE', kodeL, 0.4], ['LEMBAR', nomorL, 0.3], ['JUMLAH', jumlahL, 0.3]]), 13], [blokSel([['TANGGAL', dk.tanggal, 1]]), 12]);
+      [blokSel([['KODE', kodeL, 0.4], ['LEMBAR', nomorL, 0.3], ['JUMLAH', jumlahL, 0.3]]), 13], [blokSel([['TANGGAL', tanggalKop(dk), 1]]), 12]);
   }
   const tAtas = atas.reduce((a, [, t]) => a + t, 0) * f, tBawah = bawah.reduce((a, [, t]) => a + t, 0) * f;
   // kanan lengkap: sisa ruang dibagi ke blok tanda tangan agar rapat ke bawah
@@ -12648,6 +12785,8 @@ function svgGabung(o) {
     const cid = `gabung-${i}`, judul = (p.j.includes('@') ? namaLembarLingkup(p.j) : judulLembar(p.j).toUpperCase());
     isi.push(`<defs><clipPath id="${cid}"><rect x="${n2k(p.area.x)}" y="${n2k(p.area.y - 3)}" width="${n2k(p.area.w)}" height="${n2k(p.area.h + 5)}"/></clipPath></defs><g clip-path="url(#${cid})">${r.svg}</g>`,
       simbolJudul(p.area.x + p.area.w / 2, p.area.y + p.area.h + 1.5, judul, `1 : ${sk}`));
+    // skala grafis per petak (v0.40), bila diaktifkan untuk lembar
+    if (!r.info && (o.skalaGrafis !== undefined ? !!o.skalaGrafis : (S.setel.lembar || {}).skalaGrafis !== false)) isi.push(skalaGrafisSvg(sk, p.area.x + p.area.w - 6, p.area.y + p.area.h + 9));
     if (i && tegak) isi.push(`<line x1="${n2k(p.area.x)}" y1="${n2k(area.y + 6)}" x2="${n2k(p.area.x)}" y2="${n2k(area.y + area.h - 6)}" stroke="#BBB" stroke-width="0.15" stroke-dasharray="2 1.5"/>`);
     else if (i) isi.push(`<line x1="${n2k(area.x + 6)}" y1="${n2k(p.area.y - 0.5)}" x2="${n2k(area.x + area.w - 6)}" y2="${n2k(p.area.y - 0.5)}" stroke="#BBB" stroke-width="0.15" stroke-dasharray="2 1.5"/>`);
   });
@@ -12689,6 +12828,7 @@ function svgBagian(o, gid, nomor) {
     if (bg.i > 0) sambung(area.x + 4, Y(bg.y1), area.x + area.w - 4, Y(bg.y1), `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i)}`, area.x + area.w / 2, Y(bg.y1) - 1);
     if (bg.i < bg.n - 1) sambung(area.x + 4, Y(bg.y0), area.x + area.w - 4, Y(bg.y0), `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i + 2)}`, area.x + area.w / 2, Y(bg.y0) + 3);
   }
+  if ((o.skalaGrafis !== undefined ? !!o.skalaGrafis : (S.setel.lembar || {}).skalaGrafis !== false)) gs.push(skalaGrafisSvg(sk, area.x + area.w - 6, area.y + area.h - 5));
   const kop = kopGambar(o, W, H, `1 : ${sk}`), cid = 'potong-bagian-' + nomor;
   return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/><defs><clipPath id="${cid}"><rect x="${n2k(klipX[0])}" y="${area.y}" width="${n2k(klipX[1] - klipX[0])}" height="${area.h}"/></clipPath></defs><g clip-path="url(#${cid})">${r.svg}</g>${gs.join('')}${kop}</svg>`,
     info: `Bagian ${nomor} dari ${bg.n}: segmen ini saja, skala 1 : ${sk}.`, skala: sk, W, H, peta: null, anotStat: null};
@@ -13227,11 +13367,6 @@ function buatSVGInti(o) {
         isi.push(...ukuranBerantai({dinding: dinding.map(x => x.g), kolom: daftar.filter(x => x.g.jenis === 'kolom').map(x => x.g),
           lantai: daftar.filter(x => x.g.jenis === 'volume' && (x.g.tinggi || 0) <= 0.3).map(x => x.p), luar: {x0, y0, x1, y1}, X, Y}));
       }
-      // panah utara
-      const ax = area.x + area.w - 8, ay = area.y + 9;
-      isi.push(`<circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
-        `<polygon points="${ax},${ay - 6} ${ax + 2.4},${ay + 3} ${ax},${ay + 1.6} ${ax - 2.4},${ay + 3}" fill="#000"/>`,
-        teks(ax, ay - 7.6, 'U', 3, 'text-anchor="middle" font-weight="700"'));
     }
   } else if (o.jenis === 'atap') {
     const atapList = geos.filter(g => g.jenis === 'atap'), bidList = geos.filter(g => g.jenis === 'bidang' && g.peran === 'atap');
@@ -13941,11 +14076,42 @@ function buatSVGInti(o) {
       + (o.layar ? `<circle cx="${n2(cx)}" cy="${n2(cy)}" r="${n2(rKecil)}" fill="transparent" class="sasaran"/><circle cx="${n2(L.x)}" cy="${n2(L.y)}" r="${n2(rDet)}" fill="transparent" class="sasaran"/>` : '')
       + `</g>`);
   }
+  // panah utara (v0.40: juga di denah atap, denah pondasi, rencana plafon) dan skala grafis di semua lembar berskala
+  if (!info && ['denah', 'atap', 'pondasi', 'plafon', 'balok', 'pelat'].includes(o.jenis)) {
+    const ax = area.x + area.w - 8, ay = area.y + 9;
+    isi.push(`<g class="panah-utara"><circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
+      `<polygon points="${ax},${ay - 6} ${ax + 2.4},${ay + 3} ${ax},${ay + 1.6} ${ax - 2.4},${ay + 3}" fill="#000"/>`,
+      teks(ax, ay - 7.6, 'U', 3, 'text-anchor="middle" font-weight="700"'), '</g>');
+  }
+  const pakaiSkalaGrafis = o.skalaGrafis !== undefined ? !!o.skalaGrafis : (S.setel.lembar || {}).skalaGrafis !== false;
+  if (!info && pakaiSkalaGrafis && skala > 0 && o.jenis !== 'kusen') isi.push(skalaGrafisSvg(skala, area.x + area.w - 6, area.y + area.h - 5));
   // bingkai dan kop gambar
   isi.push(...svgBenda2D(o, proyekLembar));
   const kop = kopGambar(o, W, H, '1 : ' + skala);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`;
   return {svg, info, skala, W, H, peta, anotStat};
+}
+/**
+ * Skala grafis (v0.40): batang hitam-putih sepanjang ±50 mm di kertas, ujung kanannya di (xKanan, yAlas).
+ * 1:100 → 0·1·2·5 m; 1:20 → 0·0,5·1 m. Tetap benar walau lembar dicetak diperkecil, karena ikut terskala bersama gambar.
+ * @param {number} skala penyebut skala
+ * @param {number} xKanan
+ * @param {number} yAlas
+ */
+function skalaGrafisSvg(skala, xKanan, yAlas) {
+  const calon = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500];
+  const L = calon.reduce((a, c) => Math.abs(c * 1000 / skala - 50) < Math.abs(a * 1000 / skala - 50) ? c : a, calon[0]);
+  const tanda = L < 2.5 ? [0, L / 2, L] : [0, L / 5, 2 * L / 5, L];
+  const mm = v => v * 1000 / skala, x0 = xKanan - mm(L), h = 1.4, f = v => fmt(v).replace(/,00$/, '').replace(/(,\d)0$/, '$1');
+  const out = [`<g class="skala-grafis">`];
+  for (let i = 0; i < tanda.length - 1; i++) {
+    const a = x0 + mm(tanda[i]), b = x0 + mm(tanda[i + 1]);
+    out.push(`<rect x="${n2(a)}" y="${n2(yAlas - h)}" width="${n2(b - a)}" height="${h}" fill="${i % 2 ? '#fff' : '#000'}" stroke="#000" stroke-width="0.2"/>`);
+  }
+  for (const t of tanda) out.push(`<text x="${n2(x0 + mm(t))}" y="${n2(yAlas - h - 0.9)}" font-size="2" text-anchor="middle">${esc(f(t))}</text>`);
+  out.push(`<text x="${n2(xKanan + 1.2)}" y="${n2(yAlas - 0.2)}" font-size="2">m</text>`,
+    `<text x="${n2(x0)}" y="${n2(yAlas + 2.6)}" font-size="2" fill="#555">SKALA 1 : ${skala}</text>`, '</g>');
+  return out.join('');
 }
 let hasil2D = null;
 // skala lainnya: angka penyebut bulat 5–5000; bila tidak sah dipakai otomatis
@@ -13999,7 +14165,7 @@ function isiPilihan2D(pilih) {
 /* ---- daftar lembar di panel kiri ---- */
 function simpanLembar(ubah) {
   const l = daftarLembar();
-  S.setel.lembar = {urutan: l.map(x => x.jenis), keluar: l.filter(x => !x.masuk).map(x => x.jenis), ...ubah};
+  S.setel.lembar = {...(S.setel.lembar || {}), urutan: l.map(x => x.jenis), keluar: l.filter(x => !x.masuk).map(x => x.jenis), ...ubah};
   simpanSetelan();
 }
 function renderLembar() {
@@ -14017,9 +14183,10 @@ function renderLembar() {
   renderSampul(aktif === 'sampul');
   renderDetailPanel();
   renderKop();
+  /** @type {HTMLInputElement} */ ($('#m-skala-grafis')).checked = (S.setel.lembar || {}).skalaGrafis !== false;
 }
 // pilihan model kop dan isian data kop (panel kiri)
-let kopTerbuka = false;
+let kopTerbuka = false, revisiTerbuka = false;
 function renderKop() {
   const box = $('#m-kop');
   if (!box || box.contains(document.activeElement)) return;
@@ -14032,8 +14199,15 @@ function renderKop() {
     <details id="m-kop-data" ${kopTerbuka ? 'open' : ''}><summary>Data kop</summary><div>
     ${ISIAN_KOP.filter(([key]) => model === 'kananLengkap' || !/^(mengetahui|diperiksa|konsultan|direktur)/.test(key) || model === 'bawah' && false)
       .map(([key, lbl]) => `<label>${esk(lbl)}<input type="text" data-kop="${key}" value="${esk(k[key] || '')}" placeholder="${esk(ph[key] || '')}" ${dis()}></label>`).join('')}
-    <p class="meta">Isian kosong memakai data sampul bila ada; bila tetap kosong, ruangnya dibiarkan untuk ditulis tangan.</p></div></details>`;
+    <p class="meta">Isian kosong memakai data sampul bila ada; bila tetap kosong, ruangnya dibiarkan untuk ditulis tangan.</p></div></details>
+    <details id="m-kop-rev" ${revisiTerbuka ? 'open' : ''}><summary>Revisi gambar (${daftarRevisi().length})</summary><div>
+    ${daftarRevisi().map((r, i) => `<div class="baris-rev"><span><b>Rev. ${esk(r.no)}</b> · ${esk(r.tanggal)}${r.uraian ? ' · ' + esk(r.uraian) : ''}</span><button class="tombol kecil" type="button" data-rev-hapus="${i}" ${dis()}>Hapus</button></div>`).join('') || '<p class="meta">Belum ada revisi.</p>'}
+    <label>Tanggal revisi<input type="text" id="m-rev-tanggal" value="${esk(new Date().toLocaleDateString('id-ID'))}" ${dis()}></label>
+    <label>Uraian perubahan<input type="text" id="m-rev-uraian" placeholder="mis. Ubah pintu P1 menjadi dua daun" ${dis()}></label>
+    <button class="tombol kecil" type="button" id="m-rev-tambah" ${dis()}>Tambah revisi</button>
+    <p class="meta">Revisi berlaku untuk semua lembar: kop menampilkan tiga revisi terakhir dan tanggal revisi terakhir (Rev. n). Paraf dibiarkan kosong untuk ditandatangani.</p></div></details>`;
   box.querySelector('#m-kop-data').addEventListener('toggle', e => { kopTerbuka = e.target.open; });
+  box.querySelector('#m-kop-rev').addEventListener('toggle', e => { revisiTerbuka = e.target.open; });
 }
 // logo kop: diperkecil ke sisi terpanjang 240 px agar data pengaturan tetap ringan
 async function bacaLogo(berkas) {
@@ -14048,6 +14222,30 @@ async function bacaLogo(berkas) {
     return data;
   } finally { URL.revokeObjectURL(url); }
 }
+function tambahRevisi(tanggal, uraian) {
+  const lama = daftarRevisi(), no = lama.reduce((a, r) => Math.max(a, Number(r.no) || 0), 0) + 1;
+  S.setel.revisi = [...lama, {no, tanggal: String(tanggal || new Date().toLocaleDateString('id-ID')).trim(), uraian: String(uraian || '').trim()}];
+  simpanSetelan();
+  return no;
+}
+$('#m-kop').addEventListener('click', e => {
+  if (!S.bisaUbah) return;
+  const t = /** @type {HTMLElement} */ (e.target);
+  if (t.id === 'm-rev-tambah') {
+    const tg = /** @type {HTMLInputElement} */ ($('#m-rev-tanggal')).value.trim(), ur = /** @type {HTMLInputElement} */ ($('#m-rev-uraian')).value.trim();
+    if (!tg) return toast('Isi tanggal revisi.');
+    const no = tambahRevisi(tg, ur);
+    t.blur(); $('#m-kop').innerHTML = ''; renderKop(); segar2D();
+    return toast(`Revisi ${no} ditambahkan ke kop semua lembar.`);
+  }
+  if (t.dataset && t.dataset.revHapus !== undefined) {
+    const r = daftarRevisi(), i = Number(t.dataset.revHapus);
+    if (!r[i]) return;
+    S.setel.revisi = r.filter((_, j) => j !== i); simpanSetelan();
+    t.blur(); $('#m-kop').innerHTML = ''; renderKop(); segar2D();
+    return toast(`Revisi ${r[i].no} dihapus dari kop.`);
+  }
+});
 $('#m-kop').addEventListener('click', e => {
   if (e.target.id !== 'm-kop-logo-hapus' || !S.bisaUbah) return;
   const k = {...(S.setel.kop || {})}; delete k.logo; S.setel.kop = k;
@@ -15253,8 +15451,10 @@ function segarAnot2D() {
   const d = ANOT2D.pilih && S.elems.get(ANOT2D.pilih);
   $('#m-anot-edit').hidden = !d;
   if (d && document.activeElement !== $('#m-anot-teks')) {
-    $('#m-anot-teks').value = d.teks || '';
+    const da = /** @type {any} */ (d), tautan = da.tipe === 'label' && da.sumber && da.isi;
+    $('#m-anot-teks').value = tautan ? da.isi : da.teks || '';
     $('#m-anot-teks').placeholder = d.tipe === 'ukuran' ? 'Kosong = jarak otomatis' : d.tipe === 'peil' ? 'Kosong = elevasi otomatis' : 'Teks';
+    $('#m-anot-teks').title = tautan ? `Pola label terhubung ke ${namaSumberLabel(da.sumber)}${sumberLabelHilang(d) ? ' (sumber hilang)' : ''}. Kunci: ${KUNCI_LABEL.map(k => '{' + k + '}').join(' ')}` : '';
   }
   const st = hasil2D.anotStat || {disembunyikan: 0, terhalang: 0}, bagian = [];
   if (st.disembunyikan) bagian.push(`${st.disembunyikan} disembunyikan di gambar ini`);
@@ -15278,15 +15478,45 @@ function petunjukTambah() {
   return ANOT2D.tambah === 'peil' ? 'Klik ketinggian yang diberi peil.' : 'Klik tempat teks.';
 }
 function pilihAnot2D(id) { ANOT2D.pilih = id; segarAnot2D(); }
+// elemen terkecil yang alas denahnya memuat titik (x, y) pada lantai setinggi zl: sumber label terhubung di Gambar 2D (hanya denah).
+// Pintu/jendela memakai jejaknya di dinding sehingga menang atas dindingnya.
+function elemenDiDenah(x, y, zl = null) {
+  const dalam = (q) => { let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++) { const [xi, yi] = q[i], [xj, yj] = q[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  let terbaik = null, luasMin = Infinity;
+  for (const [id, d] of S.elems) {
+    if (!sumberLabelSah(id) || d.jenis === 'atap' || d.jenis === 'plafon' || S.sembunyi.has(id)) continue;
+    let q = null, z0 = 0, t = 0;
+    try {
+      if (d.jenis === 'bukaan') {
+        const w = S.elems.get(d.dinding);
+        if (!w || w.jenis !== 'dinding') continue;
+        const {ux, uy} = infoDinding(w), a = {x: w.awal.x + ux * d.jarak, y: w.awal.y + uy * d.jarak}, b = {x: a.x + ux * d.lebar, y: a.y + uy * d.lebar};
+        q = polyDinding({awal: a, akhir: b, tebal: w.tebal + 0.02}); z0 = (w.z0 || 0) + (d.ambang || 0); t = d.tinggi;
+      } else {
+        q = poligon(d);
+        const da = /** @type {any} */ (d);
+        z0 = da.jenis === 'tiang' ? da.zKepala - da.panjang : da.z0 ?? 0;
+        t = da.jenis === 'tiang' ? da.panjang : da.tinggi ?? da.tebal ?? da.h ?? 0;
+      }
+    } catch (_) { q = null; }
+    if (!q || q.length < 3 || !dalam(q)) continue;
+    if (zl != null && (z0 > zl + 2.5 || z0 + Math.max(t, 0.01) < zl - 0.6)) continue;
+    const A = Math.abs(luasBertanda(q));
+    if (A < luasMin) { luasMin = A; terbaik = id; }
+  }
+  return terbaik;
+}
 function tambahAnot2D(p) {
   const w = hasil2D.peta.keDunia(p.x, p.y), tipe = ANOT2D.tambah;
-  if (tipe === 'label' && !ANOT2D.titikA) { ANOT2D.titikA = w; segarAnot2D(); return; }
+  if (tipe === 'label' && !ANOT2D.titikA) { ANOT2D.titikA = w; const j = $('#m-jenis').value; ANOT2D.sumberA = hasil2D.peta.pada === 'denah' ? elemenDiDenah(w.x, w.y, j.startsWith('denah:') ? +j.slice(6) : 0) : null; segarAnot2D(); return; }
   const id = idBaru('N');
   const d = {jenis: 'anotasi', tipe, teks: tipe === 'peil' ? '' : 'Keterangan', titik: ANOT2D.titikA || w, pada: hasil2D.peta.pada, catatan: ''};
   if (tipe === 'label') d.ujung = w;
-  ANOT2D.tambah = null; ANOT2D.titikA = null;
+  if (tipe === 'label' && ANOT2D.sumberA) tautkanLabel(d, ANOT2D.sumberA);
+  ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.sumberA = null;
   terapkan([{id, sesudah: d}]);
   ANOT2D.pilih = id; segar2D();
+  if (d.sumber) toast(`Label terhubung ke ${namaSumberLabel(d.sumber)}. Ubah polanya di kotak teks, mis. {nama} · {luas} m².`);
   if (tipe !== 'peil') { const i = $('#m-anot-teks'); i.focus(); i.select(); }
 }
 document.querySelectorAll('[data-tambah]').forEach(b => b.addEventListener('click', () => {
@@ -15351,8 +15581,9 @@ $('#m-anot-teks').addEventListener('keydown', e => { if (e.key === 'Enter') e.ta
 $('#m-anot-teks').addEventListener('change', e => {
   const id = ANOT2D.pilih, d = id && S.elems.get(id);
   if (!d) return;
-  const t = e.target.value.trim();
-  if (!t && (d.tipe === 'teks' || d.tipe === 'label')) { toast('Teks anotasi tidak boleh kosong.'); e.target.value = d.teks; return; }
+  const t = e.target.value.trim(), da = /** @type {any} */ (d);
+  if (!t && (d.tipe === 'teks' || d.tipe === 'label')) { toast('Teks anotasi tidak boleh kosong.'); e.target.value = da.sumber && da.isi ? da.isi : da.teks; return; }
+  if (da.tipe === 'label' && da.sumber && da.isi) { const b = {...salin(da), isi: t}; b.teks = teksAnotasi(b) || da.teks; terapkan([{id, sesudah: b}]); segar2D(); return; }
   terapkan([{id, sesudah: {...salin(d), teks: t}}]);
   segar2D();
 });
@@ -15403,6 +15634,7 @@ $('#btn-2d').addEventListener('click', () => buka2D());
 $('#m-tutup').addEventListener('click', tutup2D);
 $('#modal2d').addEventListener('click', e => { if (e.target.id === 'modal2d') tutup2D(); });
 ['#m-jenis', '#m-skala', '#m-kertas', '#m-dimensi', '#m-dimdinding', '#m-terhalang', '#m-level'].forEach(s => $(s).addEventListener('change', segar2D));
+$('#m-skala-grafis').addEventListener('change', e => { if (S.bisaUbah) simpanLembar({skalaGrafis: /** @type {HTMLInputElement} */ (e.target).checked}); segar2D(); });
 $('#m-jenis').addEventListener('change', isiLevel2D);
 $('#m-skala').addEventListener('change', () => {
   const lain = $('#m-skala').value === 'lain';
@@ -16803,6 +17035,35 @@ window.rancangAPI = Object.freeze({
 // Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
 window.rancangUji = Object.freeze({
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
+  // alat Pindah + Ctrl (v0.40): salin pilihan sejauh (dx, dy, dz) seperti klik dua titik, lalu teks larik (mis. '24x' atau '/4')
+  // diketik di kotak ukur; hasil: jumlah elemen dan langkah Undo sesudahnya
+  pindahSalin: (ids, d, larik) => {
+    setAlat('pindah'); S.sel = new Set(ids); segarPilihan();
+    const P = alatPindah, {el} = ekspansi([...S.sel]);
+    P.terakhir = null; P.salin = true; P.lacak = []; P.dasar = {x: 0, y: 0, z: 0}; P.items = [...S.sel];
+    P.asli = new Map([...el].map(id => [id, salin(S.elems.get(id))])); P.delta = {dx: d.dx || 0, dy: d.dy || 0, dz: d.dz || 0};
+    P.selesai(); P.salin = false;
+    const sesudahSalin = S.elems.size;
+    if (larik) P.ketik(larik);
+    return {sesudahSalin, elemen: S.elems.size, undo: S.undo.length, petunjuk: P.petunjuk};
+  },
+  // alat Anotasi label (v0.40): klik ujung panah di titik a pada elemen sid, lalu posisi teks u; hasil: label beserta teksnya
+  labelTerhubung: (sid, a, u) => {
+    setAlat('anotasi'); alatAnotasi.batal(); alatAnotasi.tipe = 'label';
+    alatAnotasi.titik = {x: a.x, y: a.y, z: a.z || 0, jenis: 'muka', elemId: sid}; alatAnotasi.down({});
+    alatAnotasi.titik = {x: u.x, y: u.y, z: u.z || 0, jenis: 'grid'}; alatAnotasi.down({});
+    const id = [...S.sel][0], d = id && S.elems.get(id);
+    return {id, data: d ? ambil(id) : null, teks: d ? teksAnotasi(d) : null};
+  },
+  // revisi kop (v0.40): tambah revisi dan ganti model kop tanpa panel; hasil: daftar revisi
+  revisi: (tanggal, uraian, model) => { if (tanggal) tambahRevisi(tanggal, uraian); if (model) { S.setel.kop = {...(S.setel.kop || {}), model}; simpanSetelan(); } return daftarRevisi(); },
+  // pengaturan Ruang Lembar (v0.40), mis. {skalaGrafis: false}; hasil: pengaturan lembar sesudahnya
+  lembar: ubah => { simpanLembar(ubah); return {...S.setel.lembar}; },
+  skalaGrafis: n => skalaGrafisSvg(n, 200, 150),
+  teksLabel: id => { const d = S.elems.get(id); return d ? {teks: teksAnotasi(d), hilang: sumberLabelHilang(d)} : null; },
+  elemenDiDenah: (x, y, zl) => elemenDiDenah(x, y, zl),
+  ketikPindah: v => { alatPindah.ketik(v); return {elemen: S.elems.size, undo: S.undo.length}; },
+  urungkan: () => { urungkan(); return {elemen: S.elems.size, undo: S.undo.length}; },
   // plafon miring yang akan dibuat alat Plafon (mode miring) untuk atap/bidang tertentu: daftar bidang beserta titiknya
   plafonMiring: id => (alatPlafon.miringDari(id) || []).map(b => b.titik),
   // buat plafon miring sungguhan dari atap/bidang (seperti klik di mode Miring), lalu pilih yang pertama; hasil: id yang dibuat
