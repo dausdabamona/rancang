@@ -388,6 +388,24 @@ async function ujiAsap() {
     catat('larik Pindah: 24x, ganti /3, satu Ctrl+Z', lk.sesudahSalin === e0 + 2 && lk.elemen === e0 + 48 && kini.xs.length === 25 && kini.xs[24] === 244 && kini.cap === 25
       && u24.elemen === e0 && lk4.elemen === e0 + 8 && lk6.elemen === e0 + 6 && lk6.undo === lk4.undo && un.elemen === e0,
       {e0, larik24: lk.elemen, xsAkhir: kini.xs.slice(-2), cap: kini.cap, urung24: u24.elemen, larik4: lk4.elemen, bagi3: lk6, urung: un});
+    // v0.40: label terhubung data elemen (Asrama Putri): kode pintu dan luas lantai ikut berubah; sumber dihapus → teks terakhir
+    await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
+    const lb1 = await halaman(`window.rancangUji.labelTerhubung('B1', {x: 0, y: 0, z: 1}, {x: -1, y: -1, z: 1})`);
+    const lv1 = await halaman(`window.rancangUji.labelTerhubung('V1', {x: 1.75, y: 4.1, z: 0}, {x: 1.75, y: 4.6, z: 0})`);
+    const m0 = (await halaman(`window.rancangAPI.model()`)).elemen;
+    const ubahB = {...m0.B1, kode: 'P9'}, ubahV = {...m0.V1, alas: m0.V1.alas.map(q => ({x: q.x > 1 ? 4 : q.x, y: q.y}))};
+    for (const k of ['diubahOleh', 'diubahPada']) { delete ubahB[k]; delete ubahV[k]; }
+    const ru = await metode.terapkan({perubahan: [{id: 'B1', data: ubahB}, {id: 'V1', data: ubahV}]});
+    const tb = await halaman(`window.rancangUji.teksLabel('${lb1.id}')`), tv = await halaman(`window.rancangUji.teksLabel('${lv1.id}')`);
+    const svgL = (await metode.gambar2D({jenis: 'denah'})).svg;
+    const di2D = await halaman(`window.rancangUji.elemenDiDenah(1.75, 4.1, 0)`);
+    await metode.terapkan({perubahan: [{id: 'V1', data: null}]});
+    const th = await halaman(`window.rancangUji.teksLabel('${lv1.id}')`);
+    const pnl = await halaman(`(() => { window.rancangUji.pilih(['${lv1.id}']); const t = document.getElementById('panel').textContent; return {lepas: t.includes('Lepas tautan'), hilang: t.includes('Sumber hilang')}; })()`);
+    catat('label terhubung: P1 dan Kamar 1 ikut data', lb1.data && lb1.data.sumber === 'B1' && lb1.teks === 'P4' && lv1.data.isi === '{nama} · {luas} m²'
+      && lv1.teks === 'Lantai Kamar 1 · 14,84 m²' && ru && ru.ok && tb.teks === 'P9' && tv.teks === 'Lantai Kamar 1 · 16,96 m²'
+      && svgL.includes('Lantai Kamar 1 · 16,96 m²') && di2D === 'V1' && th.hilang && th.teks === 'Lantai Kamar 1 · 16,96 m²' && pnl.lepas && pnl.hilang,
+      {lb1: lb1.teks, lv1: lv1.teks, tb, tv, di2D, hilang: th, pnl, ru});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;

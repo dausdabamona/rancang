@@ -635,7 +635,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'/'tripleks4'/'tripleks6'/'pvc' = plafon sunda), rangka ('hollow'/'kayu'/'bajaringan'), lis ('tanpa'/'kayu'/'gypsum'/'pvc'; kosong = hanya dihitung PL-010). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
 | X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya) | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
-| N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik, ujung, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah' | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
+| N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik = ujung panah, ujung = posisi teks, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah'. Label terhubung: tambahkan sumber (id elemen yang ditunjuk) dan isi (pola teks) — teks dibaca ulang dari data elemen; kunci {nama} {kode} {lebar} {tinggi} {b} {h} (cm) {tebal} (cm) {luas} {panjang} {volume} {fc} {tulangan} {elevasi} {kemiringan} {penutup} {diameter}; contoh isi "{nama} · {luas} m²" | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
 | Q | bantu | awal{x,y,z?}, akhir{x,y,z?} (garis tak terbatas melalui dua titik; bila kedua titik punya z = garis bertinggi/miring; tinggi di titik lain = interpolasi sepanjang garis di denah), nama. Acuan snap saja: tidak masuk RAB, volume, atau gambar | `{"jenis":"bantu","nama":"Bantu 1","awal":{"x":0,"y":2},"akhir":{"x":1,"y":2}}` |
 | M | level | nama, z (elevasi dalam meter). Opsional datum 'hwl'/'msl'/'lwl'/'dasar' = datum pasang surut (digambar sebagai garis air/dasar laut di potongan dan tampak, tidak ikut daftar level lantai). Pindah dan Push/Pull menempel ke elevasinya; tidak masuk RAB | `{"jenis":"level","nama":"Lantai 2","z":3.2}` |
 | Y | tangga | Tangga beton lurus: awal{x,y} (sudut kiri bawah anak tangga pertama dilihat dari arah naik), arah (° dari sumbu X), lebar, tinggi (naik total), jumlahAnak (optrede), antrede (lebar injakan), tebalPlat, z0, railing ('tanpa'/'kiri'/'kanan'/'dua'). Panjang denah = antrede × (jumlahAnak − 1). Masuk RAB beton, besi, bekisting | `{"jenis":"tangga","awal":{"x":30,"y":9},"arah":180,"lebar":1.2,"tinggi":4,"jumlahAnak":22,"antrede":0.28,"tebalPlat":0.12,"z0":0,"railing":"kanan"}` |
@@ -999,7 +999,8 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * N — anotasi (teks, label berpanah, ukuran dua titik, peil).
  * @typedef {DasarElemen & {jenis: 'anotasi', tipe: 'teks' | 'label' | 'ukuran' | 'peil', titik: Titik3Opsional, ujung?: Titik3Opsional,
- *   teks?: string, pada?: 'semua' | 'denah' | 'tampak' | 'potongan', sembunyiDi?: string[], geser?: {x: number, y: number, z?: number}}} Anotasi
+ *   teks?: string, pada?: 'semua' | 'denah' | 'tampak' | 'potongan', sembunyiDi?: string[], geser?: {x: number, y: number, z?: number},
+ *   sumber?: string, isi?: string}} Anotasi Label terhubung (v0.40): `sumber` = id elemen yang ditunjuk, `isi` = pola teks berkunci {nama}, {luas}, …
  */
 
 /**
@@ -1220,7 +1221,9 @@ function sah(d) {
     if (!['teks', 'label', 'ukuran', 'peil'].includes(d.tipe) || !pt(d.titik)) return false;
     if ((d.tipe === 'label' || d.tipe === 'ukuran') && !pt(d.ujung)) return false;
     if (d.geser && !(Number.isFinite(d.geser.x) && Number.isFinite(d.geser.y) && Number.isFinite(d.geser.z ?? 0))) return false;
-    return d.tipe === 'ukuran' || d.tipe === 'peil' || (typeof d.teks === 'string' && d.teks.length > 0);
+    if ((d.sumber != null && typeof d.sumber !== 'string') || (d.isi != null && typeof d.isi !== 'string')) return false;
+    const terhubung = d.tipe === 'label' && !!d.sumber && !!(d.isi && d.isi.trim());
+    return d.tipe === 'ukuran' || d.tipe === 'peil' || terhubung || (typeof d.teks === 'string' && d.teks.length > 0);
   }
   const tulSah = t => t && t.n >= 1 && t.d > 0, skSah = s => s && s.d > 0 && s.s > 0;
   if (d.jenis === 'kolom') return Number.isFinite(d.x) && Number.isFinite(d.y) && d.b > 0 && d.h > 0 && d.tinggi > 0 && tulSah(d.tul) && skSah(d.sengkang) && d.fc > 0;
@@ -7490,7 +7493,58 @@ function arahPandang(d) {
   const {L, ux, uy} = infoDinding(d), s = d.pandang === -1 ? -1 : 1;
   return {L, ux, uy, vx: -uy * s, vy: ux * s};
 }
+/* ============ Label terhubung data elemen (v0.40) ============ */
+// Label berpanah yang ujungnya diklik pada elemen menyimpan `sumber` (id) dan `isi` (pola). Teksnya dibaca ulang dari data
+// elemen setiap kali digambar, jadi ikut berubah saat kode pintu, nama ruang, atau ukuran kolom diubah.
+const KUNCI_LABEL = ['nama', 'kode', 'lebar', 'tinggi', 'b', 'h', 'tebal', 'luas', 'panjang', 'volume', 'fc', 'tulangan', 'elevasi', 'kemiringan', 'penutup', 'diameter'];
+function polaLabelBawaan(d) {
+  if (!d) return '{nama}';
+  if (d.jenis === 'bukaan') return d.kode ? '{kode}' : '{nama}';
+  if (d.jenis === 'volume' && d.lantai) return '{nama} · {luas} m²';
+  if (d.jenis === 'kolom') return 'K {b}/{h} · {tulangan}';
+  if (d.jenis === 'slof' || d.jenis === 'ringbalk') return '{b}/{h} · {tulangan}';
+  if (d.jenis === 'dinding') return 'Dinding t={tebal} cm';
+  if (d.jenis === 'atap') return '{penutup} {kemiringan}°';
+  if (d.jenis === 'tiang') return BAHAN_TIANG[d.bahan] && BAHAN_TIANG[d.bahan].bulat ? 'Ø{diameter} · L {panjang} m' : '{nama} · L {panjang} m';
+  if (d.jenis === 'plat') return 'Plat t={tebal} cm · {tulangan}';
+  return '{nama}';
+}
+/** Nilai kunci label untuk satu elemen; kunci yang tidak berlaku bernilai undefined. */
+function nilaiLabel(d) {
+  let u = {};
+  try { u = ukur(d) || {}; } catch (_) { u = {}; }
+  const cm = v => Number.isFinite(v) ? String(Math.round(v * 100)) : undefined, m = v => Number.isFinite(v) ? fmt(v) : undefined;
+  const tp = d.tulPlat || d.tul;
+  const tulangan = d.tul && Number.isFinite(d.tul.n) ? `${d.tul.n}${labelBesi(d.tul.d, d.tul.ulir)}`
+    : tp && tp.d > 0 && tp.s > 0 ? `${labelBesi(tp.d, !!tp.ulir)}-${Math.round(tp.s * 1000)}` : undefined;
+  return {
+    nama: d.nama || namaJenis(d), kode: d.kode || undefined,
+    lebar: m(d.lebar), tinggi: m(d.tinggi), b: cm(d.b), h: cm(d.h), tebal: cm(d.tebal),
+    luas: m(u.luasAlas ?? u.luas ?? u.luasB), panjang: m(d.jenis === 'tiang' ? d.panjang : u.panjang ?? d.panjang), volume: m(u.volume),
+    fc: Number.isFinite(d.fc) ? labelMutu(d.fc).split(' (')[0] : undefined, tulangan,
+    elevasi: m(d.z0 ?? d.zKepala ?? d.z), kemiringan: Number.isFinite(d.kemiringan) ? String(d.kemiringan).replace('.', ',') : undefined,
+    penutup: d.jenis === 'atap' ? PENUTUP_ATAP[d.penutup || 'spandek'] : d.penutupLantai ? ((PENUTUP_LANTAI[d.penutupLantai] || {}).nama || d.penutupLantai) : undefined,
+    diameter: Number.isFinite(d.dLuar) ? String(d.dLuar) : undefined
+  };
+}
+function isiPolaLabel(pola, d) {
+  const v = nilaiLabel(d);
+  return pola.replace(/\{(\w+)\}/g, (x, k) => (KUNCI_LABEL.includes(k) ? (v[k] ?? '–') : x)).trim();
+}
+// teks terakhir tiap label terhubung: dipakai bila elemen sumbernya sudah dihapus
+const memoLabel = new Map();
+const sumberLabelHilang = d => !!(d && d.tipe === 'label' && d.sumber && !S.elems.has(d.sumber));
+// elemen yang boleh menjadi sumber label (bukan penanda/bantu/anotasi)
+function sumberLabelSah(id) {
+  const d = id && S.elems.get(id);
+  return !!d && !NONFISIK.has(d.jenis) && d.jenis !== 'gambar2d' && d.jenis !== 'detail';
+}
 function teksAnotasi(d) {
+  if (d.tipe === 'label' && d.sumber && d.isi) {
+    const kunci = d.sumber + '|' + d.isi, src = S.elems.get(d.sumber);
+    if (src) { const t = isiPolaLabel(d.isi, src) || d.teks || ''; memoLabel.set(kunci, t); return t; }
+    return memoLabel.get(kunci) || d.teks || d.isi;
+  }
   if (d.teks) return d.teks;
   if (d.tipe === 'ukuran' && d.ujung) return fmt(Math.hypot(d.ujung.x - d.titik.x, d.ujung.y - d.titik.y, zDari(d.ujung) - zDari(d.titik)));
   if (d.tipe === 'peil') { const z = zDari(d.titik); return Math.abs(z) < 0.005 ? '±0,00' : (z > 0 ? '+' : '') + fmt(z); }
@@ -7670,13 +7724,13 @@ const alatAnotasi = {
   },
   vcb: 'Ukuran',
   sibuk() { return !!this.a; },
-  batal() { this.a = null; reset(); tulisPetunjuk(); },
+  batal() { this.a = null; this.aSumber = null; reset(); tulisPetunjuk(); },
   ganti() { this.batal(); this.tipe = URUT_ANOT[(URUT_ANOT.indexOf(this.tipe) + 1) % URUT_ANOT.length]; tulisPetunjuk(); toast('Anotasi: ' + TIPE_ANOT[this.tipe].toLowerCase()); },
   ambilTitik(e) {
     const s = titikSnap(e, null, {atas: true});
-    if (s && s.jenis === 'ujung') return s;
-    const h = pilihObjek(e);
-    if (h && h.object.userData.face !== 'penanda') return {x: r2(h.point.x), y: r2(h.point.y), z: r2(h.point.z), jenis: 'muka'};
+    const h = pilihObjek(e), hid = h && h.object.userData.face !== 'penanda' ? h.object.userData.elemId : null;
+    if (s && s.jenis === 'ujung') return {...s, elemId: s.id || hid};
+    if (hid || (h && h.object.userData.face !== 'penanda')) return {x: r2(h.point.x), y: r2(h.point.y), z: r2(h.point.z), jenis: 'muka', elemId: hid};
     return s;
   },
   move(e) {
@@ -7693,13 +7747,15 @@ const alatAnotasi = {
     const s = this.titik;
     if (!s) return;
     const p = {x: r2(s.x), y: r2(s.y), z: r2(zDari(s))};
-    if ((this.tipe === 'label' || this.tipe === 'ukuran') && !this.a) { this.a = p; tulisPetunjuk(); return; }
+    if ((this.tipe === 'label' || this.tipe === 'ukuran') && !this.a) { this.a = p; this.aSumber = this.tipe === 'label' && sumberLabelSah(s.elemId) ? s.elemId : null; tulisPetunjuk(); return; }
     if (this.tipe === 'ukuran' && Math.hypot(p.x - this.a.x, p.y - this.a.y, p.z - this.a.z) < 0.01) return;
     const id = idBaru('N');
     const d = {jenis: 'anotasi', tipe: this.tipe, teks: this.tipe === 'teks' || this.tipe === 'label' ? 'Keterangan' : '', titik: this.a || p, pada: 'semua', catatan: ''};
     if (this.a) d.ujung = p;
+    if (this.tipe === 'label' && this.aSumber) tautkanLabel(d, this.aSumber);
     terapkan([{id, sesudah: denganKonteks(d)}]);
-    this.a = null; reset(); tulisPetunjuk();
+    if (d.sumber) toast(`Label terhubung ke ${namaSumberLabel(d.sumber)}: teksnya ikut berubah bila datanya berubah.`);
+    this.a = null; this.aSumber = null; reset(); tulisPetunjuk();
     S.sel = new Set([id]); segarPilihan();
     // fokus ke kolom teks setelah klik selesai, agar tidak direbut kanvas
     setTimeout(() => { const inp = $('#n-teks'); if (inp) { inp.focus(); inp.select(); } }, 80);
@@ -7762,19 +7818,39 @@ function ubahBantu(id, d, f, t) {
   }
   terapkan([{id, sesudah: b}]);
 }
+function tautkanLabel(d, sid) {
+  const src = S.elems.get(sid);
+  d.sumber = sid; d.isi = polaLabelBawaan(src);
+  d.teks = isiPolaLabel(d.isi, src) || d.teks || 'Keterangan';
+  return d;
+}
+function lepasLabel(id) {
+  const d = S.elems.get(id);
+  if (!d || !d.sumber) return;
+  const b = salin(d);
+  b.teks = teksAnotasi(d) || d.teks || 'Keterangan';
+  delete b.sumber; delete b.isi;
+  terapkan([{id, sesudah: b}]);
+  toast('Tautan dilepas. Teks label sekarang bisa disunting bebas.');
+}
+function namaSumberLabel(sid) { const d = S.elems.get(sid); return d ? `${d.nama || namaJenis(d)} (${sid})` : sid; }
 function htmlAnotasi(id, d) {
   const opsi = (nilai, obj) => Object.entries(obj).map(([v, t]) => `<option value="${v}" ${v === nilai ? 'selected' : ''}>${esc(t)}</option>`).join('');
   const otomatis = d.tipe === 'ukuran' ? 'Kosongkan teks untuk jarak otomatis.' : d.tipe === 'peil' ? 'Kosongkan teks untuk elevasi otomatis.' : '';
+  const tautan = d.tipe === 'label' && d.sumber && d.isi;
+  const infoTautan = !tautan ? '' : sumberLabelHilang(d)
+    ? `<p class="meta"><b>Sumber hilang:</b> elemen ${esc(d.sumber)} sudah dihapus. Label memakai teks terakhirnya; tekan Lepas tautan untuk menyuntingnya bebas.</p>`
+    : `<p class="meta">Terhubung ke <b>${esc(namaSumberLabel(d.sumber))}</b>. Kunci yang bisa dipakai: ${KUNCI_LABEL.map(k => '{' + k + '}').join(' ')}.</p>`;
   return `
-  <section><h2>Anotasi terpilih</h2><p class="judul">${esc(teksAnotasi(d) || TIPE_ANOT[d.tipe])}</p><span class="lencana">${esc(id.replace('_', ''))} · ${TIPE_ANOT[d.tipe]}</span></section>
+  <section><h2>Anotasi terpilih</h2><p class="judul">${esc(teksAnotasi(d) || TIPE_ANOT[d.tipe])}</p><span class="lencana">${esc(id.replace('_', ''))} · ${TIPE_ANOT[d.tipe]}${tautan ? ' · terhubung' : ''}</span></section>
   <section><h2>Properti</h2><div class="medan">
-    ${medanTeks('n-teks', 'Teks', d.teks)}
+    ${tautan ? medanTeks('n-isi', 'Isi label (pola)', d.isi) : medanTeks('n-teks', 'Teks', d.teks)}
     <label for="n-pada">Tampil di</label><select id="n-pada" ${dis()}>${opsi(d.pada || 'semua', PADA_ANOT)}</select>
     ${medanAngka('n-z', 'Elevasi titik (m)', zDari(d.titik))}
     ${medanCatatan('n-catatan', d.catatan)}
-  </div>${otomatis ? `<p class="meta">${otomatis}</p>` : ''}<p class="meta">Pindah (M) menggeser anotasi.</p></section>
+  </div>${infoTautan}${otomatis ? `<p class="meta">${otomatis}</p>` : ''}<p class="meta">Pindah (M) menggeser anotasi.${d.tipe === 'label' && !tautan ? ' Label yang ujung panahnya diklik pada benda otomatis terhubung ke data benda itu.' : ''}</p></section>
   ${metaUbah(d)}
-  <div class="aksi-panel">${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
+  <div class="aksi-panel">${tautan ? tombol('lepas-label', 'Lepas tautan') : ''}${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
 function ubahPenanda(id, d, awal, f, t) {
   const b = salin(d);
@@ -7788,6 +7864,11 @@ function ubahPenanda(id, d, awal, f, t) {
     else if (f === 'catatan') b.catatan = t.value;
   } else {
     if (f === 'teks') b.teks = t.value.trim();
+    else if (f === 'isi') {
+      const v = t.value.trim();
+      if (!v) return tolakAngka('Isi label tidak boleh kosong. Tekan Lepas tautan untuk menulis teks bebas.');
+      b.isi = v; b.teks = teksAnotasi(b) || b.teks;
+    }
     else if (f === 'pada') b.pada = t.value;
     else if (f === 'catatan') b.catatan = t.value;
     else if (f === 'z') {
@@ -11134,6 +11215,7 @@ panel.addEventListener('click', e => {
   else if (aksi === 'edit-komponen' && id) masukKomponen(id);
   else if (aksi === 'pecah-komponen' && id) pecahKomponen(id);
   else if (aksi === 'lihat-potongan' && id) buka2D('potongan:' + id);
+  else if (aksi === 'lepas-label' && id) lepasLabel(id);
   else if (aksi === 'iris-3d' && id) aturIris(id);
   else if (aksi === 'kuda-reset' && id) { const b = salin(S.elems.get(id)); delete b.kuda; terapkan([{id, sesudah: b}]); }
   else if ((aksi === 'lis-reset' || aksi === 'lis-reset-sisi') && id) {
@@ -14327,8 +14409,10 @@ function segarAnot2D() {
   const d = ANOT2D.pilih && S.elems.get(ANOT2D.pilih);
   $('#m-anot-edit').hidden = !d;
   if (d && document.activeElement !== $('#m-anot-teks')) {
-    $('#m-anot-teks').value = d.teks || '';
+    const tautan = d.tipe === 'label' && d.sumber && d.isi;
+    $('#m-anot-teks').value = tautan ? d.isi : d.teks || '';
     $('#m-anot-teks').placeholder = d.tipe === 'ukuran' ? 'Kosong = jarak otomatis' : d.tipe === 'peil' ? 'Kosong = elevasi otomatis' : 'Teks';
+    $('#m-anot-teks').title = tautan ? `Pola label terhubung ke ${namaSumberLabel(d.sumber)}${sumberLabelHilang(d) ? ' (sumber hilang)' : ''}. Kunci: ${KUNCI_LABEL.map(k => '{' + k + '}').join(' ')}` : '';
   }
   const st = hasil2D.anotStat || {disembunyikan: 0, terhalang: 0}, bagian = [];
   if (st.disembunyikan) bagian.push(`${st.disembunyikan} disembunyikan di gambar ini`);
@@ -14352,15 +14436,44 @@ function petunjukTambah() {
   return ANOT2D.tambah === 'peil' ? 'Klik ketinggian yang diberi peil.' : 'Klik tempat teks.';
 }
 function pilihAnot2D(id) { ANOT2D.pilih = id; segarAnot2D(); }
+// elemen terkecil yang alas denahnya memuat titik (x, y) pada lantai setinggi zl: sumber label terhubung di Gambar 2D (hanya denah).
+// Pintu/jendela memakai jejaknya di dinding sehingga menang atas dindingnya.
+function elemenDiDenah(x, y, zl = null) {
+  const dalam = (q) => { let c = false; for (let i = 0, j = q.length - 1; i < q.length; j = i++) { const [xi, yi] = q[i], [xj, yj] = q[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+  let terbaik = null, luasMin = Infinity;
+  for (const [id, d] of S.elems) {
+    if (!sumberLabelSah(id) || d.jenis === 'atap' || d.jenis === 'plafon' || S.sembunyi.has(id)) continue;
+    let q = null, z0 = 0, t = 0;
+    try {
+      if (d.jenis === 'bukaan') {
+        const w = S.elems.get(d.dinding);
+        if (!w || w.jenis !== 'dinding') continue;
+        const {ux, uy} = infoDinding(w), a = {x: w.awal.x + ux * d.jarak, y: w.awal.y + uy * d.jarak}, b = {x: a.x + ux * d.lebar, y: a.y + uy * d.lebar};
+        q = polyDinding({awal: a, akhir: b, tebal: w.tebal + 0.02}); z0 = (w.z0 || 0) + (d.ambang || 0); t = d.tinggi;
+      } else {
+        q = poligon(d);
+        z0 = d.jenis === 'tiang' ? d.zKepala - d.panjang : d.z0 ?? 0;
+        t = d.jenis === 'tiang' ? d.panjang : d.tinggi ?? d.tebal ?? d.h ?? 0;
+      }
+    } catch (_) { q = null; }
+    if (!q || q.length < 3 || !dalam(q)) continue;
+    if (zl != null && (z0 > zl + 2.5 || z0 + Math.max(t, 0.01) < zl - 0.6)) continue;
+    const A = Math.abs(luasBertanda(q));
+    if (A < luasMin) { luasMin = A; terbaik = id; }
+  }
+  return terbaik;
+}
 function tambahAnot2D(p) {
   const w = hasil2D.peta.keDunia(p.x, p.y), tipe = ANOT2D.tambah;
-  if (tipe === 'label' && !ANOT2D.titikA) { ANOT2D.titikA = w; segarAnot2D(); return; }
+  if (tipe === 'label' && !ANOT2D.titikA) { ANOT2D.titikA = w; const j = $('#m-jenis').value; ANOT2D.sumberA = hasil2D.peta.pada === 'denah' ? elemenDiDenah(w.x, w.y, j.startsWith('denah:') ? +j.slice(6) : 0) : null; segarAnot2D(); return; }
   const id = idBaru('N');
   const d = {jenis: 'anotasi', tipe, teks: tipe === 'peil' ? '' : 'Keterangan', titik: ANOT2D.titikA || w, pada: hasil2D.peta.pada, catatan: ''};
   if (tipe === 'label') d.ujung = w;
-  ANOT2D.tambah = null; ANOT2D.titikA = null;
+  if (tipe === 'label' && ANOT2D.sumberA) tautkanLabel(d, ANOT2D.sumberA);
+  ANOT2D.tambah = null; ANOT2D.titikA = null; ANOT2D.sumberA = null;
   terapkan([{id, sesudah: d}]);
   ANOT2D.pilih = id; segar2D();
+  if (d.sumber) toast(`Label terhubung ke ${namaSumberLabel(d.sumber)}. Ubah polanya di kotak teks, mis. {nama} · {luas} m².`);
   if (tipe !== 'peil') { const i = $('#m-anot-teks'); i.focus(); i.select(); }
 }
 document.querySelectorAll('[data-tambah]').forEach(b => b.addEventListener('click', () => {
@@ -14426,7 +14539,8 @@ $('#m-anot-teks').addEventListener('change', e => {
   const id = ANOT2D.pilih, d = id && S.elems.get(id);
   if (!d) return;
   const t = e.target.value.trim();
-  if (!t && (d.tipe === 'teks' || d.tipe === 'label')) { toast('Teks anotasi tidak boleh kosong.'); e.target.value = d.teks; return; }
+  if (!t && (d.tipe === 'teks' || d.tipe === 'label')) { toast('Teks anotasi tidak boleh kosong.'); e.target.value = d.sumber && d.isi ? d.isi : d.teks; return; }
+  if (d.tipe === 'label' && d.sumber && d.isi) { const b = {...salin(d), isi: t}; b.teks = teksAnotasi(b) || d.teks; terapkan([{id, sesudah: b}]); segar2D(); return; }
   terapkan([{id, sesudah: {...salin(d), teks: t}}]);
   segar2D();
 });
@@ -15737,6 +15851,16 @@ window.rancangUji = Object.freeze({
     if (larik) P.ketik(larik);
     return {sesudahSalin, elemen: S.elems.size, undo: S.undo.length, petunjuk: P.petunjuk};
   },
+  // alat Anotasi label (v0.40): klik ujung panah di titik a pada elemen sid, lalu posisi teks u; hasil: label beserta teksnya
+  labelTerhubung: (sid, a, u) => {
+    setAlat('anotasi'); alatAnotasi.batal(); alatAnotasi.tipe = 'label';
+    alatAnotasi.titik = {x: a.x, y: a.y, z: a.z || 0, jenis: 'muka', elemId: sid}; alatAnotasi.down({});
+    alatAnotasi.titik = {x: u.x, y: u.y, z: u.z || 0, jenis: 'grid'}; alatAnotasi.down({});
+    const id = [...S.sel][0], d = id && S.elems.get(id);
+    return {id, data: d ? ambil(id) : null, teks: d ? teksAnotasi(d) : null};
+  },
+  teksLabel: id => { const d = S.elems.get(id); return d ? {teks: teksAnotasi(d), hilang: sumberLabelHilang(d)} : null; },
+  elemenDiDenah: (x, y, zl) => elemenDiDenah(x, y, zl),
   ketikPindah: v => { alatPindah.ketik(v); return {elemen: S.elems.size, undo: S.undo.length}; },
   urungkan: () => { urungkan(); return {elemen: S.elems.size, undo: S.undo.length}; },
   // plafon miring yang akan dibuat alat Plafon (mode miring) untuk atap/bidang tertentu: daftar bidang beserta titiknya

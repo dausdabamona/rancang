@@ -60,6 +60,7 @@ test('mode berkas: membaca, menerapkan, dan menolak perubahan tanpa aplikasi', a
     assert.equal(daftar.total, 1);
     const panduan = await c.callTool({name: 'panduan_data', arguments: {}});
     assert.match(panduan.content[0].text, /Panduan data model RANCANG/);
+    assert.match(panduan.content[0].text, /Label terhubung: tambahkan sumber/);
   } finally { await c.close(); }
 });
 
