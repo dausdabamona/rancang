@@ -68,6 +68,9 @@ RANCANG adalah aplikasi gambar bangunan ala SketchUp untuk kebutuhan PPK Poltek 
 | v0.29.0 | **Sapuan** (Follow Me yang tetap bisa diedit): talang, lisplang, list plafon, plint, pipa, parit U |
 | v0.29.1 | Pindah memakai titik acuan pada benda dan menempel ke bidang benda lain |
 | v0.30 | Push/Pull benda pejal dan menempel ke titik benda lain; alat Bidang 3D; **cache snap** per elemen (sebelumnya semua geometri dihitung ulang tiap gerak kursor, ±28 ms di model 592 elemen); snap mengabaikan titik yang tertutup benda lain |
+| v0.33.0 | Rilis 18 Okt 2026 malam: PR #20 + #21 (seleksi dengan sorotan dan info kursor, `pilihan_pengguna`, ukuran alas, plafon miring disatukan, garis potong mudah dipilih, Shift+H, Ctrl+V gambar di Panel Claude) |
+| v0.34.0 | Tahap A desain ulang: pintasan ala SketchUp/AutoCAD, palet Ctrl+K, menu tiga keadaan, rel panel, mode fokus |
+| v0.34.1 (PR #24) | Plafon miring berhenti di lisplang; mundur seng 20 cm semua rangka; isian jarak tepi plafon dari ujung seng |
 | v0.31–v0.31.1 | Antarmuka Broadsheet, Plafon terpisah (miring, per ruang, gabungan); menu alat dan panel properti bisa dilipat |
 | v0.32.0 (PR #20, cabang `menu-potongan`, menunggu uji pengguna) | Menu Potongan A–A/B–B di bar tampilan; plafon: Pecah per ruang / Gabungkan, bahan tripleks dan PVC, rangka dan lis plafon digambar 3D + lembar "Rencana plafon dan rangka" + RAB; ukuran gording/bubungan/klos dapat dipilih; Pustaka Sanitair (alat Z); skor kayu antar tiang kuda-kuda; lisplang diperpanjang/dipangkas per sisi; dinding bertepi atas bertangga/miring (`profilAtas`); **alat Perpanjang/Pangkas (Shift+H)**: ujung papan lisplang dan sisi plafon sampai batas benda lain; bahan dinding (bata, tripleks, GRC, gypsum) dengan rangka |
 | v0.33.0 | Tahap 1 interaksi: sorotan kursor, bilah bawah menyebut sasaran, `pilihan_pengguna`, Ukuran alas di Properti, Shift+H Perpanjang, pengaturan plafon miring disatukan |
@@ -196,6 +199,13 @@ Sunting Alas ditempatkan di tahap 2 karena disebut langsung sebagai hambatan nya
 - Tahap C: tab Claude di desktop lewat API key Anthropic (berbayar per pakai) di samping jalur MCP.
 
 **Bangunan bertingkat (v0.35.0, 18 Oktober 2026).** Untuk menggambar Asrama Putri 2 lantai (PDF gambar kerja, 37,0 × 8,75 m, lantai 2 di +4,00) diputuskan tiga alat dibuat dulu, baru modelnya: (1) **Tangga** beton lurus parametrik — dua klik, jumlah anak dari tinggi level, panel Properti, denah NAIK/TURUN, RAB; (2) **Plat lantai beton** (W) dengan lubang void, dikonversi dari lantai biasa, masuk RAB beton/besi/bekisting; (3) **Denah per level** — pemilih Level di bar Gambar 2D dan parameter `level` di MCP `gambar_2d`. Tangga bordes/putar belum ada: digambar sebagai dua tangga lurus + plat bordes.
+
+**Perbaikan plafon miring (18 Oktober 2026 malam, PR #24 → v0.34.1).** Laporan pengguna: plafon miring ikut sepanjang spandek, padahal seharusnya berhenti di lisplang; spandek menjorok ±20 cm dan harus bisa diatur; pengaturannya harus ada di Properti atau terpotong otomatis saat dibuat. Yang dilakukan:
+- Alat Plafon mode *Miring* memakai muka atap yang dimundurkan sampai sisi dalam papan lisplang (`susunTepiAtap(d).muka[].dalam`), bukan muka penutup; berlaku juga untuk atap yang sudah dipecah (tepi bidang H yang berpapan lisplang H sejajar dimundurkan, `mundurKeLisplang`).
+- Bawaan *Mundur dari ujung seng* menjadi 20 cm untuk semua rangka (sebelumnya baja ringan 0, sehingga perbaikan tidak terlihat). Atap baja ringan lama ikut bergeser; tetap bisa diatur per sisi lisplang.
+- Isian baru di Properti plafon miring: *Jarak tepi plafon dari ujung seng (m)* (`mundurSeng`, terisi otomatis = mundur + tebal papan, mis. 0,225); mengetik ulang menggeser tepi luar yang berhadapan dengan lisplang.
+- Papan lisplang diterima sebagai batas alat Perpanjang/Pangkas (sisi dalam papan).
+- Uji asap 26 langkah: kayu, baja ringan, atap terpecah, isian jarak (0,225 → 0,40 = geser 15 cm mendatar pada 30°).
 
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
