@@ -1,3 +1,10 @@
+## Yang baru di 0.43.1
+
+Perbaikan dari gambar Layout Dermaga TUKS BBP (21 Oktober 2026).
+
+- **As di bagian garis putus tidak lagi bertumpuk**: as yang jatuh di bagian yang dihilangkan garis putus tidak digambar (garis as, gelembung, dan ukurannya). Ukuran antar-as menyambung ke as terlihat berikutnya dengan nilai sebenarnya, mis. 3 → 18 = 90,00. Berlaku di denah/layout, rencana pile cap dan tiang, rencana balok dan pelat, tampak, dan potongan.
+- Pasang **RANCANG-Setup-0.43.1.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.43.1 dari rilis yang sama.
+
 ## Yang baru di 0.43.0
 
 Rilis penyelaras (20 Oktober 2026): aplikasi desktop, ekstensi Claude (RANCANG.mcpb), dan artefak RANCANG di Claude kini memakai versi kode yang sama, sehingga model dan gambar yang dibuat Claude tampil persis sama di aplikasi Bapak.

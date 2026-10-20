@@ -13502,11 +13502,15 @@ function buatSVGInti(o) {
   };
   const gayaAs = 'stroke="#000" stroke-width="0.15" stroke-dasharray="5 1 0.7 1"';
   const bulatAs = (cx, cy, label) => `<circle cx="${n2(cx)}" cy="${n2(cy)}" r="3" fill="#fff" stroke="#000" stroke-width="0.25"/>` + teks(cx, cy + 1.1, label, 2.9, 'text-anchor="middle" font-weight="700"');
+  // as yang jatuh di dalam bagian yang dihilangkan garis putus (v0.43.1, keputusan 21 Okt 2026): tidak digambar,
+  // agar gelembung, garis as, dan ukurannya tidak bertumpuk di celah; ujung bagian yang dihilangkan tetap tampil
+  const dalamPutus = (iv, t) => (iv || []).some(r => t > r.a + 1e-6 && t < r.b - 1e-6);
   // denah/rencana pondasi: garis as menembus gambar, gelembung di atas (as tegak) dan kiri (as datar), ukuran antar as di antaranya
-  const asDenah = (as, X, Y, x0, y0, x1, y1) => {
+  // pp = garis putus lembar ini {u, v}: ukuran antar as menyambung ke as terlihat berikutnya dengan nilai sebenarnya
+  const asDenah = (as, X, Y, x0, y0, x1, y1, pp = {u: [], v: []}) => {
     const out = [];
-    const vx = as.garis.filter(a => a.sumbu === 'x' && a.v >= x0 - 0.3 && a.v <= x1 + 0.3).sort((a, b) => a.v - b.v);
-    const vy = as.garis.filter(a => a.sumbu === 'y' && a.v >= y0 - 0.3 && a.v <= y1 + 0.3).sort((a, b) => a.v - b.v);
+    const vx = as.garis.filter(a => a.sumbu === 'x' && a.v >= x0 - 0.3 && a.v <= x1 + 0.3 && !dalamPutus(pp.u, a.v)).sort((a, b) => a.v - b.v);
+    const vy = as.garis.filter(a => a.sumbu === 'y' && a.v >= y0 - 0.3 && a.v <= y1 + 0.3 && !dalamPutus(pp.v, a.v)).sort((a, b) => a.v - b.v);
     const yUkur = Y(y1) - 5, yBulat = Y(y1) - 12, xUkur = X(x0) - 5, xBulat = X(x0) - 12;
     let lalu = -Infinity, naik = false;
     for (const a of vx) {
@@ -13526,11 +13530,12 @@ function buatSVGInti(o) {
     return out;
   };
   // tampak/potongan: as yang tegak lurus bidang gambar tampak sebagai garis tegak; gelembung di atas gambar
-  const asTegak = (as, uDari, X, Y, zAtas, zBawah, uMin, uMax, naikMm = 0) => {
+  // putusU = garis putus datar lembar ini (koordinat u): as di bagian yang dihilangkan tidak digambar
+  const asTegak = (as, uDari, X, Y, zAtas, zBawah, uMin, uMax, naikMm = 0, putusU = []) => {
     const out = [], ada = [];
     for (const a of as.garis) {
       const ua = a.sumbu === 'x' ? uDari(a.v, 0) : uDari(0, a.v), ub = a.sumbu === 'x' ? uDari(a.v, 10) : uDari(10, a.v);
-      if (Math.abs(ua - ub) > 1e-4 || ua < uMin - 0.3 || ua > uMax + 0.3) continue;
+      if (Math.abs(ua - ub) > 1e-4 || ua < uMin - 0.3 || ua > uMax + 0.3 || dalamPutus(putusU, ua)) continue;
       ada.push({u: ua, label: a.label});
     }
     ada.sort((p, q) => X(p.u) - X(q.u));
@@ -13984,7 +13989,7 @@ function buatSVGInti(o) {
         }
       }
       isi.push(...anotasiSvg(p => [X(p.x), Y(p.y)], 'denah', o.level != null ? d => (d.titik.z ?? 0) >= o.level - 1 && (d.titik.z ?? 0) < o.level + 3.5 : null));   // denah per level: hanya anotasi di ketinggian level itu
-      if (asZ && !asLewatUkur) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1));
+      if (asZ && !asLewatUkur) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1, pp));
       peta = {pada: 'denah', keDunia: (px, py) => ({x: r2(su.inv(su.f(bx0) + (px - ox) / s)), y: r2(sv.inv(sv.f(by1) - (py - oy) / s)), z: 0}), geser: (dx, dy) => ({x: dx / s, y: -dy / s, z: 0})};
       if (o.dimensi && o.dimDinding) {
         for (const {g} of dinding) {
@@ -14122,7 +14127,7 @@ function buatSVGInti(o) {
         else isi.push(`<polygon points="${pts(poligon(g))}" fill="#000" stroke="#000" stroke-width="0.2"/>`);
       }
       isi.push(...gambarPutus(pp, X, Y, X(x0) - 3, X(x1) + 3, Y(y1) - 3, Y(y0) + 3));
-      if (asZ && !asLewatUkur) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1));
+      if (asZ && !asLewatUkur) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1, pp));
       proyekLembar = q => [X(q.x), Y(q.y)];
       peta = {pada: 'pondasi', keDunia: (px, py) => ({x: r2(su.inv(su.f(bx0) + (px - ox) / s)), y: r2(sv.inv(sv.f(by1) - (py - oy) / s)), z: 0}), geser: (dx, dy) => ({x: dx / s, y: -dy / s, z: 0})};
       // keterangan jenis
@@ -14204,7 +14209,7 @@ function buatSVGInti(o) {
         }
       }
       isi.push(...gambarPutus(pp, X, Y, X(x0) - 3, X(x1) + 3, Y(y1) - 3, Y(y0) + 3));
-      if (asZ) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1));
+      if (asZ) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1, pp));
       proyekLembar = q => [X(q.x), Y(q.y)];
       peta = {pada: 'rencana', keDunia: (px, py) => ({x: r2(su.inv(su.f(bx0) + (px - ox) / s)), y: r2(sv.inv(sv.f(by1) - (py - oy) / s)), z: 0}), geser: (dx, dy) => ({x: dx / s, y: -dy / s, z: 0})};
       let ky = area.y + 4;
@@ -14477,7 +14482,7 @@ function buatSVGInti(o) {
         }
         const prf = profilDasar(), uzP = prf ? (() => { const r = [], n = 200; for (let i = 0; i <= n; i++) { const x = pt.awal.x + (pt.akhir.x - pt.awal.x) * (i / n), y = pt.awal.y + (pt.akhir.y - pt.awal.y) * (i / n); r.push([Hh(x, y), zDasarDi(x, y)]); } return r; })() : null;
         isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y, uzP));
-        if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, ketOto ? Math.max(zmax, ...geosP.filter(g => g.jenis === 'plat').map(g => g.z0 + g.tebal)) : zmax, zmin, h0, h1, ketOto ? 14 : 0));
+        if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, ketOto ? Math.max(zmax, ...geosP.filter(g => g.jenis === 'plat').map(g => g.z0 + g.tebal)) : zmax, zmin, h0, h1, ketOto ? 14 : 0, pp.u));
         if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3, h0, h1));
         if (ketOto) isi.push(...ketPotongan({Hh, Dp, X, Y, s, gs: geosP, vx, vy, px0, py0}));
         // kuda-kuda terdekat di belakang bidang potong, dan penampang reng/gording yang terpotong
@@ -14685,7 +14690,7 @@ function buatSVGInti(o) {
       isi.push(...gambarPutus(pp, X, Y, X(u0 - 0.8), X(u1 + 0.8), Y(bz1 - 0.3), Y(bz0 + 0.3)));
       const level = [...new Set([0, ...daftar.filter(d => d.jenis !== 'lisplang').map(d => n2(d.z1))])].sort((a, b) => a - b).slice(-6);
       isi.push(...peilKanan(level, X(u1), X(u1) + 4, Y));
-      if (asZ) isi.push(...asTegak(asZ, (x, y) => pr.u(x, y), X, Y, z1, z0, u0, u1));
+      if (asZ) isi.push(...asTegak(asZ, (x, y) => pr.u(x, y), X, Y, z1, z0, u0, u1, 0, pp.u));
       if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3, u0, u1));
       if (asZ && ketAktif() && !o.tanpaPerbesar) isi.push(...ketMiring(geos, pr.u(1, 0), pr.u(0, 1), q => [X(pr.u(q.x, q.y)), Y(zDari(q))]));
       const tertutup = q => {
