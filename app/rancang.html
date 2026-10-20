@@ -5093,11 +5093,12 @@ function masukGrup(gid) { S.konteks = gid; S.sel.clear(); segarKonteks(); segarP
 /** Jadikan pilihan sekarang definisi komponen baru + satu salinan; elemen dan grup asal dihapus (tombol G). */
 /* ============ Jadikan komponen (v0.42): kotak isian, titik sisip, salinan kembar ============ */
 // Pilihan yang akan dijadikan komponen: daftar [id, data] beserta grup yang ikut dihapus; null + pesan bila tidak bisa
+/** @returns {{galat?: string, daftar?: Array<[string, any]>, gr?: Set<string>}} */
 function bahanKomponen() {
   if (S.edit) return {galat: 'Selesaikan edit komponen dulu.'};
   if (!S.sel.size) return {galat: 'Pilih objek dulu, lalu tekan G.'};
   const {el, gr} = ekspansi([...S.sel]);
-  const daftar = [...el].map(id => [id, S.elems.get(id)]);
+  const daftar = /** @type {Array<[string, any]>} */ ([...el].map(id => [id, S.elems.get(id)]));
   if (!daftar.length) return {galat: 'Pilihan tidak berisi elemen.'};
   if (daftar.some(([, d]) => d.jenis === 'instance')) return {galat: 'Komponen di dalam komponen belum didukung. Pecah komponennya dulu.'};
   if (daftar.some(([, d]) => NONFISIK.has(d.jenis) || d.jenis === 'gambar2d' || d.jenis === 'detail')) return {galat: 'Garis bantu, garis potong, level, dan anotasi tidak bisa masuk komponen. Keluarkan dari pilihan dulu.'};
@@ -13067,7 +13068,7 @@ function svgBenda2D(o, proyek, asalPetak = null) {
       const isiVp = isiViewport(id, d, o, x + w / 2, y + h / 2), cid = 'vp-' + id.replace(/[^\w-]/g, '');
       el = `<clipPath id="${cid}"><rect x="${nk(x)}" y="${nk(y)}" width="${nk(w)}" height="${nk(h)}"/></clipPath><rect x="${nk(x)}" y="${nk(y)}" width="${nk(w)}" height="${nk(h)}" fill="#fff"/>`
         + `<g clip-path="url(#${cid})">${isiVp}</g><rect x="${nk(x)}" y="${nk(y)}" width="${nk(w)}" height="${nk(h)}" fill="none" stroke="#000" stroke-width="0.35"/>`
-        + `<text x="${nk(x + w / 2)}" y="${nk(y + h + 5)}" font-size="3.2" font-weight="700" text-anchor="middle" text-decoration="underline">${esk(d.judul || judulViewport(d))}</text>`
+        + `<text x="${nk(x + w / 2)}" y="${nk(y + h + 5)}" font-size="3.2" font-weight="700" text-anchor="middle" text-decoration="underline">${esk(/** @type {any} */ (d).judul || judulViewport(d))}</text>`
         + `<text x="${nk(x + w / 2)}" y="${nk(y + h + 9)}" font-size="2.4" text-anchor="middle">SKALA 1 : ${d.skala}</text>`;
       hit = `<rect x="${nk(x)}" y="${nk(y)}" width="${nk(w)}" height="${nk(h)}" fill="transparent" class="sasaran"/>`;
     } else if (d.bentuk === 'legenda') {
@@ -13681,7 +13682,7 @@ function buatSVGInti(o) {
       // garis potong ikut memperluas bidang gambar, tetapi tidak mengubah ukuran keseluruhan bangunan
       let lx0 = x0, ly0 = y0, lx1 = x1, ly1 = y1;
       for (const d of garisPotong) for (const q of [d.awal, d.akhir]) { lx0 = Math.min(lx0, q.x - 1); ly0 = Math.min(ly0, q.y - 1); lx1 = Math.max(lx1, q.x + 1); ly1 = Math.max(ly1, q.y + 1); }
-      const asZ = asAktif(), asLewatUkur = !!(asZ && asZ.manual && o.dimensi && geos.some(g => g.jenis === 'dinding'));
+      const asZ = /** @type {any} */ (asAktif()), asLewatUkur = !!(asZ && asZ.manual && o.dimensi && geos.some(g => g.jenis === 'dinding'));
       const tp = asZ && !asLewatUkur ? {l: 26, r: 8, t: 26, b: 8} : o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
       const pp = kumpulPutus(p => p.x, p => p.y, x0, x1, y0, y1);
       skala = skalaTepi(x1 - x0, y1 - y0, tp, 1, lx1 - lx0, ly1 - ly0);
@@ -13875,7 +13876,7 @@ function buatSVGInti(o) {
       const dindingP = geos.filter(g => g.jenis === 'dinding').map(g => poligon(g));
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const p of [...bawahList.map(g => poligon(g)), ...dindingP]) for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-      const asZ = asAktif(), asLewatUkur = !!(asZ && asZ.manual && o.dimensi && dindingP.length);
+      const asZ = /** @type {any} */ (asAktif()), asLewatUkur = !!(asZ && asZ.manual && o.dimensi && dindingP.length);
       const tp = asZ && !asLewatUkur ? {l: 26, r: 8, t: 26, b: 8} : o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
       const pp = kumpulPutus(p => p.x, p => p.y, x0, x1, y0, y1);
       skala = skalaTepi(x1 - x0, y1 - y0, tp, 1.25);
@@ -16349,7 +16350,7 @@ function segarPanel2D() {
   sSel.hidden = $('#g2-rotasi').hidden = ALAT2D.alat !== 'simbol';
   $('#g2-skala-det').hidden = ALAT2D.alat !== 'perbesar';
   // viewport (v0.42): isi dan skala untuk viewport baru, atau viewport yang sedang dipilih
-  const vpPilih = [...ALAT2D.pilih].map(i => S.elems.get(i)).filter(x => x && x.bentuk === 'viewport');
+  const vpPilih = /** @type {any[]} */ ([...ALAT2D.pilih].map(i => S.elems.get(i))).filter(x => x && x.bentuk === 'viewport');
   const vpTampil = ALAT2D.alat === 'viewport' || (!ALAT2D.alat && vpPilih.length > 0);
   const vS = /** @type {HTMLSelectElement} */ ($('#g2-vp-sumber')), vK = /** @type {HTMLSelectElement} */ ($('#g2-vp-skala'));
   vS.hidden = vK.hidden = !vpTampil;
@@ -16445,7 +16446,7 @@ function akhirSeret2DBenda() {
   ALAT2D.seret = null;
   if (!sr) return;
   if (Math.hypot(sr.dx, sr.dy) < 0.3) { for (const g of sr.g) g.removeAttribute('transform'); return; }
-  const tulis = [...ALAT2D.pilih].filter(id => S.elems.has(id)).map(id => { const d = S.elems.get(id); return {id, sesudah: sr.alt && d.bentuk === 'viewport' ? geserIsiViewport(id, d, sr.dx, sr.dy) : geserData2D(d, sr.dx, sr.dy)}; });
+  const tulis = [...ALAT2D.pilih].filter(id => S.elems.has(id)).map(id => { const d = /** @type {any} */ (S.elems.get(id)); return {id, sesudah: sr.alt && d.bentuk === 'viewport' ? geserIsiViewport(id, d, sr.dx, sr.dy) : geserData2D(d, sr.dx, sr.dy)}; });
   terapkan(tulis); segar2D();
 }
 $('#m-svg').addEventListener('pointerup', akhirSeret2DBenda, true);
@@ -17534,7 +17535,7 @@ window.rancangUji = Object.freeze({
   komponen: (ids, opsi = {}) => { S.sel = new Set(ids); segarPilihan(); const b = bahanKomponen(); if (b.galat) return {galat: b.galat}; const kembar = cariKembar(b.daftar, keDefinisi(b.daftar, {posisi: titikSisip(b.daftar, opsi.sisip), rotasi: 0, z0: 0})).length; const r = buatKomponen(opsi); return {...r, ditemukan: kembar, instance: [...S.elems.values()].filter(x => x.jenis === 'instance').length}; },
   kotakKomponen: ids => { S.sel = new Set(ids); segarPilihan(); jadikanKomponen(); return {tampil: !$('#modalKomp').hidden, info: $('#mk-info').textContent, kembar: $('#mk-kembar-teks').textContent, nama: /** @type {HTMLInputElement} */ ($('#mk-nama')).value}; },
   // viewport (v0.42): Alt + seret isi sejauh (dx, dy) mm; hasil: pusat sesudahnya
-  geserViewport: (id, dx, dy) => { const d = S.elems.get(id); if (!d) return null; terapkan([{id, sesudah: geserIsiViewport(id, d, dx, dy)}]); return S.elems.get(id).pusat; },
+  geserViewport: (id, dx, dy) => { const d = S.elems.get(id); if (!d) return null; terapkan([{id, sesudah: geserIsiViewport(id, d, dx, dy)}]); return /** @type {any} */ (S.elems.get(id)).pusat; },
   teksLabel: id => { const d = S.elems.get(id); return d ? {teks: teksAnotasi(d), hilang: sumberLabelHilang(d)} : null; },
   elemenDiDenah: (x, y, zl) => elemenDiDenah(x, y, zl),
   ketikPindah: v => { alatPindah.ketik(v); return {elemen: S.elems.size, undo: S.undo.length}; },
