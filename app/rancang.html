@@ -12786,7 +12786,7 @@ function svgGabung(o) {
     isi.push(`<defs><clipPath id="${cid}"><rect x="${n2k(p.area.x)}" y="${n2k(p.area.y - 3)}" width="${n2k(p.area.w)}" height="${n2k(p.area.h + 5)}"/></clipPath></defs><g clip-path="url(#${cid})">${r.svg}</g>`,
       simbolJudul(p.area.x + p.area.w / 2, p.area.y + p.area.h + 1.5, judul, `1 : ${sk}`));
     // skala grafis per petak (v0.40), bila diaktifkan untuk lembar
-    if (!r.info && (o.skalaGrafis !== undefined ? !!o.skalaGrafis : (S.setel.lembar || {}).skalaGrafis !== false)) isi.push(skalaGrafisSvg(sk, p.area.x + p.area.w - 6, p.area.y + p.area.h + 9));
+    if (!r.info && (o.skalaGrafis !== undefined ? !!o.skalaGrafis : (S.setel.lembar || {}).skalaGrafis !== false)) isi.push(skalaGrafisSvg(sk, p.area.x + p.area.w - 6, p.area.y + p.area.h - 3));
     if (i && tegak) isi.push(`<line x1="${n2k(p.area.x)}" y1="${n2k(area.y + 6)}" x2="${n2k(p.area.x)}" y2="${n2k(area.y + area.h - 6)}" stroke="#BBB" stroke-width="0.15" stroke-dasharray="2 1.5"/>`);
     else if (i) isi.push(`<line x1="${n2k(area.x + 6)}" y1="${n2k(p.area.y - 0.5)}" x2="${n2k(area.x + area.w - 6)}" y2="${n2k(p.area.y - 0.5)}" stroke="#BBB" stroke-width="0.15" stroke-dasharray="2 1.5"/>`);
   });
