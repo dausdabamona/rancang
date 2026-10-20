@@ -13,11 +13,11 @@
     "build:mcp": "node scripts/build-mcp.mjs",
     "build": "npm run build:renderer && npm run build:mcp",
     "start": "npm run build:renderer && electron .",
-    "test": "node --test test/*.test.js test/*.test.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.js test/*.test.mjs",
     "uji-asap": "electron . --uji-asap",
     "dist:win": "electron-builder --win --x64 --publish never",
     "pack:mcpb": "mcpb pack build/mcp build/RANCANG.mcpb",
-    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/reporter-anotasi.mjs --test-reporter-destination=stdout test/*.test.js test/*.test.mjs",
+    "test:ci": "node --test --test-concurrency=1 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./scripts/reporter-anotasi.mjs --test-reporter-destination=stdout test/*.test.js test/*.test.mjs",
     "periksa-tipe": "node scripts/periksa-tipe.mjs"
   },
   "devDependencies": {
