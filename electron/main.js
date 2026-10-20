@@ -436,6 +436,22 @@ async function ujiAsap() {
     catat('skala grafis dan panah utara', okPanjang && s20.label.join() === '0,0,5,1' && s20.mm === 50 && s100.label.join() === '0,1,2,5' && s100.mm === 50 && s50.mm === 50 && sg.detail.skala === 10 && !sg.detail.utara
       && ['denah', 'atap', 'pondasi', 'plafon'].every(j => sg[j].utara) && !sg.depan.utara && !mati && lbrSet.skalaGrafis === true && Array.isArray(lbrSet.urutan),
       {sg, s20, s100, s50, mati});
+    // v0.42: as grid manual (garis bantu ber-label): Kantor Utama 11x3 ke timur dan 5;2;5 ke selatan; B diganti B'
+    await halaman(`window.rancangUji.contoh('kantor-utama', 'ganti')`);
+    const bulat = svg => (svg.match(/<circle [^>]*r="4"/g) || []).length;
+    const sebelumAs = bulat((await metode.gambar2D({jenis: 'denah:0'})).svg);
+    const asX = await halaman(`window.rancangUji.asGrid({x: 0, y: 0}, 0, '11x3')`);
+    const asY = await halaman(`window.rancangUji.asGrid({x: 0, y: 12}, -90, '5;2;5')`);
+    const mAs = (await halaman(`window.rancangAPI.model()`)).elemen;
+    const labelAs = [...asX, ...asY].map(i => mAs[i] && mAs[i].as && mAs[i].as.label);
+    const idB = asY.find(i => mAs[i].as.label === 'B');
+    await halaman(`window.rancangUji.pilih(['${idB}'])`);
+    const ubahAs = await halaman(`window.rancangUji.isiMedan('bn-as', "B'")`);
+    const dAs = (await metode.gambar2D({jenis: 'denah:0'})).svg, pAs = (await metode.gambar2D({jenis: 'pondasi'})).svg, tAs = (await metode.gambar2D({jenis: 'depan'})).svg;
+    catat('as grid manual menggantikan as otomatis', asX.length === 11 && asY.length === 4 && labelAs.join() === '1,2,3,4,5,6,7,8,9,10,11,A,B,C,D'
+      && ubahAs.data && ubahAs.data.as.label === "B'" && ubahAs.data.nama === "As B'" && bulat(dAs) === 15 && />B(&#39;|')</.test(dAs) && dAs.includes('>11<') && !dAs.includes('>E<')
+      && bulat(pAs) === 15 && />B(&#39;|')</.test(pAs) && tAs.includes('>11<'),
+      {sebelumAs, label: labelAs, denah: bulat(dAs), pondasi: bulat(pAs), tampak11: tAs.includes('>11<')});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;
