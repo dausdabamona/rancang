@@ -52,6 +52,14 @@ test('dermaga KP Sorong: tiang miring, selimut, causeway', {skip: process.env.RA
     assert.equal(b('DM-091').vol, nMiring);
     assert.ok(b('DM-301').vol > 500 && b('DM-302').vol > 100, JSON.stringify([b('DM-301'), b('DM-302')]));
     assert.equal(b('DM-090').vol, Object.values(m.elemen).filter(d => d.tipe === 'pilecap').length);
+    // lembar gabungan, lembar bagian tampak, dan gabungan bebas (v0.41)
+    for (const jenis of ['gabung:denah@G3+pondasi@G3', 'gabung:denah@G4+pondasi@G4', 'gabung:depan@G1+kiri@G1', 'depan@G1#1', 'depan@G1#2', 'gabung:potongan:X1+potongan:X3']) {
+      const g = await c.callTool({name: 'gambar_2d', arguments: {jenis, kertas: 'A3'}});
+      assert.equal(g.content[0].type, 'image', jenis + ': ' + JSON.stringify(g.content[0]).slice(0, 200));
+      fs.writeFileSync(path.join(keluar, `kps-${jenis.replace(/[:@#+]/g, '-')}.png`), Buffer.from(g.content[0].data, 'base64'));
+    }
+    const salahJ = await c.callTool({name: 'gambar_2d', arguments: {jenis: 'gabung:denah@G3+tidakada', kertas: 'A3'}});
+    assert.notEqual(salahJ.content[0].type, 'image');
     for (const jenis of ['denah', 'pondasi', 'potongan:X1', 'potongan:X2', 'potongan:X4']) {
       const g = await c.callTool({name: 'gambar_2d', arguments: {jenis, kertas: 'A3'}});
       assert.equal(g.content[0].type, 'image', jenis + ': ' + JSON.stringify(g.content[0]).slice(0, 200));

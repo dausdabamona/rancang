@@ -104,10 +104,10 @@ export function modelKPSorong() {
   tambah('M', {jenis: 'level', nama: 'Dasar laut', datum: 'dasar', z: -10.1, profil: {awal: {x: 0, y: 0}, akhir: {x: 70, y: 0},
     titik: [[0, 0.5], [25, -0.436], [35, -2.211], [45, -4.572], [55, -6.935], [65, -9.074], [70, -10.108]]}});
   // ---- garis potong
-  tambah('X', {jenis: 'potong', nama: 'A', awal: {x: 41, y: 6}, akhir: {x: 41, y: -3}, pandang: 1});
+  tambah('X', {jenis: 'potong', nama: 'A', awal: {x: 41, y: 6}, akhir: {x: 41, y: -3}, pandang: 1, dalam: 2});
   tambah('X', {jenis: 'potong', nama: 'B', awal: {x: -3, y: 0.25}, akhir: {x: 67, y: 0.25}, pandang: -1});
-  tambah('X', {jenis: 'potong', nama: 'C', awal: {x: 61.5, y: 18}, akhir: {x: 61.5, y: -3}, pandang: 1});
-  tambah('X', {jenis: 'potong', nama: 'D', awal: {x: 15, y: 8}, akhir: {x: 15, y: -5}, pandang: 1});
+  tambah('X', {jenis: 'potong', nama: 'C', awal: {x: 61.5, y: 18}, akhir: {x: 61.5, y: -3}, pandang: 1, dalam: 2});
+  tambah('X', {jenis: 'potong', nama: 'D', awal: {x: 15, y: 8}, akhir: {x: 15, y: -5}, pandang: 1, dalam: 2});
 
   const setel = {nama: 'Dermaga Politeknik KP Sorong (model ulang dari gambar TA 2020)', faktorBesi: 5,
     sampul: {lokasi: 'Politeknik Kelautan dan Perikanan Sorong', pemilik: 'Politeknik KP Sorong', tahun: '2020', penggambar: 'Firdaus Dabamona'}, kop: {kodeLembar: 'PKP'}};

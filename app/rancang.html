@@ -637,7 +637,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
 | U | timbunan | Causeway/timbunan batu (v0.41; id U dipakai bersama sapuan, dibedakan dari jenis): awal{x,y}, akhir{x,y} (as), lebarAtas, zAtas (elevasi puncak), talud (1:talud, mendatar per tegak), opsional zDasar (bila kosong mengikuti profil dasar laut). RAB DM-301 timbunan m³, DM-302 armour talud m² | `{"jenis":"timbunan","awal":{"x":0,"y":1.5},"akhir":{"x":30,"y":1.5},"lebarAtas":5.4,"zAtas":3.5,"talud":2}` |
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'/'tripleks4'/'tripleks6'/'pvc' = plafon sunda), rangka ('hollow'/'kayu'/'bajaringan'), lis ('tanpa'/'kayu'/'gypsum'/'pvc'; kosong = hanya dihitung PL-010). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
-| X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya) | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
+| X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya). Opsional dalam (m, v0.41) = kedalaman pandang: benda yang seluruhnya lebih jauh dari bidang potong tidak digambar | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
 | N | anotasi | tipe 'teks' (titik{x,y,z}, teks), 'label' (titik, ujung, teks), 'ukuran' (titik, ujung), 'peil' (titik; teks kosong = elevasi otomatis), pada 'denah' | `{"jenis":"anotasi","tipe":"teks","teks":"Kamar 1","titik":{"x":1.5,"y":2,"z":0},"pada":"denah"}` |
 | Q | bantu | awal{x,y,z?}, akhir{x,y,z?} (garis tak terbatas melalui dua titik; bila kedua titik punya z = garis bertinggi/miring; tinggi di titik lain = interpolasi sepanjang garis di denah), nama. Acuan snap saja: tidak masuk RAB, volume, atau gambar | `{"jenis":"bantu","nama":"Bantu 1","awal":{"x":0,"y":2},"akhir":{"x":1,"y":2}}` |
 | M | level | nama, z (elevasi dalam meter). Opsional datum 'hwl'/'msl'/'lwl'/'dasar' = datum pasang surut (digambar sebagai garis air/dasar laut di potongan dan tampak, tidak ikut daftar level lantai). Pindah dan Push/Pull menempel ke elevasinya; tidak masuk RAB. Datum 'dasar' boleh profil {awal{x,y}, akhir{x,y}, titik [[jarak, z]…]} = dasar laut miring sepanjang garis awal→akhir (jarak dari awal; di luar rentang = titik ujung) | `{"jenis":"level","nama":"Lantai 2","z":3.2}` |
@@ -993,7 +993,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 
 /**
  * X — garis potong. `pandang` 1 = melihat ke kiri arah awal→akhir, −1 = ke kanan.
- * @typedef {DasarElemen & {jenis: 'potong', nama: string, awal: Titik2, akhir: Titik2, pandang: 1 | -1, lingkup?: string}} Potong
+ * @typedef {DasarElemen & {jenis: 'potong', nama: string, awal: Titik2, akhir: Titik2, pandang: 1 | -1, lingkup?: string, dalam?: number}} Potong
  */
 
 /**
@@ -1218,7 +1218,7 @@ function sah(d) {
   if (d.jenis === 'atap' && d.bentuk === 'denah' && !(Array.isArray(d.alas) && d.alas.length >= 3 && d.alas.length <= 64 && d.alas.every(titikSah) && Math.abs(luas2D(d.alas.map(q => [q.x, q.y]))) > 0.25
     && (d.tepi === undefined || (Array.isArray(d.tepi) && d.tepi.length === d.alas.length && d.tepi.every(t => t && typeof t === 'object' && (t.overstek === undefined || (Number.isFinite(t.overstek) && t.overstek >= 0 && t.overstek <= 5)) && (t.kemiringan === undefined || (Number.isFinite(t.kemiringan) && t.kemiringan >= 1 && t.kemiringan <= 75))))))) return false;
   if (d.jenis === 'atap') return ['x0', 'y0', 'x1', 'y1'].every(k => Number.isFinite(d[k])) && Math.abs(d.x1 - d.x0) > 0.05 && Math.abs(d.y1 - d.y0) > 0.05 && !!BENTUK_ATAP[d.bentuk];
-  if (d.jenis === 'potong') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.1 && (d.pandang === 1 || d.pandang === -1) && typeof d.nama === 'string' && !!d.nama;
+  if (d.jenis === 'potong') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.1 && (d.pandang === 1 || d.pandang === -1) && typeof d.nama === 'string' && !!d.nama && (d.dalam == null || (Number.isFinite(d.dalam) && d.dalam > 0));
   if (d.jenis === 'bantu') return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) > 0.02
     && ((d.awal.z === undefined && d.akhir.z === undefined) || (Number.isFinite(d.awal.z) && Number.isFinite(d.akhir.z)));
   if (d.jenis === 'level') return Number.isFinite(d.z) && typeof d.nama === 'string' && d.nama.length > 0 && (d.datum === undefined || !!DATUM_PASUT[d.datum])
@@ -7932,6 +7932,7 @@ function htmlPotong(id, d) {
   <section><h2>Properti</h2><div class="medan">
     ${medanTeks('x-nama', 'Huruf', d.nama)}
     <label for="x-pandang">Arah pandang</label><select id="x-pandang" ${dis()}><option value="1" ${d.pandang !== -1 ? 'selected' : ''}>Ke kiri garis (awal ke akhir)</option><option value="-1" ${d.pandang === -1 ? 'selected' : ''}>Ke kanan garis (awal ke akhir)</option></select>
+    ${medanAngka('x-dalam', 'Kedalaman pandang (m, kosong = tanpa batas)', d.dalam ?? '')}
     ${medanCatatan('x-catatan', d.catatan)}
   </div><p class="meta">Panah di ujung garis menunjukkan arah pandang. Pindah (M) menggeser garis potong. Iris model 3D memotong tampilan 3D; klik panah oranye untuk menggeser bidangnya.</p></section>
   ${metaUbah(d)}
@@ -8037,6 +8038,7 @@ function ubahPenanda(id, d, awal, f, t) {
       if ([...S.elems].some(([oid, o]) => oid !== id && o.jenis === 'potong' && o.nama === h)) return tolakAngka(`Huruf ${h} sudah dipakai garis potong lain.`);
       b.nama = h;
     } else if (f === 'pandang') b.pandang = Number(t.value) === -1 ? -1 : 1;
+    else if (f === 'dalam') { const v = angka(t.value); if (!String(t.value).trim()) delete b.dalam; else if (!(v > 0)) return tolakAngka('Kedalaman pandang harus lebih dari 0 m, atau kosongkan.'); else b.dalam = v; }
     else if (f === 'catatan') b.catatan = t.value;
   } else {
     if (f === 'teks') b.teks = t.value.trim();
@@ -11809,7 +11811,7 @@ function perbaruiKosong() { $('#kosong').hidden = S.mode === 'muat' || S.elems.s
 
 /* ============ Gambar 2D ============ */
 const KERTAS = {A4: [297, 210], A3: [420, 297]};
-const SKALA = [20, 50, 100, 150, 200, 500, 1000];
+const SKALA = [20, 50, 100, 150, 200, 250, 300, 500, 1000];
 const CELAH_PUTUS = 6;   // lebar celah garis putus di kertas (mm), v0.40
 function namaGambar(j) {
   if (j && j.includes('@')) return namaLembarLingkup(j);
@@ -11843,6 +11845,8 @@ function potongDenah(g) {
 }
 // Lingkup gambar 2D (v0.40): himpunan id elemen yang boleh digambar (zona/komponen), null = seluruh model
 let LINGKUP = /** @type {Set<string> | null} */ (null);
+// zona (grup teratas ber-zona) dari lembar yang sedang digambar; dipakai grid as dermaga (v0.41)
+let ZONA_AKTIF = /** @type {string | null} */ (null);
 function geometriSemua() {
   const r = [];
   for (const [id, d] of S.elems) { if (S.sembunyi.has(id) || (LINGKUP && !LINGKUP.has(id))) continue; for (const g of geometriElemen(id, d)) r.push(g); }
@@ -11963,6 +11967,8 @@ const ISIAN_SAMPUL = [['judul', 'Judul', 'GAMBAR KERJA'], ['nama', 'Nama proyek'
 // Profil mengikuti susunan gambar dermaga KP Sorong (layout → per komponen → detail) dan gambar kerja gedung
 const PROFIL_ZONA = {gedung: 'Gedung', dermaga: 'Dermaga beton (tiang pancang)', jeti: 'Jeti / dermaga kayu'};
 const pisahLingkup = j => {
+  // lembar gabungan (v0.41): 'gabung:<gambar1>+<gambar2>…'; grup = grup gambar pertama
+  if (String(j).startsWith('gabung:')) { const g1 = pisahLingkup(String(j).slice(7).split('+')[0]); return {dasar: j, gid: g1.gid, bagian: 0}; }
   const i = String(j).lastIndexOf('@');
   if (i <= 0) return {dasar: j, gid: null, bagian: 0};
   const [gid, b] = j.slice(i + 1).split('#');
@@ -11978,8 +11984,21 @@ function bagianLingkup(gid, kertas) {
   const muat = (datar ? area.w - 50 : area.h - 40) * SKALA_BAGIAN / 1000, panjang = datar ? x1 - x0 : y1 - y0;
   const n = Math.max(1, Math.ceil(panjang / Math.max(5, muat) - 1e-6));
   if (n === 1) return [];
-  const step = panjang / n;
-  return Array.from({length: n}, (_, i) => datar ? {x0: x0 + i * step, x1: x0 + (i + 1) * step, y0, y1, datar, n, i} : {x0, x1, y0: y1 - (i + 1) * step, y1: y1 - i * step, datar, n, i});
+  const step = panjang / n, a0 = datar ? x0 : y0, a1 = datar ? x1 : y1;
+  // batas bagian (v0.41): dipindah ke as dermaga terdekat bila panjang tiap bagian tetap muat
+  const batas = [a0];
+  const asZ = asZona(zonaDari(gid)), calon = asZ ? asZ.garis.filter(a => a.sumbu === (datar ? 'x' : 'y')).map(a => a.v).filter(v => v > a0 + 1 && v < a1 - 1) : [];
+  for (let i = 1; i < n; i++) {
+    const ideal = datar ? a0 + i * step : a1 - i * step, lalu = batas[batas.length - 1];
+    let pilih = ideal;
+    for (const v of calon) if (Math.abs(v - ideal) < Math.abs(pilih - ideal) || pilih === ideal) {
+      const ok = datar ? v - lalu <= muat && v > lalu && a1 - v <= muat * (n - i) : lalu - v <= muat && v < lalu && v - a0 <= muat * (n - i);
+      if (ok && Math.abs(v - ideal) < step / 2) pilih = v;
+    }
+    batas.push(pilih);
+  }
+  batas[0] = datar ? a0 : a1; batas.push(datar ? a1 : a0);
+  return Array.from({length: n}, (_, i) => datar ? {x0: batas[i], x1: batas[i + 1], y0, y1, datar, n, i} : {x0, x1, y0: batas[i + 1], y1: batas[i], datar, n, i});
 }
 // pemecahan selalu dihitung untuk kertas A4 agar daftar lembar tetap sama di A4 maupun A3
 const kertasLembar = () => 'A4';
@@ -12008,6 +12027,48 @@ function daftarZona() {
   // urutan set gambar: dermaga beton, jeti, gedung; dalam profil yang sama menurut nama
   const ur = {dermaga: 0, jeti: 1, gedung: 2};
   return z.sort((a, b) => ur[a.profil] - ur[b.profil] || a.nama.localeCompare(b.nama));
+}
+// grup teratas dari sebuah grup (zona tempat komponen berada)
+function zonaDari(gid) {
+  let g = gid;
+  for (let i = 0; i < 30; i++) { const gg = S.grup.get(g); if (!gg || !gg.induk || !S.grup.has(gg.induk)) break; g = gg.induk; }
+  return g;
+}
+/**
+ * Grid as dermaga (v0.41) dari tiang pancang zona ber-profil dermaga. As memanjang dinomori 1, 2, … dari ujung laut
+ * (ujung dalam profil dasar laut; tanpa profil dari koordinat terkecil), as melintang berhuruf A, B, … dari koordinat terkecil.
+ * Tiang berjarak ≤ 0,6 m = satu as (pasangan tegak + miring); letak as = posisi bertiang terbanyak; as < 2 tiang diabaikan.
+ * @returns {{datar: boolean, garis: {v: number, label: string, sumbu: 'x' | 'y'}[]} | null} sumbu 'x' = garis as di x = v
+ */
+function asZona(zgid) {
+  const g = zgid && S.grup.get(zgid);
+  if (!g || !g.zona || g.zona.profil !== 'dermaga') return null;
+  const T = /** @type {any[]} */ ([...anggotaGrup(zgid)].filter(i => !S.sembunyi.has(i)).map(i => S.elems.get(i)).filter(d => d && d.jenis === 'tiang' && sah(d)));
+  if (T.length < 4) return null;
+  const kelompok = vals => {
+    const a = [...vals].sort((p, q) => p - q), gr = [];
+    for (const v of a) { const k = gr[gr.length - 1]; if (k && v - k[k.length - 1] <= 0.6) k.push(v); else gr.push([v]); }
+    return gr.filter(k => k.length >= 2).map(k => {
+      const hit = new Map();
+      for (const v of k) { const r = Math.round(v * 100) / 100; hit.set(r, (hit.get(r) || 0) + 1); }
+      let best = null;
+      for (const [v, n] of hit) if (!best || n > best.n) best = {v, n};
+      return best.v;
+    });
+  };
+  const xs = T.map(d => d.x), ys = T.map(d => d.y);
+  const datar = Math.max(...xs) - Math.min(...xs) >= Math.max(...ys) - Math.min(...ys);
+  const gx = kelompok(xs), gy = kelompok(ys), panjang = datar ? gx : gy, lintang = datar ? gy : gx;
+  let dariBesar = false;
+  const p = profilDasar();
+  if (p) {
+    const dangkalDiAwal = p.titik[0][1] >= p.titik[p.titik.length - 1][1], dalam = dangkalDiAwal ? p.akhir : p.awal, dangkal = dangkalDiAwal ? p.awal : p.akhir;
+    dariBesar = datar ? dalam.x > dangkal.x : dalam.y > dangkal.y;
+  }
+  const sP = /** @type {'x' | 'y'} */ (datar ? 'x' : 'y'), sL = /** @type {'x' | 'y'} */ (datar ? 'y' : 'x');
+  const nomor = [...panjang].sort((a, b) => (dariBesar ? b - a : a - b)).map((v, i) => ({v, label: String(i + 1), sumbu: sP}));
+  const huruf = [...lintang].sort((a, b) => a - b).map((v, i) => ({v, label: String.fromCharCode(65 + (i % 26)), sumbu: sL}));
+  return {datar, garis: [...nomor, ...huruf]};
 }
 // zona tempat garis potong berada: lingkup tertulis di garis potong, atau zona yang memuat titik tengahnya
 function zonaPotong(pid) {
@@ -12039,6 +12100,20 @@ function lembarZona(z) {
     L.push(...pot);
     return L;
   }
+  if (z.profil === 'dermaga') {
+    // seperti lembar KP Sorong: layout zona, tampak samping + depan satu lembar, potongan, lalu tiap komponen layout + rencana pile cap satu lembar
+    L.push('denah@' + z.gid, `gabung:${tz.samping}@${z.gid}+${tz.depan}@${z.gid}`);
+    // tampak samping panjang: dipecah per bagian pada skala kerja, garis sambung di as
+    for (const b of bagianLingkup(z.gid, kertasLembar())) L.push(`${tz.samping}@${z.gid}#${b.i + 1}`);
+    if (!z.komponen.length) { if (ada(['tiang', 'pondasi'])) L.push('pondasi@' + z.gid); L.push(...pot); return L; }
+    L.push(...pot);
+    for (const k of z.komponen) {
+      const bg = bagianLingkup(k.gid, kertasLembar()), adaTiang = k.isi.some(d => d.jenis === 'tiang' || d.jenis === 'pondasi');
+      L.push(adaTiang ? `gabung:denah@${k.gid}+pondasi@${k.gid}` : 'denah@' + k.gid);
+      if (adaTiang) for (const b of bg) L.push(`pondasi@${k.gid}#${b.i + 1}`);
+    }
+    return L;
+  }
   L.push('denah@' + z.gid, tz.samping + '@' + z.gid, tz.depan + '@' + z.gid);
   if (z.profil === 'jeti' || !z.komponen.length) { if (ada(['tiang', 'pondasi', 'jetiKayu'])) L.push('pondasi@' + z.gid); L.push(...pot); return L; }
   L.push(...pot);
@@ -12053,6 +12128,7 @@ function lembarZona(z) {
 }
 // nama lembar berlingkup, mengikuti istilah gambar dermaga (layout, rencana pile cap & pancang, tampak samping/depan)
 function namaLembarLingkup(j) {
+  if (String(j).startsWith('gabung:')) return String(j).slice(7).split('+').map(x => (x.includes('@') ? namaLembarLingkup(x) : judulLembar(x).toUpperCase())).join(' & ');
   const {dasar, gid, bagian} = pisahLingkup(j), g = S.grup.get(gid);
   if (bagian) { const bg = bagianLingkup(gid, kertasLembar()); return `${namaLembarLingkup(dasar + '@' + gid)} — BAGIAN ${bagian}/${bg.length || bagian}`; }
   if (!g) return (NAMA_2D[dasar] || dasar).toUpperCase();
@@ -12134,7 +12210,7 @@ function daftarLembarBiasa() {
   return nomoriLembar(urut, sim, null);
 }
 function judulLembar(j) {
-  if (j.includes('@')) { const n = namaLembarLingkup(j); return n.charAt(0) + n.slice(1).toLowerCase(); }
+  if (j.includes('@') || j.startsWith('gabung:')) { const n = namaLembarLingkup(j); return n.charAt(0) + n.slice(1).toLowerCase(); }
   if (j === 'sampul') return 'Sampul';
   if (j === 'daftar') return 'Daftar gambar';
   if (j.startsWith('denah:')) { const l = levelDenah().find(x => x.kunci === j); return 'Denah ' + (l ? l.nama : 'level ' + fmtElevasi(+j.slice(6))); }
@@ -12519,15 +12595,64 @@ function lembarKhusus(o) {
  * @returns {{svg: string, info: string, skala: number | string, W: number, H: number, peta?: any, anotStat?: any, petak?: any[]}} `skala` angka penyebut, '-' (sampul/daftar) atau 'TERTERA' (lembar detail)
  */
 function buatSVG(o) {
+  if (String(o.jenis).startsWith('gabung:')) return svgGabung(o);
   // lembar berlingkup zona/komponen: '<jenis>@<id grup>'; potongan otomatis ikut zona tempat garis potongnya berada
   const pl = pisahLingkup(o.jenis), gid = pl.gid || (pl.dasar.startsWith('potongan:') ? zonaPotong(pl.dasar.slice(9)) : null);
   if (!gid || !S.grup.has(gid)) return buatSVGInti(o);
-  const lama = LINGKUP;
+  const lama = LINGKUP, lamaZ = ZONA_AKTIF;
   LINGKUP = anggotaGrup(gid);
+  ZONA_AKTIF = zonaDari(gid);
   try {
     const oo = {...o, lembar: o.lembar !== undefined ? o.lembar : infoLembar(o.jenis), jenis: pl.dasar, jenisAsli: o.jenisAsli || o.jenis};
     return pl.bagian ? svgBagian(oo, gid, pl.bagian) : buatSVGInti(oo);
-  } finally { LINGKUP = lama; }
+  } finally { LINGKUP = lama; ZONA_AKTIF = lamaZ; }
+}
+// Simbol judul gambar di bawah petak (seperti gambar kerja dermaga): judul tebal bergaris bawah, skala di bawahnya
+function simbolJudul(cx, y, judul, skalaTeks) {
+  const uk = 3.6, w = Math.max(30, String(judul).length * uk * 0.62), x0 = cx - w / 2 - 6, xr = cx + w / 2 - 4;
+  return `<text x="${n2k(x0)}" y="${n2k(y + 4.2)}" font-size="${uk}" font-weight="700">${esk(judul)}</text>`
+    + `<line x1="${n2k(x0)}" y1="${n2k(y + 5.6)}" x2="${n2k(xr + 11)}" y2="${n2k(y + 5.6)}" stroke="#000" stroke-width="0.45"/>`
+    + `<text x="${n2k(x0)}" y="${n2k(y + 9.2)}" font-size="2.4">Skala ${esk(skalaTeks)}</text>`
+    + `<rect x="${n2k(xr + 4.6)}" y="${n2k(y - 0.6)}" width="6" height="5" fill="#C9D3F2" stroke="#000" stroke-width="0.2"/>`
+    + `<rect x="${n2k(xr + 3)}" y="${n2k(y + 0.6)}" width="6" height="5" fill="#fff" stroke="#000" stroke-width="0.3"/>`
+    + `<line x1="${n2k(xr + 6)}" y1="${n2k(y + 5.6)}" x2="${n2k(xr + 6)}" y2="${n2k(y + 9.4)}" stroke="#000" stroke-width="0.6"/>`;
+}
+/**
+ * Lembar gabungan (v0.41): 'gabung:<gambar1>+<gambar2>…' — tiap gambar di petaknya sendiri (ditumpuk atas–bawah) dengan simbol judul.
+ * Skala otomatis diseragamkan ke skala terkecil di antara petak (penyebut terbesar) agar gambar sebanding.
+ */
+function svgGabung(o) {
+  const sumber = String(o.jenis).slice(7).split('+').filter(Boolean);
+  const [W, H] = KERTAS[o.kertas], area = areaGambar(W, H), n = Math.max(1, sumber.length), ruangJudul = 13;
+  // denah komponen yang memanjang tegak (mis. kepala dermaga) disusun berdampingan kiri–kanan; selain itu ditumpuk atas–bawah
+  let tegak = false;
+  const pl0 = pisahLingkup(sumber[0]);
+  if (pl0.gid && S.grup.has(pl0.gid) && sumber.every(j => ['denah', 'pondasi', 'atap', 'plafon'].includes(pisahLingkup(j).dasar))) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const id of anggotaGrup(pl0.gid)) for (const g of geometriElemen(id, S.elems.get(id))) { let pg; try { pg = poligon(g); } catch (_) { continue; } for (const [x, y] of pg) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } }
+    tegak = Number.isFinite(x0) && (y1 - y0) > 1.2 * (x1 - x0);
+  }
+  const petak = sumber.map((j, i) => (tegak
+    ? {j, area: {x: area.x + i * area.w / n, y: area.y, w: area.w / n, h: area.h - ruangJudul}}
+    : {j, area: {x: area.x, y: area.y + i * area.h / n, w: area.w, h: area.h / n - ruangJudul}}));
+  const sub = (p, sk) => buatSVG({...o, jenis: p.j, jenisAsli: undefined, area: p.area, skala: sk, hanyaIsi: true, lembar: null, layar: false});
+  let sk = o.skala || 0;
+  if (!sk) for (const p of petak) { const r = sub(p, 0); if (typeof r.skala === 'number') sk = Math.max(sk, r.skala); }
+  sk = sk || 100;
+  const isi = [], info = [];
+  petak.forEach((p, i) => {
+    const r = sub(p, sk);
+    if (r.info) info.push(r.info);
+    const cid = `gabung-${i}`, judul = (p.j.includes('@') ? namaLembarLingkup(p.j) : judulLembar(p.j).toUpperCase());
+    isi.push(`<defs><clipPath id="${cid}"><rect x="${n2k(p.area.x)}" y="${n2k(p.area.y - 3)}" width="${n2k(p.area.w)}" height="${n2k(p.area.h + 5)}"/></clipPath></defs><g clip-path="url(#${cid})">${r.svg}</g>`,
+      simbolJudul(p.area.x + p.area.w / 2, p.area.y + p.area.h + 1.5, judul, `1 : ${sk}`));
+    if (i && tegak) isi.push(`<line x1="${n2k(p.area.x)}" y1="${n2k(area.y + 6)}" x2="${n2k(p.area.x)}" y2="${n2k(area.y + area.h - 6)}" stroke="#BBB" stroke-width="0.15" stroke-dasharray="2 1.5"/>`);
+    else if (i) isi.push(`<line x1="${n2k(area.x + 6)}" y1="${n2k(p.area.y - 0.5)}" x2="${n2k(area.x + area.w - 6)}" y2="${n2k(p.area.y - 0.5)}" stroke="#BBB" stroke-width="0.15" stroke-dasharray="2 1.5"/>`);
+  });
+  const oo = {...o, lembar: o.lembar !== undefined ? o.lembar : infoLembar(o.jenis), jenisAsli: o.jenisAsli || o.jenis};
+  const kop = kopGambar(oo, W, H, `1 : ${sk}`);
+  return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`,
+    info: info.join(' '), skala: sk, W, H, peta: null, anotStat: null};
 }
 // Lembar bagian: gambar lingkup pada skala kerja, dipusatkan di segmen ke-n dan dipotong di batas bidang gambar;
 // garis sambung putus-putus di ujung segmen dengan rujukan ke lembar bagian sebelah
@@ -12536,20 +12661,34 @@ function svgBagian(o, gid, nomor) {
   if (!bg) return buatSVGInti(o);
   const [W, H] = KERTAS[o.kertas], area = areaGambar(W, H), sk = o.skala || SKALA_BAGIAN, s = 1000 / sk;
   const cx = (bg.x0 + bg.x1) / 2, cy = (bg.y0 + bg.y1) / 2, kx = area.x + area.w / 2, ky = area.y + area.h / 2;
-  const r = buatSVGInti({...o, skala: sk, hanyaIsi: true, fokus: {titik: {x: cx, y: cy}, kertas: {x: kx, y: ky}}});
-  const X = x => kx + (x - cx) * s, Y = y => ky - (y - cy) * s, gs = [];
+  // tampak (v0.41): sumbu datar kertas = u proyeksi tampak, tegak = elevasi; titik fokus di tengah rentang tinggi gambar
+  const pr = PROYEKSI[o.jenis];
+  let zt = 0;
+  if (pr) {
+    let za = Infinity, zb = -Infinity;
+    for (const g of geometriSemua()) { let bd; try { bd = strukturGeom(g).benda; } catch (_) { continue; } for (const b of bd || []) { if (b.p) { za = Math.min(za, b.z0); zb = Math.max(zb, b.z0 + b.h); } else if (b.muka) for (const t of b.muka.flat()) { za = Math.min(za, t[2]); zb = Math.max(zb, t[2]); } } }
+    if (Number.isFinite(za)) zt = (za + zb) / 2;
+  }
+  const r = buatSVGInti({...o, skala: sk, hanyaIsi: true, fokus: {titik: {x: cx, y: cy, z: zt}, kertas: {x: kx, y: ky}}});
+  const X = x => (pr ? kx + (pr.u(x, cy) - pr.u(cx, cy)) * s : kx + (x - cx) * s), Y = y => ky - (y - cy) * s, gs = [];
+  let klipX = [area.x, area.x + area.w];
   const kodeDari = n => { const l = infoLembar(`${pisahLingkup(o.jenisAsli).dasar}@${gid}#${n}`); return l && l.kode ? l.kode : 'bagian ' + n; };
   const sambung = (xa, ya, xb, yb, teks, tx, ty) => gs.push(`<line x1="${n2k(xa)}" y1="${n2k(ya)}" x2="${n2k(xb)}" y2="${n2k(yb)}" stroke="#C0392B" stroke-width="0.35" stroke-dasharray="4 1.5 1 1.5"/>`,
     `<text x="${n2k(tx)}" y="${n2k(ty)}" font-size="2.2" fill="#C0392B" text-anchor="middle">${esk(teks)}</text>`);
-  if (bg.datar) {
-    if (bg.i > 0) sambung(X(bg.x0), area.y + 4, X(bg.x0), area.y + area.h - 4, `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i)}`, X(bg.x0), area.y + area.h - 1.5);
-    if (bg.i < bg.n - 1) sambung(X(bg.x1), area.y + 4, X(bg.x1), area.y + area.h - 4, `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i + 2)}`, X(bg.x1), area.y + area.h - 1.5);
+  if (bg.datar || pr) {
+    // tepi bagian di kertas: zona memanjang X → x0/x1; zona memanjang Y (hanya tampak) → y0/y1 lewat proyeksi
+    const Pa = bg.datar ? X(bg.x0) : kx + (pr.u(cx, bg.y1) - pr.u(cx, cy)) * s, Pb = bg.datar ? X(bg.x1) : kx + (pr.u(cx, bg.y0) - pr.u(cx, cy)) * s;
+    const kiri = Math.min(Pa, Pb), kanan = Math.max(Pa, Pb), noKiri = Pa <= Pb ? bg.i : bg.i + 2, noKanan = Pa <= Pb ? bg.i + 2 : bg.i;
+    const adaKiri = Pa <= Pb ? bg.i > 0 : bg.i < bg.n - 1, adaKanan = Pa <= Pb ? bg.i < bg.n - 1 : bg.i > 0;
+    if (pr) klipX = [adaKiri ? kiri - 6 : area.x, adaKanan ? kanan + 6 : area.x + area.w];
+    if (adaKiri) sambung(kiri, area.y + 4, kiri, area.y + area.h - 4, `GARIS SAMBUNG — LIHAT ${kodeDari(noKiri)}`, kiri, area.y + area.h - 1.5);
+    if (adaKanan) sambung(kanan, area.y + 4, kanan, area.y + area.h - 4, `GARIS SAMBUNG — LIHAT ${kodeDari(noKanan)}`, kanan, area.y + area.h - 1.5);
   } else {
     if (bg.i > 0) sambung(area.x + 4, Y(bg.y1), area.x + area.w - 4, Y(bg.y1), `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i)}`, area.x + area.w / 2, Y(bg.y1) - 1);
     if (bg.i < bg.n - 1) sambung(area.x + 4, Y(bg.y0), area.x + area.w - 4, Y(bg.y0), `GARIS SAMBUNG — LIHAT ${kodeDari(bg.i + 2)}`, area.x + area.w / 2, Y(bg.y0) + 3);
   }
   const kop = kopGambar(o, W, H, `1 : ${sk}`), cid = 'potong-bagian-' + nomor;
-  return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/><defs><clipPath id="${cid}"><rect x="${area.x}" y="${area.y}" width="${area.w}" height="${area.h}"/></clipPath></defs><g clip-path="url(#${cid})">${r.svg}${gs.join('')}</g>${kop}</svg>`,
+  return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/><defs><clipPath id="${cid}"><rect x="${n2k(klipX[0])}" y="${area.y}" width="${n2k(klipX[1] - klipX[0])}" height="${area.h}"/></clipPath></defs><g clip-path="url(#${cid})">${r.svg}</g>${gs.join('')}${kop}</svg>`,
     info: `Bagian ${nomor} dari ${bg.n}: segmen ini saja, skala 1 : ${sk}.`, skala: sk, W, H, peta: null, anotStat: null};
 }
 function buatSVGInti(o) {
@@ -12557,7 +12696,8 @@ function buatSVGInti(o) {
   if (o.jenis === 'sampul' || o.jenis === 'daftar') return lembarKhusus(o);
   if (o.jenis.startsWith('det:')) return lembarDetail(o);
   const [W, H] = KERTAS[o.kertas], m = 10;
-  const area = areaGambar(W, H);
+  // petak lembar gabungan (v0.41) memberi bidang gambarnya sendiri
+  const area = o.area || areaGambar(W, H);
   // Denah per level (v0.35): hanya benda yang terpotong bidang denah level itu (z level + 0,3 … + 2,2 m), lantai/plat di sekitar level,
   // dan tangga yang berangkat dari atau tiba di level itu. o.level = elevasi level (m) atau null = semua.
   const geos = o.jenis === 'denah' && o.level != null ? geometriSemua().filter(g => {
@@ -12666,7 +12806,72 @@ function buatSVGInti(o) {
   // panjang di kertas (mm) setelah garis putus: bagian hilang dikurangi, tiap celah CELAH_PUTUS mm
   let putusSkala = {lu: 0, nu: 0, lv: 0, nv: 0};
   const mmU = (L, sk) => Math.max(0, L - putusSkala.lu) * 1000 / sk + putusSkala.nu * CELAH_PUTUS;
-  const mmV = (L, sk) => Math.max(0, L - putusSkala.lv) * 1000 / sk + putusSkala.nv * CELAH_PUTUS;
+  // tambahMmV: ruang kertas tambahan (gelembung as di atas, tabel dasar laut di bawah) ikut menentukan skala otomatis
+  let tambahMmV = 0, ruangAtas = 0;
+  const mmV = (L, sk) => Math.max(0, L - putusSkala.lv) * 1000 / sk + putusSkala.nv * CELAH_PUTUS + tambahMmV;
+  // ===== Grid as dermaga (v0.41) =====
+  const asAktif = () => (ZONA_AKTIF ? asZona(ZONA_AKTIF) : null);
+  const gayaAs = 'stroke="#000" stroke-width="0.15" stroke-dasharray="5 1 0.7 1"';
+  const bulatAs = (cx, cy, label) => `<circle cx="${n2(cx)}" cy="${n2(cy)}" r="3" fill="#fff" stroke="#000" stroke-width="0.25"/>` + teks(cx, cy + 1.1, label, 2.9, 'text-anchor="middle" font-weight="700"');
+  // denah/rencana pondasi: garis as menembus gambar, gelembung di atas (as tegak) dan kiri (as datar), ukuran antar as di antaranya
+  const asDenah = (as, X, Y, x0, y0, x1, y1) => {
+    const out = [];
+    const vx = as.garis.filter(a => a.sumbu === 'x' && a.v >= x0 - 0.3 && a.v <= x1 + 0.3).sort((a, b) => a.v - b.v);
+    const vy = as.garis.filter(a => a.sumbu === 'y' && a.v >= y0 - 0.3 && a.v <= y1 + 0.3).sort((a, b) => a.v - b.v);
+    const yUkur = Y(y1) - 5, yBulat = Y(y1) - 12, xUkur = X(x0) - 5, xBulat = X(x0) - 12;
+    let lalu = -Infinity, naik = false;
+    for (const a of vx) {
+      const px = X(a.v); naik = px - lalu < 6.5 ? !naik : false; lalu = px;
+      const yb = yBulat - (naik ? 6.5 : 0);
+      out.push(`<line x1="${n2(px)}" y1="${n2(yb + 3)}" x2="${n2(px)}" y2="${n2(Y(y0) + 2)}" ${gayaAs}/>`, bulatAs(px, yb, a.label));
+    }
+    lalu = Infinity; naik = false;
+    for (const a of [...vy].reverse()) {
+      const py = Y(a.v); naik = py - lalu < 6.5 && py - lalu > -6.5 ? !naik : false; lalu = py;
+      const xb = xBulat - (naik ? 6.5 : 0);
+      out.push(`<line x1="${n2(xb + 3)}" y1="${n2(py)}" x2="${n2(X(x1) + 2)}" y2="${n2(py)}" ${gayaAs}/>`, bulatAs(xb, py, a.label));
+    }
+    for (let i = 0; i + 1 < vx.length; i++) out.push(ukuranGaris(X(vx[i].v), yUkur, X(vx[i + 1].v), yUkur, fmt(vx[i + 1].v - vx[i].v), -1));
+    for (let i = 0; i + 1 < vy.length; i++) out.push(ukuranGaris(xUkur, Y(vy[i].v), xUkur, Y(vy[i + 1].v), fmt(vy[i + 1].v - vy[i].v), -1));
+    return out;
+  };
+  // tampak/potongan: as yang tegak lurus bidang gambar tampak sebagai garis tegak; gelembung di atas gambar
+  const asTegak = (as, uDari, X, Y, zAtas, zBawah, uMin, uMax) => {
+    const out = [], ada = [];
+    for (const a of as.garis) {
+      const ua = a.sumbu === 'x' ? uDari(a.v, 0) : uDari(0, a.v), ub = a.sumbu === 'x' ? uDari(a.v, 10) : uDari(10, a.v);
+      if (Math.abs(ua - ub) > 1e-4 || ua < uMin - 0.3 || ua > uMax + 0.3) continue;
+      ada.push({u: ua, label: a.label});
+    }
+    ada.sort((p, q) => X(p.u) - X(q.u));
+    let lalu = -Infinity, naik = false;
+    for (const a of ada) {
+      const px = X(a.u); naik = px - lalu < 6.5 ? !naik : false; lalu = px;
+      const yb = Y(zAtas) - 8 - (naik ? 6.5 : 0);
+      out.push(`<line x1="${n2(px)}" y1="${n2(yb + 3)}" x2="${n2(px)}" y2="${n2(Y(zBawah))}" ${gayaAs}/>`, bulatAs(px, yb, a.label));
+    }
+    return out;
+  };
+  // Tabel elevasi dasar laut (v0.41): di bawah gambar yang sejajar profil, kolom di tiap titik profil (data survei)
+  const profilSejajar = uDari => {
+    const p = profilDasar();
+    if (!p) return null;
+    const L = Math.hypot(p.akhir.x - p.awal.x, p.akhir.y - p.awal.y), ux = (p.akhir.x - p.awal.x) / L, uy = (p.akhir.y - p.awal.y) / L;
+    if (Math.abs(Math.abs(uDari(p.akhir.x, p.akhir.y) - uDari(p.awal.x, p.awal.y)) - L) > 0.02 * L) return null;
+    return p.titik.map(([j, z]) => ({j, z, u: uDari(p.awal.x + ux * j, p.awal.y + uy * j)}));
+  };
+  const tabelDasar = (titik, X, yAtas, uMin, uMax) => {
+    const q = titik.filter(t => t.u >= uMin - 0.5 && t.u <= uMax + 0.5).sort((a, b) => a.u - b.u);
+    if (q.length < 2) return [];
+    const xl = X(q[0].u) - 30, xr = X(q[q.length - 1].u) + 6, h = 5, out = [];
+    out.push(`<rect x="${n2(xl)}" y="${n2(yAtas)}" width="${n2(xr - xl)}" height="${2 * h}" fill="#fff" stroke="#000" stroke-width="0.25"/>`, garis(xl, yAtas + h, xr, yAtas + h, 0.15), garis(xl + 28, yAtas, xl + 28, yAtas + 2 * h, 0.2));
+    out.push(teks(xl + 1.2, yAtas + 3.4, 'JARAK (m)', 1.9, 'font-weight="700"'), teks(xl + 1.2, yAtas + h + 3.4, 'ELV. DASAR LAUT', 1.9, 'font-weight="700"'));
+    for (const t of q) {
+      const px = X(t.u);
+      out.push(garis(px, yAtas - 1.5, px, yAtas + 2 * h, 0.12), teks(px, yAtas + 3.4, fmt(t.j), 1.8, 'text-anchor="middle"'), teks(px, yAtas + h + 3.4, fmtElev(t.z), 1.8, 'text-anchor="middle"'));
+    }
+    return out;
+  };
   const pilihSkala = (lebar, tinggi) => {
     if (skala) return skala;
     for (const sk of SKALA) if (mmU(lebar, sk) <= area.w && mmV(tinggi, sk) <= area.h) return sk;
@@ -12875,19 +13080,32 @@ function buatSVGInti(o) {
     if (!daftar.length) info = 'Belum ada gambar untuk dibuat denahnya.';
     else {
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-      const garisPotong = [...S.elems].filter(([pid, d]) => d.jenis === 'potong' && !S.sembunyi.has(pid) && sah(d)).map(([, d]) => d);
+      let garisPotong = /** @type {any[]} */ ([...S.elems].filter(([pid, d]) => d.jenis === 'potong' && !S.sembunyi.has(pid) && sah(d)).map(([, d]) => d));
       for (const p of [...daftar.map(x => x.p), ...atapNya]) for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+      // lembar berlingkup (v0.41): garis potong dipangkas ke sekitar komponen (2,5 m), yang tidak mengenainya dibuang
+      if (LINGKUP) garisPotong = garisPotong.map(d => {
+        const bx = [x0 - 2.5, x1 + 2.5], by = [y0 - 2.5, y1 + 2.5], dx = d.akhir.x - d.awal.x, dy = d.akhir.y - d.awal.y;
+        let t0 = 0, t1 = 1;
+        for (const [pp, qq] of [[-dx, d.awal.x - bx[0]], [dx, bx[1] - d.awal.x], [-dy, d.awal.y - by[0]], [dy, by[1] - d.awal.y]]) {
+          if (Math.abs(pp) < 1e-12) { if (qq < 0) return null; continue; }
+          const r = qq / pp;
+          if (pp < 0) t0 = Math.max(t0, r); else t1 = Math.min(t1, r);
+        }
+        if (t1 - t0 < 1e-6) return null;
+        return {...d, awal: {x: d.awal.x + dx * t0, y: d.awal.y + dy * t0}, akhir: {x: d.awal.x + dx * t1, y: d.awal.y + dy * t1}};
+      }).filter(Boolean);
       // garis potong ikut memperluas bidang gambar, tetapi tidak mengubah ukuran keseluruhan bangunan
       let lx0 = x0, ly0 = y0, lx1 = x1, ly1 = y1;
       for (const d of garisPotong) for (const q of [d.awal, d.akhir]) { lx0 = Math.min(lx0, q.x - 1); ly0 = Math.min(ly0, q.y - 1); lx1 = Math.max(lx1, q.x + 1); ly1 = Math.max(ly1, q.y + 1); }
-      const tp = o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
+      const asZ = asAktif();
+      const tp = asZ ? {l: 26, r: 8, t: 26, b: 8} : o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
       const pp = kumpulPutus(p => p.x, p => p.y, x0, x1, y0, y1);
       skala = skalaTepi(x1 - x0, y1 - y0, tp, 1, lx1 - lx0, ly1 - ly0);
       const kM = skala / 1000;
       const bx0 = Math.min(x0 - tp.l * kM, lx0 - 4 * kM), by0 = Math.min(y0 - tp.b * kM, ly0 - 4 * kM), bx1 = Math.max(x1 + tp.r * kM, lx1 + 4 * kM), by1 = Math.max(y1 + tp.t * kM, ly1 + 4 * kM);
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bx1) - su.f(bx0)) * s, tinggiK = (sv.f(by1) - sv.f(by0)) * s;
-      let ox = area.x + (area.w - lebarK) / 2, oy = area.y + (area.h - tinggiK) / 2;
+      let ox = area.x + (area.w - lebarK) / 2, oy = area.y + (area.h - tinggiK - tambahMmV) / 2 + ruangAtas;
       if (o.fokus) { ox = o.fokus.kertas.x - (su.f(o.fokus.titik.x) - su.f(bx0)) * s; oy = o.fokus.kertas.y - (sv.f(by1) - sv.f(o.fokus.titik.y)) * s; }
       const X = x => ox + (su.f(x) - su.f(bx0)) * s, Y = y => oy + (sv.f(by1) - sv.f(y)) * s;
       const pts = p => p.map(([x, y]) => `${n2(X(x))},${n2(Y(y))}`).join(' ');
@@ -12987,6 +13205,7 @@ function buatSVGInti(o) {
         }
       }
       isi.push(...anotasiSvg(p => [X(p.x), Y(p.y)], 'denah', o.level != null ? d => (d.titik.z ?? 0) >= o.level - 1 && (d.titik.z ?? 0) < o.level + 3.5 : null));   // denah per level: hanya anotasi di ketinggian level itu
+      if (asZ) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1));
       peta = {pada: 'denah', keDunia: (px, py) => ({x: r2(su.inv(su.f(bx0) + (px - ox) / s)), y: r2(sv.inv(sv.f(by1) - (py - oy) / s)), z: 0}), geser: (dx, dy) => ({x: dx / s, y: -dy / s, z: 0})};
       if (o.dimensi && o.dimDinding) {
         for (const {g} of dinding) {
@@ -13076,7 +13295,8 @@ function buatSVGInti(o) {
       const dindingP = geos.filter(g => g.jenis === 'dinding').map(g => poligon(g));
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const p of [...bawahList.map(g => poligon(g)), ...dindingP]) for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-      const tp = o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
+      const asZ = asAktif();
+      const tp = asZ ? {l: 26, r: 8, t: 26, b: 8} : o.dimensi ? TEPI_UKUR : {l: 4, r: 6, t: 6, b: 4};
       const pp = kumpulPutus(p => p.x, p => p.y, x0, x1, y0, y1);
       skala = skalaTepi(x1 - x0, y1 - y0, tp, 1.25);
       const kM = skala / 1000, bx0 = x0 - tp.l * kM, by0 = y0 - tp.b * kM, bx1 = x1 + tp.r * kM, by1 = y1 + tp.t * kM;
@@ -13127,6 +13347,7 @@ function buatSVGInti(o) {
         else isi.push(`<polygon points="${pts(poligon(g))}" fill="#000" stroke="#000" stroke-width="0.2"/>`);
       }
       isi.push(...gambarPutus(pp, X, Y, X(x0) - 3, X(x1) + 3, Y(y1) - 3, Y(y0) + 3));
+      if (asZ) isi.push(...asDenah(asZ, X, Y, x0, y0, x1, y1));
       proyekLembar = q => [X(q.x), Y(q.y)];
       peta = {pada: 'pondasi', keDunia: (px, py) => ({x: r2(su.inv(su.f(bx0) + (px - ox) / s)), y: r2(sv.inv(sv.f(by1) - (py - oy) / s)), z: 0}), geser: (dx, dy) => ({x: dx / s, y: -dy / s, z: 0})};
       // keterangan jenis
@@ -13334,7 +13555,9 @@ function buatSVGInti(o) {
       const {vx, vy} = arahPandang(pt), px0 = pt.awal.x, py0 = pt.awal.y;
       const Hh = (x, y) => (x - px0) * vy - (y - py0) * vx;   // ke kanan pengamat
       const Dp = (x, y) => (x - px0) * vx + (y - py0) * vy;   // kedalaman ke arah pandang
-      const {prismaL, cembung, bidAtap, bukL, asDinding, mukaDinding, rangkaL} = kumpulBenda(geos, Dp, Hh);
+      // kedalaman pandang (v0.41): benda yang seluruhnya lebih jauh dari pt.dalam tidak digambar
+      const geosP = pt.dalam > 0 ? geos.filter(g => { let pg; try { pg = poligon(g); } catch (_) { return true; } return !pg || !pg.length || pg.some(([x, y]) => Dp(x, y) <= pt.dalam); }) : geos;
+      const {prismaL, cembung, bidAtap, bukL, asDinding, mukaDinding, rangkaL} = kumpulBenda(geosP, Dp, Hh);
       // 1. Bagian di belakang bidang potong: bidang-bidang dipotong pada kedalaman 0 lalu digambar jauh ke dekat
       const depan = poly => {
         const r = [];
@@ -13395,10 +13618,12 @@ function buatSVGInti(o) {
         const zmin = Math.min(0, ...semuaQ.map(q => q[1])), zmax = Math.max(...semuaQ.map(q => q[1]));
         const bu0 = h0 - (o.dimensi ? 2.2 : 1), bu1 = h1 + 2.2, bz0 = zmin - (o.dimensi ? 1.6 : 0.6), bz1 = zmax + 0.6;
         const pp = kumpulPutus(p => Hh(p.x, p.y), p => zDari(p), bu0, bu1, bz0, bz1);
+        const asZ = asAktif(), tbD = profilSejajar(Hh);
+        ruangAtas = asZ ? 15 : 0; tambahMmV = ruangAtas + (tbD ? 15 : 0);
         skala = pilihSkala(bu1 - bu0, bz1 - bz0);
         const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
         const lebarK = (su.f(bu1) - su.f(bu0)) * s, tinggiK = (sv.f(bz1) - sv.f(bz0)) * s;
-        let ox = area.x + (area.w - lebarK) / 2, oy = area.y + (area.h - tinggiK) / 2;
+        let ox = area.x + (area.w - lebarK) / 2, oy = area.y + (area.h - tinggiK - tambahMmV) / 2 + ruangAtas;
         if (o.fokus) { ox = o.fokus.kertas.x - (su.f(Hh(o.fokus.titik.x, o.fokus.titik.y)) - su.f(bu0)) * s; oy = o.fokus.kertas.y - (sv.f(bz1) - sv.f(zDari(o.fokus.titik))) * s; }
         const X = u => ox + (su.f(u) - su.f(bu0)) * s, Y = z => oy + (sv.f(bz1) - sv.f(z)) * s;
         const pts = q => q.map(([u, z]) => `${n2(X(u))},${n2(Y(z))}`).join(' ');
@@ -13416,6 +13641,8 @@ function buatSVGInti(o) {
         }
         const prf = profilDasar(), uzP = prf ? (() => { const r = [], n = 200; for (let i = 0; i <= n; i++) { const x = pt.awal.x + (pt.akhir.x - pt.awal.x) * (i / n), y = pt.awal.y + (pt.akhir.y - pt.awal.y) * (i / n); r.push([Hh(x, y), zDasarDi(x, y)]); } return r; })() : null;
         isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y, uzP));
+        if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, zmax, zmin, h0, h1));
+        if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3, h0, h1));
         // kuda-kuda terdekat di belakang bidang potong, dan penampang reng/gording yang terpotong
         for (const rk of rangkaL) {
           // atap yang tidak terpotong hanya tampak penutupnya; rangkanya tersembunyi
@@ -13567,10 +13794,12 @@ function buatSVGInti(o) {
       const z0 = Math.min(0, ...daftar.map(d => d.z0)), z1 = Math.max(...daftar.map(d => d.z1));
       const bu0 = u0 - 1, bu1 = u1 + 2.2, bz0 = z0 - (o.dimensi ? 1.6 : 0.6), bz1 = z1 + 0.6;
       const pp = kumpulPutus(p => pr.u(p.x, p.y), p => zDari(p), bu0, bu1, bz0, bz1);
+      const asZ = asAktif(), tbD = profilSejajar((x, y) => pr.u(x, y));
+      ruangAtas = asZ ? 15 : 0; tambahMmV = ruangAtas + (tbD ? 15 : 0);
       skala = pilihSkala(bu1 - bu0, bz1 - bz0);
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bu1) - su.f(bu0)) * s, tinggiK = (sv.f(bz1) - sv.f(bz0)) * s;
-      let ox = area.x + (area.w - lebarK) / 2, oy = area.y + (area.h - tinggiK) / 2;
+      let ox = area.x + (area.w - lebarK) / 2, oy = area.y + (area.h - tinggiK - tambahMmV) / 2 + ruangAtas;
       if (o.fokus) { ox = o.fokus.kertas.x - (su.f(pr.u(o.fokus.titik.x, o.fokus.titik.y)) - su.f(bu0)) * s; oy = o.fokus.kertas.y - (sv.f(bz1) - sv.f(zDari(o.fokus.titik))) * s; }
       const X = u => ox + (su.f(u) - su.f(bu0)) * s, Y = z => oy + (sv.f(bz1) - sv.f(z)) * s;
       if (!o.fokus && (lebarK > area.w + 0.5 || tinggiK > area.h + 0.5)) info = `Gambar lebih besar dari kertas pada 1 : ${skala}. Pilih skala lebih kecil, kertas A3, atau beri garis putus.`;
@@ -13610,6 +13839,8 @@ function buatSVGInti(o) {
       isi.push(...gambarPutus(pp, X, Y, X(u0 - 0.8), X(u1 + 0.8), Y(bz1 - 0.3), Y(bz0 + 0.3)));
       const level = [...new Set([0, ...daftar.filter(d => d.jenis !== 'lisplang').map(d => n2(d.z1))])].sort((a, b) => a - b).slice(-6);
       isi.push(...peilKanan(level, X(u1), X(u1) + 4, Y));
+      if (asZ) isi.push(...asTegak(asZ, (x, y) => pr.u(x, y), X, Y, z1, z0, u0, u1));
+      if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3, u0, u1));
       const tertutup = q => {
         const u = pr.u(q.x, q.y), z = zDari(q), j = pr.jauh(q.x, q.y);
         return daftar.some(it => (it.jenis === 'dinding' || it.jenis === 'atap') && it.dekat < j - 0.05 &&
@@ -16340,7 +16571,10 @@ function jenisGambar2D() {
  */
 function gambar2D(o = {}) {
   const opsi = {jenis: o.jenis || 'denah', skala: +o.skala || 0, kertas: o.kertas === 'A3' ? 'A3' : 'A4', dimensi: o.dimensi !== false, terhalang: o.terhalang !== false, level: Number.isFinite(+o.level) && o.level !== null && o.level !== '' ? +o.level : null};
-  if (!jenisGambar2D().some(x => x.jenis === opsi.jenis)) throw new Error(`Jenis gambar "${opsi.jenis}" tidak dikenal.`);
+  const dikenal = jenisGambar2D(), kenal = j => dikenal.some(x => x.jenis === j) || (j.includes('@') && S.grup.has(pisahLingkup(j).gid) && kenal(pisahLingkup(j).dasar));
+  // lembar gabungan bebas (v0.41): 'gabung:<jenis1>+<jenis2>…', tiap jenis harus dikenal
+  const ok = kenal(opsi.jenis) || opsi.jenis.startsWith('gabung:') && opsi.jenis.slice(7).split('+').filter(Boolean).every(kenal);
+  if (!ok) throw new Error(`Jenis gambar "${opsi.jenis}" tidak dikenal.`);
   const h = buatSVG(opsi);
   return {svg: h.svg, info: h.info || '', skala: h.skala, kertas: opsi.kertas, W: h.W, H: h.H};
 }
