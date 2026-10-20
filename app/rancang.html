@@ -630,7 +630,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | R | ringbalk | sama dengan slof. Opsional peran 'balok' = balok lantai/balok induk (kolom menerus melewatinya; kode detail B) | z0 = dasar balok. Balok lantai: puncak = level lantai atas, mis. `{"jenis":"ringbalk","peran":"balok","awal":{"x":0,"y":0},"akhir":{"x":6,"y":0},"b":0.25,"h":0.4,"z0":3.6,"tul":{"n":6,"d":13,"ulir":true},"sengkang":{"d":10,"s":0.15},"fc":20.75,"selimut":0.03}` |
 | F | pondasi | tipe 'batukali' (awal, akhir, lebarAtas, lebarBawah, tinggi, aanstamping, pasir, z0); 'footplat' (x, y, p, l, tebal, tulPlat{d,s,ulir}, pedestal{b,h}, puncakPedestal, tul, sengkang, fc, selimut, z0); 'umpak' (x, y, bawah, atas, tinggi, fc, z0); 'pilecap' (pile cap dermaga: x, y, p, l, tebal, z0 = elevasi DASAR, tulPlat{d,s,ulir} dua lapis dua arah, fc, selimut) | `{"jenis":"pondasi","tipe":"batukali","awal":{"x":0,"y":0},"akhir":{"x":7,"y":0},"lebarAtas":0.3,"lebarBawah":0.7,"tinggi":0.7,"aanstamping":0.15,"pasir":0.05,"z0":-0.31}` |
 | A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar'/'denah' (denah bebas: alas [{x,y}…] as dinding berlawanan jarum jam, tepi [{miring: true/false, overstek}] sejajar alas — tepi i = alas[i]→alas[i+1], miring = tritisan, false = dinding/gunungan; x0..y1 = kotak pembatas alas; satu kemiringan untuk semua tritisan; Fase 1: sudut cekung di antara dua tritisan belum didukung), x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa'/'penuh'/'tritisan'; bila bukan tanpa: plafonBahan dan plafonRangka seperti elemen P) ('tanpa','penuh','tritisan'), kuda{kaki,tarik,makelar,tiang,sokong,skor,gording,bubungan,klos: [lebar,tinggi] m; lisMundur (jarak ujung spandek ke lisplang, m), jarakGording, …}, lisplangSisi{kunciSisi:{pasang,bahan,tebal,tinggi,mundur,awal,akhir (m; + perpanjang, − pangkas ujung papan)}}, satukan (false = atap tidak dipangkas dan tidak memangkas atap lain di pertemuan; bawaan otomatis, bagian di atas denah dinding sendiri menang atas overstek atap lain), overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
-| H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Plafon (peran 'plafon'): bahan, rangka, lis seperti elemen P, turun (jarak di bawah penutup atap, m); RAB-nya menyatu dengan plafon datar. Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
+| H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Plafon (peran 'plafon'): bahan, rangka, lis seperti elemen P, turun (jarak di bawah penutup atap, m), mundurSeng (jarak tepi plafon dari ujung seng, m; bawaan 0,225); RAB-nya menyatu dengan plafon datar. Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
 | J | batang | Batang lurus 3D (kuda-kuda, gording, usuk, reng, klos): awal{x,y,z}, akhir{x,y,z}, b (lebar), h (tinggi penampang), bahan ('kayu'/'bajaringan'/'baja'; baja = baja profil, opsional profil: WF150, WF200, WF250, WF300, H150, C125, C150, L50, L60, L2x60, P76, P114, HB100, HB50 — b dan h mengikuti profil; RAB per kg di divisi Struktur Baja), peran ('kaki','tarik','makelar','tiang','sokong','skor','klos','gording','nok','usuk','reng','skor','rangka','lain'). Opsional: atas [x,y,z] (arah tinggi penampang), jangkar ('tengah' = sumbu di tengah penampang; 'atas' = sumbu di sisi atas) | `{"jenis":"batang","peran":"kaki","bahan":"kayu","awal":{"x":0,"y":0,"z":3.6},"akhir":{"x":0,"y":3,"z":5.2},"b":0.06,"h":0.12,"jangkar":"tengah"}` |
 | U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'/'tripleks4'/'tripleks6'/'pvc' = plafon sunda), rangka ('hollow'/'kayu'/'bajaringan'), lis ('tanpa'/'kayu'/'gypsum'/'pvc'; kosong = hanya dihitung PL-010). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
@@ -958,7 +958,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * H — bidang 3D bebas (hasil pecah atap atau alat Bidang 3D). `dinding` di sini adalah persegi batas, bukan id dinding.
  * @typedef {DasarElemen & {jenis: 'bidang', titik: Titik3[], peran: 'atap' | 'gunung' | 'lisplang' | 'plafon',
- *   tebal?: number, tebalTengah?: boolean, penutup?: string, rangka?: string, bahan?: string, lis?: string, turun?: number, tinggi?: number,
+ *   tebal?: number, tebalTengah?: boolean, penutup?: string, rangka?: string, bahan?: string, lis?: string, turun?: number, mundurSeng?: number, tinggi?: number,
  *   dinding?: {x0: number, y0: number, x1: number, y1: number}}} Bidang
  */
 
@@ -6539,7 +6539,7 @@ const alatHapus = {
 
 // Alat Perpanjang/Pangkas (extend/trim) ujung papan lisplang: klik papan, lalu klik batasnya (papan lisplang lain atau dinding)
 const alatPerluas = {
-  petunjuk: '<b>Perpanjang/Pangkas:</b> 1) klik papan lisplang (dekat ujung yang diubah) atau klik plafon, 2) klik batasnya: papan lisplang lain, dinding, atau plafon di depannya. Ujung papan atau sisi plafon yang menghadap batas otomatis diperpanjang atau dipangkas sampai bertemu. Esc membatalkan, Ctrl+Z mengembalikan.',
+  petunjuk: '<b>Perpanjang/Pangkas:</b> 1) klik papan lisplang (dekat ujung yang diubah) atau klik plafon, 2) klik batasnya: papan lisplang (plafon berhenti di sisi dalamnya), dinding, atau plafon di depannya. Ujung papan atau sisi plafon yang menghadap batas otomatis diperpanjang atau dipangkas sampai bertemu. Esc membatalkan, Ctrl+Z mengembalikan.',
   vcb: 'Ukuran',
   pilih: null,
   sibuk() { return !!this.pilih; },
@@ -6571,6 +6571,11 @@ const alatPerluas = {
     if (d.jenis === 'plafon') return {ruas: cincin(d.alas.map(q => [q.x, q.y])), nama: d.nama || u.elemId};
     if (d.jenis === 'bidang') return {ruas: cincin(d.titik.map(q => [q.x, q.y])), nama: d.nama || u.elemId};
     if (d.jenis === 'atap' && u.face === 'plafon-miring') return {ruas: susunTepiAtap(d).plafon.flatMap(pf => cincin(pf.atas.map(q => [q[0], q[1]]))), nama: 'plafon ' + (d.nama || u.elemId)};
+    // papan lisplang sebagai batas: sisi DALAM papan (tempat plafon tritisan berhenti), bukan ujung seng
+    if (d.jenis === 'atap' && u.sisi) {
+      const bd = susunTepiAtap(d).papan.find(x => x.sisi === u.sisi);
+      if (bd) { const c = bd.titik; return {ruas: [[c[3][0], c[3][1], c[2][0], c[2][1]]], nama: 'lisplang ' + u.sisi}; }
+    }
     return null;
   },
   // perpanjang/pangkas sisi plafon yang menghadap titik klik tujuan sampai ruas batas terdekat; ujung sisi meluncur sepanjang sisi di sebelahnya
@@ -8423,7 +8428,7 @@ function susunTepiAtap(d) {
   const atur = kunci => {
     const o = (d.lisplangSisi || {})[kunci] || {}, bahan = o.bahan || bahanAtap;
     if (o.pasang === false || bahan === 'tanpa' || !UKURAN_LISPLANG[bahan]) return null;
-    return {bahan, tebal: o.tebal > 0 ? o.tebal : UKURAN_LISPLANG[bahan][0], tinggi: o.tinggi > 0 ? o.tinggi : tinggiAuto(bahan), mundur: o.mundur >= 0 ? o.mundur : (kayu ? K.lisMundur : 0),
+    return {bahan, tebal: o.tebal > 0 ? o.tebal : UKURAN_LISPLANG[bahan][0], tinggi: o.tinggi > 0 ? o.tinggi : tinggiAuto(bahan), mundur: o.mundur >= 0 ? o.mundur : SUSUN_KAYU.lisMundur, // bawaan 20 cm untuk semua rangka: seng menjorok di luar papan (v0.34.1)
       // perpanjang (+) / pangkas (-) ujung papan sepanjang sisinya (m)
       awal: Number.isFinite(o.awal) ? batas(o.awal, -5, 5) : 0, akhir: Number.isFinite(o.akhir) ? batas(o.akhir, -5, 5) : 0};
   };
@@ -9161,9 +9166,82 @@ const alatPlafon = {
   gabungBatas(daftar) { return {x0: Math.min(...daftar.map(b => b.x0)), y0: Math.min(...daftar.map(b => b.y0)), x1: Math.max(...daftar.map(b => b.x1)), y1: Math.max(...daftar.map(b => b.y1))}; },
   // bidang penutup atap (titik 3D) dari satu elemen atap atau bidang atap bebas
   bidangAtapDari(d) {
-    if (d.jenis === 'atap') return d.bentuk === 'datar' ? [] : atapGeom(d).permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
-    if (d.jenis === 'bidang' && d.peran === 'atap') return [d.titik.map(ke3)];
+    // Plafon miring berhenti di sisi dalam papan lisplang, bukan di ujung seng: seng menjorok sejauh "Mundur dari ujung seng"
+    // (bawaan 20 cm pada rangka kayu, bisa diatur per sisi di panel Lisplang). Tanpa lisplang, batasnya tetap tepi penutup.
+    if (d.jenis === 'atap') {
+      if (d.bentuk === 'datar') return [];
+      const su = susunTepiAtap(d);
+      if (su.muka.length) return su.muka.map(m => m.dalam || m.t);
+      return atapGeom(d).permukaan.filter(p => p.jenis === 'atap').map(p => p.titik);
+    }
+    if (d.jenis === 'bidang' && d.peran === 'atap') return [this.mundurKeLisplang(d.titik.map(ke3), d)];
     return null;
+  },
+  // Semua papan lisplang di model sebagai garis tepi atas sisi dalam {P, Q, tebal, mundur}: dari atap parametrik (susunTepiAtap)
+  // maupun bidang H peran lisplang (hasil pecah atap). Dipakai untuk mengenali tepi luar plafon miring.
+  garisLisplang(kecualiId) {
+    const r = [];
+    for (const [id, x] of S.elems) {
+      if (id === kecualiId) continue;
+      if (x.jenis === 'atap' && x.bentuk !== 'datar' && (x.lisplang || 'papan') !== 'tanpa') {
+        for (const bd of susunTepiAtap(x).papan) r.push({P: bd.titik[3], Q: bd.titik[2], tebal: bd.set.tebal, mundur: bd.set.mundur});
+      } else if (x.jenis === 'bidang' && x.peran === 'lisplang' && Array.isArray(x.titik) && x.titik.length >= 2) {
+        r.push({P: ke3(x.titik[0]), Q: ke3(x.titik[1]), tebal: x.tebal > 0 ? x.tebal : 0.025, mundur: SUSUN_KAYU.lisMundur});
+      }
+    }
+    return r;
+  },
+  // Tepi plafon (titik 3D) yang sejajar dan dekat (< jarakMaks) dengan salah satu garis lisplang: indeks tepi → garis terdekat
+  tepiLuarPlafon(t, garis, jarakMaks = 0.8) {
+    const N = t.length, hasil = new Map();
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], len = v => Math.hypot(v[0], v[1], v[2]);
+    for (let i = 0; i < N; i++) {
+      const A = t[i], B = t[(i + 1) % N], e = sub(B, A), L = len(e);
+      if (L < 1e-6) continue;
+      const u = e.map(v => v / L), M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2];
+      let terdekat = null;
+      for (const g of garis) {
+        const f = sub(g.Q, g.P), Lf = len(f);
+        if (Lf < 1e-6) continue;
+        const w = f.map(v => v / Lf), silang = Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]);
+        if (silang > 0.08) continue;
+        const PM = sub(M, g.P), sepanjang = PM[0] * w[0] + PM[1] * w[1] + PM[2] * w[2];
+        if (sepanjang < -0.5 || sepanjang > Lf + 0.5) continue;
+        const kaki = [g.P[0] + w[0] * sepanjang, g.P[1] + w[1] * sepanjang, g.P[2] + w[2] * sepanjang], jarak = len(sub(M, kaki));
+        if (jarak > jarakMaks) continue;
+        if (!terdekat || jarak < terdekat.jarak) terdekat = {jarak, g};
+      }
+      if (terdekat) hasil.set(i, terdekat);
+    }
+    return hasil;
+  },
+  // Bidang atap bebas: tepi yang berpapan lisplang (bidang H peran lisplang yang sejajar dan menempel) dimundurkan sampai
+  // sisi dalam papan, supaya plafon miring hasil pecah atap juga berhenti di lisplang, bukan di ujung seng.
+  mundurKeLisplang(t, diri) {
+    const N = t.length, dd = new Array(N).fill(0);
+    const papan = /** @type {any[]} */ ([...S.elems.values()].filter(x => x !== diri && x.jenis === 'bidang' && x.peran === 'lisplang' && Array.isArray(x.titik) && x.titik.length >= 2));
+    if (!papan.length) return t;
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], len = v => Math.hypot(v[0], v[1], v[2]);
+    for (let i = 0; i < N; i++) {
+      const A = t[i], B = t[(i + 1) % N], e = sub(B, A), L = len(e);
+      if (L < 1e-6) continue;
+      const u = e.map(v => v / L), M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2, (A[2] + B[2]) / 2];
+      let terdekat = null;
+      for (const pp of papan) {
+        const P = ke3(pp.titik[0]), Q = ke3(pp.titik[1]), f = sub(Q, P), Lf = len(f);
+        if (Lf < 1e-6) continue;
+        const w = f.map(v => v / Lf), silang = Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]);
+        if (silang > 0.08) continue; // tidak sejajar
+        const PM = sub(M, P), sepanjang = PM[0] * w[0] + PM[1] * w[1] + PM[2] * w[2];
+        if (sepanjang < -0.5 || sepanjang > Lf + 0.5) continue;
+        const kaki = [P[0] + w[0] * sepanjang, P[1] + w[1] * sepanjang, P[2] + w[2] * sepanjang], jarak = len(sub(M, kaki));
+        if (jarak > 0.45) continue;
+        const total = jarak + (pp.tebal > 0 ? pp.tebal : 0.025);
+        if (!terdekat || total < terdekat) terdekat = total;
+      }
+      if (terdekat) dd[i] = terdekat;
+    }
+    return dd.some(v => v > 0) ? mundurMukaArr(t, dd) : t;
   },
   semuaBidangAtap() {
     const o = [];
@@ -9190,7 +9268,9 @@ const alatPlafon = {
         if (c.length < 3 || Math.abs(luas2D(c)) < 0.05) continue;
         let titik = c.map(([x, y]) => ({x: r2(x), y: r2(y), z: r2(zBidang(t, n, x, y) - this.turun)}));
         if (normalNewell(titik.map(ke3))[2] < 0) titik = titik.reverse();
-        hasil.push({jenis: 'bidang', peran: 'plafon', titik, tebal: 0.006, bahan: 'grc', rangka: 'hollow', lis: 'tanpa', turun: this.turun, catatan: ''});
+        const luar = this.tepiLuarPlafon(titik.map(ke3), this.garisLisplang(null)), g0 = luar.size ? [...luar.values()][0].g : null;
+        hasil.push({jenis: 'bidang', peran: 'plafon', titik, tebal: 0.006, bahan: 'grc', rangka: 'hollow', lis: 'tanpa', turun: this.turun,
+          mundurSeng: r2(g0 ? g0.mundur + g0.tebal : SUSUN_KAYU.lisMundur + SUSUN_KAYU.lisTebal), catatan: ''});
       }
     }
     return hasil.length ? hasil : null;
@@ -9283,7 +9363,7 @@ function htmlBidang(id, d) {
     <label for="h-peran">Peran</label><select id="h-peran" ${dis()}>${opsiDari(d.peran, PERAN_BIDANG)}</select>
     ${d.peran === 'atap' ? `<label for="h-penutup">Penutup</label><select id="h-penutup" ${dis()}>${opsiDari(d.penutup || 'spandek', PENUTUP_ATAP)}</select>
     <label for="h-rangka">Rangka (untuk RAB)</label><select id="h-rangka" ${dis()}>${opsiDari(d.rangka || 'bajaringan', RANGKA_ATAP)}</select>` : ''}
-    ${d.peran === 'plafon' ? medanSetelPlafon('h', d) + medanAngka('h-turun', 'Jarak di bawah penutup atap (m)', d.turun ?? 0.2) : ''}
+    ${d.peran === 'plafon' ? medanSetelPlafon('h', d) + medanAngka('h-turun', 'Jarak di bawah penutup atap (m)', d.turun ?? 0.2) + medanAngka('h-mundurSeng', 'Jarak tepi plafon dari ujung seng (m)', d.mundurSeng ?? 0.225) : ''}
     ${d.peran === 'lisplang' ? `<label for="h-bahan">Bahan</label><select id="h-bahan" ${dis()}>${opsiDari(d.bahan || 'papan', BAHAN_LIS_BIDANG)}</select>${medanAngka('h-tinggi', 'Tinggi papan (m)', d.tinggi || 0.2)}` : ''}
     ${d.peran !== 'atap' ? medanAngka('h-tebal', 'Tebal (m)', d.tebal || 0) : ''}
     ${medanCatatan('h-catatan', d.catatan)}
@@ -9349,6 +9429,19 @@ function ubahBidangBatang(id, d, awal, f, t) {
   else if (['peran', 'penutup', 'rangka', 'bahan'].includes(f)) { b[f] = t.value; if (f === 'bahan' && t.value !== 'baja') delete b.profil; }
   else if (f === 'profil') { if (PROFIL_BAJA[t.value]) { b.profil = t.value; b.b = PROFIL_BAJA[t.value].b; b.h = PROFIL_BAJA[t.value].h; } else delete b.profil; }
   else if (f === 'lis') b.lis = LIS_PLAFON[t.value] ? t.value : 'tanpa';
+  else if (f === 'mundurSeng') {
+    // tepi luar plafon miring (yang berhadapan dengan lisplang) digeser sejauh selisih; tepi lain tetap
+    const v = angka(t.value);
+    if (!(v >= 0 && v <= 1.5)) return tolakAngka('Jarak dari ujung seng antara 0 dan 1,5 m.');
+    const lama = d.mundurSeng ?? 0.225, delta = r2(v - lama);
+    if (Math.abs(delta) > 1e-6) {
+      const t3 = d.titik.map(ke3), luar = alatPlafon.tepiLuarPlafon(t3, alatPlafon.garisLisplang(id), 1.2);
+      if (!luar.size) return tolakAngka('Tidak ada papan lisplang di dekat tepi plafon ini; jaraknya tidak bisa dihitung.');
+      const dd = t3.map((_, i) => (luar.has(i) ? delta : 0));
+      b.titik = mundurMukaArr(t3, dd).map(q => ({x: r2(q[0]), y: r2(q[1]), z: r2(q[2])}));
+    }
+    b.mundurSeng = r2(v);
+  }
   else if (f === 'turun') {
     // plafon miring: seluruh titik digeser tegak sejauh selisih jarak, bidang tetap sejajar penutup atap
     const v = angka(t.value);
@@ -15593,6 +15686,10 @@ window.rancangAPI = Object.freeze({
 // Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
 window.rancangUji = Object.freeze({
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
+  // plafon miring yang akan dibuat alat Plafon (mode miring) untuk atap/bidang tertentu: daftar bidang beserta titiknya
+  plafonMiring: id => (alatPlafon.miringDari(id) || []).map(b => b.titik),
+  // buat plafon miring sungguhan dari atap/bidang (seperti klik di mode Miring), lalu pilih yang pertama; hasil: id yang dibuat
+  buatPlafonMiring: id => { const h = alatPlafon.miringDari(id) || []; const nid = pemberiId(), ids = h.map(b => { const bid = nid('H'); return {id: bid, sesudah: {...b, nama: 'Plafon miring uji'}}; }); terapkan(ids); S.sel = new Set([ids[0].id]); segarPilihan(); return ids.map(x => x.id); },
   // palet perintah: hasil pencarian untuk teks tertentu (jenis + teks), tanpa membuka dialog
   palet: teks => butirPalet(teks).map(b => b.jenis + ': ' + b.teks),
   // proyek contoh: muat langsung (tanpa dialog) dengan cara 'ganti' atau 'tambah'; hasil: jumlah elemen sesudahnya

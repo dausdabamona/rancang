@@ -1,3 +1,7 @@
+## Yang baru di 0.39.1
+
+Perbaikan plafon miring dari PR #24 (v0.34.1) yang tertinggal, dipasang ulang di atas 0.39.0 (20 Oktober 2026). Rinciannya ada di bagian *Yang baru di 0.34.1* di bawah: plafon miring berhenti di sisi dalam lisplang, bawaan *Mundur dari ujung seng* 20 cm untuk semua rangka (atap baja ringan lama ikut bergeser 20 cm ke dalam), isian *Jarak tepi plafon dari ujung seng* di Properti plafon miring, dan papan lisplang sebagai batas Perpanjang/Pangkas.
+
 ## Yang baru di 0.39.0
 
 Elemen dermaga, Fase 1 (20 Oktober 2026, disiapkan untuk RAB dermaga TUKS trestle 150 × 10 m di Sorong).
@@ -56,6 +60,14 @@ Alat untuk bangunan bertingkat (disiapkan untuk menggambar Asrama Putri dua lant
 - **Denah per level**: pemilih *Level* di bar Gambar 2D (tampil bila ada level di atas ±0,00): denah lantai 2 hanya menggambar benda yang terpotong bidang denah level itu, lantai/plat miliknya, dan tangga yang tiba di sana. MCP `gambar_2d` menerima `level` (elevasi dalam meter).
 - Panduan data bertambah baris Y (tangga) dan W (plat); id elemen `Y…`, `W…`.
 - **Proyek contoh Asrama Putri 2 lantai** (375 elemen: struktur lengkap, 16 kamar + KM, plat lantai berlubang, tangga, atap limas kayu, kusen bertipe) — buka lewat palet Ctrl+K *Buka contoh* atau panel Proyek → *Contoh*. Berkas `contoh/asrama-putri.json` ikut dipaketkan di desktop dan artifact; perintah *Buka proyek (.json)* juga tersedia di palet.
+
+## Yang baru di 0.34.1
+
+- **Plafon miring berhenti di lisplang.** Alat Plafon mode *Miring* kini memotong plafon di sisi dalam papan lisplang, bukan di ujung seng. Seng tetap menjorok sejauh *Mundur dari ujung seng* (bawaan 20 cm pada rangka kayu; 0 pada baja ringan), yang bisa diatur per sisi di panel atap → Lisplang. Atap tanpa lisplang tetap memakai tepi penutup.
+- **Bawaan *Mundur dari ujung seng* kini 20 cm untuk semua rangka** (sebelumnya hanya kayu; baja ringan 0 sehingga lisplang menempel di ujung seng dan plafon tampak tidak berubah). Atap baja ringan yang sudah ada ikut bergeser 20 cm ke dalam; atur per sisi bila perlu.
+- **Atap yang sudah dipecah** (bidang H) juga berhenti di lisplang: tepi bidang penutup yang berpapan lisplang (bidang H peran lisplang yang sejajar dan menempel) dimundurkan sampai sisi dalam papan saat dijadikan plafon miring.
+- **Isian baru di Properti plafon miring: *Jarak tepi plafon dari ujung seng (m)*.** Terisi otomatis saat dibuat (jorokan seng + tebal papan, mis. 0,225) dan bisa diketik ulang; tepi luar plafon yang berhadapan dengan lisplang bergeser mengikuti angka itu, tepi lain tetap.
+- **Papan lisplang bisa jadi batas Perpanjang/Pangkas** (Shift+H): klik plafon yang sudah ada, lalu klik papan lisplang; sisi plafon dipangkas/diperpanjang sampai sisi dalam papan. Berguna untuk merapikan plafon miring yang dibuat sebelum 0.34.1.
 
 ## Yang baru di 0.34.0
 

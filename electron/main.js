@@ -312,6 +312,31 @@ async function ujiAsap() {
     catat('palet perintah', pal1[0] && /Perpanjang/.test(pal1[0]) && pal2.some(x => x === 'Alat: Plafon') && pal2.some(x => /Elemen: Plafon P1/.test(x)) && pal3.some(x => /Elemen: Dinding D1/.test(x)), {pal1: pal1.slice(0, 2), pal2: pal2.slice(0, 4), pal3: pal3.slice(0, 2)});
     const tt1 = await halaman(`window.rancangUji.tata('ringkas', false)`), tt2 = await halaman(`window.rancangUji.tata(undefined, undefined, true)`), tt3 = await halaman(`window.rancangUji.tata(undefined, undefined, false)`);
     catat('tata letak ringkas, rel panel, mode fokus', /rail-ringkas/.test(tt1.kelas) && /panel-tutup/.test(tt1.kelas) && tt1.relTampak && tt1.panelW === '44px' && /fokus/.test(tt2.kelas) && !/fokus/.test(tt3.kelas) && /rail-ringkas/.test(tt3.kelas), {tt1, tt2, tt3});
+    // v0.34.1: plafon miring dari alat Plafon berhenti di sisi dalam lisplang (seng menjorok 20 cm pada rangka kayu), bukan di ujung seng
+    const rk = await metode.terapkan({perubahan: [{id: 'A2', data: {jenis: 'atap', bentuk: 'pelana', x0: 10, y0: 0, x1: 16, y1: 4, z0: 3, kemiringan: 30, overstek: 0.6, arah: 'x', rangka: 'kayu', lisplang: 'papan', plafonMiring: 'tanpa'}}]});
+    catat('buat atap kayu berlisplang', rk && rk.ok, {r: rk});
+    const pm = await halaman(`window.rancangUji.plafonMiring('A2')`);
+    const ys = pm.flat().map(q => q.y), yMin = Math.min(...ys), yMax = Math.max(...ys);
+    // tepi seng di y = -0,6 dan 4,6; sisi dalam lisplang mundur (0,20 + 0,025) × cos 30° ≈ 0,195 m ke dalam
+    // bawaan mundur 20 cm juga berlaku pada rangka baja ringan (A1 dibuat tanpa lisplang eksplisit → papan)
+    const pmb = await halaman(`window.rancangUji.plafonMiring('A1')`);
+    const ysb = pmb.flat().map(q => q.y), yMinB = Math.min(...ysb);
+    catat('plafon miring baja ringan juga mundur dari seng', pmb.length >= 2 && yMinB > -0.6 + 0.15, {yMinB});
+    catat('plafon miring berhenti di lisplang', pm.length >= 2 && yMin > -0.6 + 0.15 && yMin < -0.6 + 0.25 && yMax < 4.6 - 0.15 && yMax > 4.6 - 0.25, {yMin, yMax, bidang: pm.length});
+    // atap yang sudah dipecah: bidang penutup (H) pun mundur ke sisi dalam papan lisplang (H peran lisplang) saat jadi plafon miring
+    const pc = await metode.pecahAtap({id: 'A2'});
+    catat('pecah atap A2', pc && pc.ok, {r: pc});
+    const idH = Object.entries((await halaman('window.rancangAPI.model()')).elemen).filter(([, x]) => x.jenis === 'bidang' && x.peran === 'atap').map(([id]) => id);
+    const pmh = await halaman(`window.rancangUji.plafonMiring(${JSON.stringify(idH[0])})`);
+    const ysh = pmh.flat().map(q => q.y), yMinH = Math.min(...ysh), yMaxH = Math.max(...ysh);
+    catat('plafon miring dari atap terpecah berhenti di lisplang', pmh.length >= 1 && (yMinH > -0.6 + 0.15 || yMaxH < 4.6 - 0.15), {yMinH, yMaxH, bidangAtap: idH.length});
+    // isian "Jarak tepi plafon dari ujung seng": 0,225 → 0,40 menggeser tepi luar ±0,175 × cos 30° ≈ 0,15 m ke dalam
+    const idsPM = await halaman(`window.rancangUji.buatPlafonMiring('A1')`);
+    const sebelum = await halaman(`window.rancangAPI.model()`);
+    const pSeb = sebelum.elemen[idsPM[0]], yMinSeb = Math.min(...pSeb.titik.map(q => q.y));
+    const uSeng = await halaman(`window.rancangUji.isiMedan('h-mundurSeng', '0,4')`);
+    const yMinSes = Math.min(...uSeng.data.titik.map(q => q.y));
+    catat('isian jarak tepi plafon dari ujung seng', pSeb.mundurSeng === 0.225 && uSeng.data.mundurSeng === 0.4 && yMinSes - yMinSeb > 0.12 && yMinSes - yMinSeb < 0.18, {yMinSeb, yMinSes, mundurSeng: pSeb.mundurSeng});
     // v0.35: alat Tangga dua klik (pangkal di lantai 1, naik ke level +4,00 → 22 anak, optrede ≈18 cm); plat lantai beton masuk RAB; denah per level
     const rl = await metode.terapkan({perubahan: [{id: 'M1', data: {jenis: 'level', nama: 'Lantai 2', z: 4}}, {id: 'W1', data: {jenis: 'plat', alas: [{x: 0, y: 0}, {x: 4, y: 0}, {x: 4, y: 3}, {x: 0, y: 3}], z0: 3.88, tebal: 0.12}}]});
     catat('buat level dan plat lantai', rl && rl.ok, {r: rl});
