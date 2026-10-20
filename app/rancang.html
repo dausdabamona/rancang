@@ -14288,7 +14288,7 @@ function buatSVGInti(o) {
  * @param {number} yAlas
  */
 function skalaGrafisSvg(skala, xKanan, yAlas) {
-  const calon = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500];
+  const calon = [0.5, 1, 2, 2.5, 5, 10, 15, 20, 25, 50, 100, 200, 250, 500];
   const L = calon.reduce((a, c) => Math.abs(c * 1000 / skala - 50) < Math.abs(a * 1000 / skala - 50) ? c : a, calon[0]);
   const tanda = L < 2.5 ? [0, L / 2, L] : [0, L / 5, 2 * L / 5, L];
   const mm = v => v * 1000 / skala, x0 = xKanan - mm(L), h = 1.4, f = v => fmt(v).replace(/,00$/, '').replace(/(,\d)0$/, '$1');
