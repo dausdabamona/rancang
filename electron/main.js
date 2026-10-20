@@ -452,6 +452,20 @@ async function ujiAsap() {
       && ubahAs.data && ubahAs.data.as.label === "B'" && ubahAs.data.nama === "As B'" && bulat(dAs) === 15 && />B(&#39;|')</.test(dAs) && dAs.includes('>11<') && !dAs.includes('>E<')
       && bulat(pAs) === 15 && />B(&#39;|')</.test(pAs) && tAs.includes('>11<'),
       {sebelumAs, label: labelAs, denah: bulat(dAs), pondasi: bulat(pAs), tampak11: tAs.includes('>11<')});
+    // v0.42: Jadikan komponen + salinan kembar (Asrama Putri: kolom lt.2 + foot plat), RAB sebelum = sesudah
+    await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
+    const petaRab = rr => { const m = new Map(); for (const b of rr.flatMap(dv => dv.baris)) m.set(b.kode + '|' + b.uraian, (m.get(b.kode + '|' + b.uraian) || 0) + (b.vol || 0)); return m; };
+    const rab0 = petaRab(await metode.rab({}));
+    const kotak = await halaman(`window.rancangUji.kotakKomponen(['C2', 'F1'])`);
+    await halaman(`(() => { document.getElementById('mk-batal').click(); return true; })()`);
+    const kp = await halaman(`window.rancangUji.komponen(['C2', 'F1'], {nama: 'Kolom + foot plat R1', sisip: 'tengah'})`);
+    const rab1 = petaRab(await metode.rab({}));
+    const beda = [...new Set([...rab0.keys(), ...rab1.keys()])].map(k => [k, Math.abs((rab0.get(k) || 0) - (rab1.get(k) || 0))]).filter(([, v]) => v > 0.011);
+    const mk = (await halaman(`window.rancangAPI.model()`));
+    const inst = Object.values(mk.elemen).filter(d => d.jenis === 'instance' && d.definisi === kp.kid);
+    catat('jadikan komponen dengan salinan kembar', kotak.tampil && /Ganti juga \d+ salinan/.test(kotak.kembar) && kp.kid && kp.kembar >= 30 && inst.length === kp.kembar + 1 && !beda.length
+      && inst.every(d => d.nama === 'Kolom + foot plat R1') && !Object.values(mk.elemen).some(d => d.jenis === 'kolom' && d.x === 0 && d.y === 0 && d.z0 === 4),
+      {kotak, kembar: kp.kembar, instance: inst.length, beda: beda.slice(0, 6)});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;

@@ -325,6 +325,11 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .kop-logo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
 .kop-logo img{height:40px;width:40px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:2px}
 .kop-logo label.tombol{display:inline-flex;cursor:pointer;color:var(--fg);font-size:12px}
+.isian-komp{padding:16px 18px;display:grid;gap:12px}
+.isian-komp label:not(.cek){display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.isian-komp input[type=text],.isian-komp select{background:var(--bg);border:1px solid var(--line);border-radius:2px;padding:7px 8px;color:var(--fg);font-size:13px}
+.daftar-komp li{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.daftar-komp li input{flex:1 1 120px;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:2px;padding:4px 6px;color:var(--fg);font-size:12px}
 .baris-rev{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)}
 .baris-rev span{min-width:0;overflow-wrap:anywhere}
 .lembar-kop select,.lembar-kop input{background:var(--panel);border:1px solid var(--line);border-radius:2px;padding:6px 8px;color:var(--fg);font-size:13px}
@@ -838,6 +843,21 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
         <button class="tombol" type="button" id="mp-batal">Batal</button>
         <button class="tombol" type="button" id="mp-tambah">Tambahkan ke model</button>
         <button class="tombol utama" type="button" id="mp-ganti">Ganti model sekarang</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal" id="modalKomp" hidden role="dialog" aria-modal="true" aria-labelledby="mk-judul">
+  <div class="modal-isi" style="width:min(460px,100%)">
+    <div class="modal-kepala"><h2 id="mk-judul">Jadikan komponen</h2><button type="button" id="mk-tutup" aria-label="Tutup">×</button></div>
+    <div class="isian-komp">
+      <p class="meta" id="mk-info"></p>
+      <label for="mk-nama">Nama komponen<input type="text" id="mk-nama" autocomplete="off"></label>
+      <label for="mk-sisip">Titik sisip<select id="mk-sisip"><option value="pojok">Pojok kiri bawah</option><option value="tengah">Tengah alas</option><option value="klik">Klik titik di model</option></select></label>
+      <label class="cek" for="mk-kembar"><input type="checkbox" id="mk-kembar" checked> <span id="mk-kembar-teks">Ganti juga salinan yang sama</span></label>
+      <div class="aksi-panel" style="justify-content:flex-end">
+        <button class="tombol" type="button" id="mk-batal">Batal</button>
+        <button class="tombol utama" type="button" id="mk-buat">Buat komponen</button>
       </div>
     </div>
   </div>
@@ -5066,28 +5086,177 @@ function pecahGrup(gid) {
 }
 function masukGrup(gid) { S.konteks = gid; S.sel.clear(); segarKonteks(); segarPilihan(); }
 /** Jadikan pilihan sekarang definisi komponen baru + satu salinan; elemen dan grup asal dihapus (tombol G). */
-function jadikanKomponen() {
-  if (S.edit) return toast('Selesaikan edit komponen dulu.');
-  if (!S.sel.size) return toast('Pilih objek dulu, lalu tekan G.');
+/* ============ Jadikan komponen (v0.42): kotak isian, titik sisip, salinan kembar ============ */
+// Pilihan yang akan dijadikan komponen: daftar [id, data] beserta grup yang ikut dihapus; null + pesan bila tidak bisa
+function bahanKomponen() {
+  if (S.edit) return {galat: 'Selesaikan edit komponen dulu.'};
+  if (!S.sel.size) return {galat: 'Pilih objek dulu, lalu tekan G.'};
   const {el, gr} = ekspansi([...S.sel]);
   const daftar = [...el].map(id => [id, S.elems.get(id)]);
-  if (!daftar.length) return toast('Pilihan tidak berisi elemen.');
-  if (daftar.some(([, d]) => d.jenis === 'instance')) return toast('Komponen di dalam komponen belum didukung. Pecah komponennya dulu.');
-  let minx = Infinity, miny = Infinity;
-  for (const [, d] of daftar) for (const [x, y] of titikKunci(d)) { minx = Math.min(minx, x); miny = Math.min(miny, y); }
-  const dasar = {x: r2(snapG(minx)), y: r2(snapG(miny))}, ref = {posisi: dasar, rotasi: 0, z0: 0};
-  const nid = pemberiId(), kid = nid('K'), iid = nid('I');
+  if (!daftar.length) return {galat: 'Pilihan tidak berisi elemen.'};
+  if (daftar.some(([, d]) => d.jenis === 'instance')) return {galat: 'Komponen di dalam komponen belum didukung. Pecah komponennya dulu.'};
+  if (daftar.some(([, d]) => NONFISIK.has(d.jenis) || d.jenis === 'gambar2d' || d.jenis === 'detail')) return {galat: 'Garis bantu, garis potong, level, dan anotasi tidak bisa masuk komponen. Keluarkan dari pilihan dulu.'};
+  return {daftar, gr};
+}
+// titik sisip: pojok kiri bawah (dibulatkan ke grid) atau tengah alas pilihan
+function titikSisip(daftar, cara) {
+  let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+  for (const [, d] of daftar) for (const [x, y] of titikKunci(d)) { minx = Math.min(minx, x); miny = Math.min(miny, y); maxx = Math.max(maxx, x); maxy = Math.max(maxy, y); }
+  return cara === 'tengah' ? {x: r2((minx + maxx) / 2), y: r2((miny + maxy) / 2)} : {x: r2(snapG(minx)), y: r2(snapG(miny))};
+}
+const zElemen = d => (d.jenis === 'tiang' ? d.zKepala : Number.isFinite(d.z0) ? d.z0 : 0);
+// sama bentuk dan isi (toleransi 6 mm), nama/catatan/jejak diabaikan
+const KUNCI_ABAI_KEMBAR = new Set(['nama', 'catatan', 'diubahOleh', 'diubahPada', 'grup', 'dinding']);
+function samaKembar(a, b, akar = true) {
+  if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) <= 0.006;
+  if (a === b) return true;
+  if (a == null || b == null || typeof a !== 'object' || typeof b !== 'object') return (a == null && b == null) || a === b;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) return a.length === b.length && a.every((v, i) => samaKembar(v, b[i], false));
+  const kunci = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of kunci) {
+    if (k.startsWith('_') || (akar && KUNCI_ABAI_KEMBAR.has(k))) continue;
+    if (!samaKembar(a[k], b[k], false)) return false;
+  }
+  return true;
+}
+/**
+ * Cari kelompok elemen lain yang isinya sama dengan definisi (hanya bergeser dan/atau berputar 90°/180°/270°).
+ * @param {Array<[string, any]>} daftar pilihan (dunia)
+ * @param {any[]} elemen isi definisi (lokal, hasil keDefinisi)
+ * @returns {Array<{ref: {posisi: Titik2, rotasi: number, z0: number}, ids: string[], grup: string | undefined}>}
+ */
+function cariKembar(daftar, elemen) {
+  const dipilih = new Set(daftar.map(([id]) => id)), utama = [];
+  elemen.forEach((e, i) => { if (e.jenis !== 'bukaan') utama.push(i); });
+  if (!utama.length) return [];
+  const perJenis = new Map(), bukaanDi = new Map();
+  for (const [id, d] of S.elems) {
+    if (dipilih.has(id) || S.sembunyi.has(id) || !sah(d)) continue;
+    if (d.jenis === 'bukaan') { const l = bukaanDi.get(d.dinding) || []; l.push(id); bukaanDi.set(d.dinding, l); continue; }
+    if (NONFISIK.has(d.jenis) || d.jenis === 'instance' || d.jenis === 'gambar2d' || d.jenis === 'detail') continue;
+    const l = perJenis.get(d.jenis) || []; l.push(id); perJenis.set(d.jenis, l);
+  }
+  // elemen kunci: jenis dengan calon paling sedikit
+  const kunci = utama.reduce((a, i) => ((perJenis.get(elemen[i].jenis) || []).length < (perJenis.get(elemen[a].jenis) || []).length ? i : a), utama[0]);
+  const calonKunci = perJenis.get(elemen[kunci].jenis) || [];
+  if (!calonKunci.length) return [];
+  const pL = titikKunci(elemen[kunci])[0];
+  if (!pL) return [];
+  const terpakai = new Set(), hasil = [];
+  const bukaanDef = elemen.map((e, i) => [e, i]).filter(([e]) => e.jenis === 'bukaan');
+  for (const cid of calonKunci) {
+    if (terpakai.has(cid)) continue;
+    const c = S.elems.get(cid);
+    let ketemu = null;
+    for (const rot of [0, 90, 180, 270]) {
+      const t = rot * Math.PI / 180, cs = Math.round(Math.cos(t)), sn = Math.round(Math.sin(t));
+      for (const [qx, qy] of titikKunci(c).slice(0, 8)) {
+        const ref = {posisi: {x: r2(qx - (cs * pL[0] - sn * pL[1])), y: r2(qy - (sn * pL[0] + cs * pL[1]))}, rotasi: rot, z0: r2(zElemen(c) - zElemen(elemen[kunci]))};
+        if (!samaKembar(bersihkan(keLokal(c, ref)), elemen[kunci])) continue;
+        const peta = new Map([[kunci, cid]]), pakai = new Set([cid]);
+        let ok = true;
+        for (const i of utama) {
+          if (i === kunci) continue;
+          const w = (perJenis.get(elemen[i].jenis) || []).find(wid => !pakai.has(wid) && !terpakai.has(wid) && samaKembar(bersihkan(keLokal(S.elems.get(wid), ref)), elemen[i]));
+          if (!w) { ok = false; break; }
+          peta.set(i, w); pakai.add(w);
+        }
+        if (!ok) continue;
+        // pintu/jendela: tiap dinding kembar harus punya bukaan yang sama persis, tidak lebih
+        const idUtama = utama.map(i => [i, peta.get(i)]), bukaanIds = [];
+        for (const [i, wid] of idUtama) {
+          if (elemen[i].jenis !== 'dinding') continue;
+          const def = bukaanDef.filter(([b]) => b.dinding === '#' + utama.indexOf(i)).map(([b]) => b), ada = (bukaanDi.get(wid) || []).slice();
+          if (def.length !== ada.length) { ok = false; break; }
+          for (const b of def) {
+            const k = ada.findIndex(bid => samaKembar(S.elems.get(bid), b));
+            if (k < 0) { ok = false; break; }
+            bukaanIds.push(ada[k]); ada.splice(k, 1);
+          }
+          if (!ok) break;
+        }
+        if (!ok) continue;
+        const grupS = new Set([...pakai].map(id => S.elems.get(id).grup));
+        ketemu = {ref, ids: [...pakai, ...bukaanIds], grup: grupS.size === 1 ? [...grupS][0] : undefined};
+        break;
+      }
+      if (ketemu) break;
+    }
+    if (ketemu) { hasil.push(ketemu); for (const id of ketemu.ids) terpakai.add(id); }
+  }
+  return hasil;
+}
+const KOMP = {bahan: null, kembar: [], opsi: null};
+function jadikanKomponen() {
+  const b = bahanKomponen();
+  if (b.galat) return toast(b.galat);
+  const nid = nomorMaks('K') + 1, ref = {posisi: titikSisip(b.daftar, 'pojok'), rotasi: 0, z0: 0};
+  KOMP.bahan = b;
+  KOMP.kembar = cariKembar(b.daftar, keDefinisi(b.daftar, ref));
+  $('#mk-info').textContent = `${b.daftar.length} elemen terpilih.`;
+  /** @type {HTMLInputElement} */ ($('#mk-nama')).value = 'Komponen K' + nid;
+  /** @type {HTMLInputElement} */ ($('#mk-kembar')).checked = true;
+  /** @type {HTMLInputElement} */ ($('#mk-kembar')).disabled = !KOMP.kembar.length;
+  $('#mk-kembar-teks').textContent = KOMP.kembar.length ? `Ganti juga ${KOMP.kembar.length} salinan yang sama di model` : 'Tidak ada salinan yang sama di model';
+  $('#modalKomp').hidden = false;
+  setTimeout(() => { const i = /** @type {HTMLInputElement} */ ($('#mk-nama')); i.focus(); i.select(); }, 30);
+}
+function tutupModalKomp() { $('#modalKomp').hidden = true; }
+$('#mk-batal').addEventListener('click', () => { tutupModalKomp(); KOMP.bahan = null; });
+$('#mk-tutup').addEventListener('click', () => { tutupModalKomp(); KOMP.bahan = null; });
+$('#mk-buat').addEventListener('click', () => {
+  const opsi = {nama: /** @type {HTMLInputElement} */ ($('#mk-nama')).value.trim(), sisip: /** @type {HTMLSelectElement} */ ($('#mk-sisip')).value, kembar: /** @type {HTMLInputElement} */ ($('#mk-kembar')).checked};
+  tutupModalKomp();
+  if (opsi.sisip === 'klik') { KOMP.opsi = opsi; setAlat('titiksisip'); return; }
+  buatKomponen(opsi);
+});
+/**
+ * Buat komponen dari pilihan: definisi + satu salinan di tempat pilihan, dan (bila diminta) salinan kembar ikut diganti.
+ * @param {{nama?: string, sisip?: string, kembar?: boolean, titik?: Titik2}} opsi
+ */
+function buatKomponen(opsi = {}) {
+  const b = bahanKomponen();
+  if (b.galat) return toast(b.galat);
+  const {daftar, gr} = b;
+  const dasar = opsi.titik ? {x: r2(opsi.titik.x), y: r2(opsi.titik.y)} : titikSisip(daftar, opsi.sisip), ref = {posisi: dasar, rotasi: 0, z0: 0};
+  const nid = pemberiId(), kid = nid('K'), iid = nid('I'), nama = opsi.nama || 'Komponen ' + kid;
   const elemen = keDefinisi(daftar, ref);
+  const kembar = opsi.kembar === false ? [] : cariKembar(daftar, elemen);
   const tulis = [
-    {id: kid, sesudah: {nama: 'Komponen ' + kid, elemen, catatan: ''}},
+    {id: kid, sesudah: {nama, elemen, catatan: ''}},
     ...daftar.map(([id]) => ({id, sesudah: null})),
     ...[...gr].map(id => ({id, sesudah: null})),
-    {id: iid, sesudah: denganKonteks({jenis: 'instance', nama: 'Komponen ' + kid, definisi: kid, posisi: dasar, rotasi: 0, z0: 0, catatan: ''})}
+    {id: iid, sesudah: denganKonteks({jenis: 'instance', nama, definisi: kid, posisi: dasar, rotasi: 0, z0: 0, catatan: ''})}
   ];
+  for (const k of kembar) {
+    // titik sisip salinan kembar mengikuti titik sisip definisi
+    tulis.push(...k.ids.map(id => ({id, sesudah: null})));
+    const pos = k.ref.posisi, t = k.ref.rotasi * Math.PI / 180, dx = dasar.x - ref.posisi.x, dy = dasar.y - ref.posisi.y;
+    const inst = {jenis: 'instance', nama, definisi: kid, posisi: {x: r2(pos.x + Math.cos(t) * dx - Math.sin(t) * dy), y: r2(pos.y + Math.sin(t) * dx + Math.cos(t) * dy)}, rotasi: k.ref.rotasi, z0: k.ref.z0, catatan: ''};
+    if (k.grup) inst.grup = k.grup;
+    tulis.push({id: nid('I'), sesudah: inst});
+  }
   terapkan(tulis);
   S.sel = new Set([iid]); segarPilihan();
-  toast(`${kid} dibuat dari ${daftar.length} elemen. Salin dengan Pindah + Ctrl.`);
+  toast(`${nama} (${kid}) dibuat dari ${daftar.length} elemen${kembar.length ? `, ${kembar.length} salinan yang sama ikut diganti` : ''}. Salin dengan Pindah + Ctrl.`);
+  return {kid, iid, kembar: kembar.length};
 }
+// Klik titik sisip komponen di model (dari kotak Jadikan komponen)
+const alatTitikSisip = {
+  vcb: 'Ukuran',
+  get petunjuk() { return '<b>Titik sisip komponen:</b> klik titik di model yang menjadi titik sisip (kotak hijau = ujung, bulat biru muda = tengah). Esc membatalkan.'; },
+  move(e) { S.snap = titikSnap(e, null, {atas: true, tengah: true, tepi: true}); minta(); },
+  down(e) {
+    const s0 = titikSnap(e, null, {atas: true, tengah: true, tepi: true}), p = s0 || alatBantu.tunjuk(e);
+    if (!p) return;
+    const opsi = KOMP.opsi || {};
+    KOMP.opsi = null;
+    setAlat('pilih');
+    buatKomponen({...opsi, titik: {x: p.x, y: p.y}});
+  },
+  batal() { reset(); }
+};
 /**
  * Uraikan satu salinan komponen menjadi elemen biasa di grup konteks sekarang.
  * @param {string} iid id salinan (I…)
@@ -10348,8 +10517,8 @@ const alatSanitair = {
     toast(SANITAIR[this.kunci].nama + ' dipasang (' + iid + '). Tab mengganti benda.');
   }
 };
-const ALAT = {jeti: alatJeti, tiang: alatTiang, perlengkapan: alatPerlengkapan, tangga: alatTangga, sanitair: alatSanitair, pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, balok: alatBalok, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, meteran: alatMeteran, dimensi: alatDimensi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, cermin: alatCermin, bantu: alatBantu, asgrid: alatAsGrid, hapus: alatHapus, perluas: alatPerluas, orbit: alatOrbit, iris: alatIris};
-const UBAH = new Set(['jeti', 'tiang', 'perlengkapan', 'tangga', 'sanitair', 'bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'balok', 'pondasi', 'potong', 'anotasi', 'dimensi', 'dorong', 'pindah', 'putar', 'cermin', 'bantu', 'hapus', 'perluas']);
+const ALAT = {jeti: alatJeti, tiang: alatTiang, perlengkapan: alatPerlengkapan, tangga: alatTangga, sanitair: alatSanitair, pilih: alatPilih, persegi: alatPersegi, lingkaran: alatLingkaran, busur: alatBusur, offset: alatOffset, dinding: alatDinding, pintu: alatPintu, jendela: alatJendela, atap: alatAtap, plafon: alatPlafon, kolom: alatKolom, slof: alatSlof, ringbalk: alatRingbalk, balok: alatBalok, pondasi: alatPondasi, potong: alatPotong, anotasi: alatAnotasi, meteran: alatMeteran, dimensi: alatDimensi, dorong: alatDorong, sapuan: alatSapuan, bidang3d: alatBidang3D, pindah: alatPindah, putar: alatPutar, cermin: alatCermin, bantu: alatBantu, asgrid: alatAsGrid, titiksisip: alatTitikSisip, hapus: alatHapus, perluas: alatPerluas, orbit: alatOrbit, iris: alatIris};
+const UBAH = new Set(['jeti', 'tiang', 'perlengkapan', 'tangga', 'sanitair', 'bidang3d', 'sapuan', 'persegi', 'lingkaran', 'busur', 'offset', 'dinding', 'pintu', 'jendela', 'atap', 'plafon', 'kolom', 'slof', 'ringbalk', 'balok', 'pondasi', 'potong', 'anotasi', 'dimensi', 'dorong', 'pindah', 'putar', 'cermin', 'bantu', 'asgrid', 'titiksisip', 'hapus', 'perluas']);
 const alat = () => ALAT[S.tool];
 function batalAlat() { const a = alat(); if (a.batal) a.batal(); else reset(); lepasKunci(); }
 const NAMA_SUMBU = {x: 'sumbu X (merah)', y: 'sumbu Y (hijau)', z: 'sumbu Z (biru)'};
@@ -10382,7 +10551,7 @@ function butirPalet(teks) {
     const P = [
       ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
       ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
-      ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
+      ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Jadikan komponen', 'G', () => jadikanKomponen()], ['Komponen proyek', '', () => { S.sel.clear(); segarPilihan(); if (!TATA.sisi) $('#btn-sisi').click(); setTimeout(() => { const h = [...panel.querySelectorAll('h2')].find(x => x.textContent === 'Komponen proyek'); if (h) h.scrollIntoView({block: 'start'}); else toast('Belum ada komponen di proyek ini. Pilih benda lalu tekan G.'); }, 60); }], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
       ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
     ];
     for (const [teks, ket, f] of P) if ((alias === 'zoom' && teks === 'Zoom semua') || cocok(teks)) hasil.push({jenis: 'Perintah', teks, ket, skor: 2, jalankan: f});
@@ -10623,6 +10792,7 @@ window.addEventListener('keyup', e => {
 });
 window.addEventListener('keydown', e => {
   if (!$('#modalProyek').hidden) { if (e.key === 'Escape') $('#mp-batal').click(); return; }
+  if (!$('#modalKomp').hidden) { if (e.key === 'Escape') $('#mk-batal').click(); else if (e.key === 'Enter') { e.preventDefault(); $('#mk-buat').click(); } return; }
   if (!$('#modal2d').hidden) {
     if (e.target && e.target.matches && e.target.matches('input, textarea, select')) return;
     if (kunci2D(e)) return;
@@ -11390,7 +11560,8 @@ function htmlInstance(id, d) {
   </div></section>
   <section><h2>Definisi ${esc(d.definisi)}</h2><div class="medan">
     ${medanTeks('k-nama', 'Nama komponen', def ? def.nama : '')}
-  </div><p class="meta">Mengubah isi definisi memperbarui semua salinan.</p></section>
+    ${S.komp.size > 1 ? `<label for="i-ganti">Ganti dengan komponen</label><select id="i-ganti" ${dis()}>${[...S.komp].map(([kid, k]) => `<option value="${esc(kid)}" ${kid === d.definisi ? 'selected' : ''}>${esc(k.nama)} (${esc(kid)})</option>`).join('')}</select>` : ''}
+  </div><p class="meta">Mengubah isi definisi memperbarui semua salinan.${S.komp.size > 1 ? ' Ganti dengan: semua salinan terpilih memakai definisi lain di posisi yang sama.' : ''}</p></section>
   <section><h2>Ukuran salinan ini</h2>${htmlTotal()}</section>
   ${htmlRekapBagian([id])}
   ${metaUbah(d)}
@@ -11436,11 +11607,21 @@ function htmlDaftarPotong() {
   return `<section><h2>Garis potong</h2><ul class="daftar-komp">${daftar.map(([id, d]) => `<li>Potongan ${esc(d.nama)}–${esc(d.nama)} <span>${esc(id)}</span>${S.bisaUbah ? `<button class="tombol kecil" type="button" data-aksi="pilih-id" data-id="${esc(id)}">Pilih</button>` : ''}</li>`).join('')}</ul>
   <p class="meta">Pilih untuk mengubah arah pandang, nama, atau menghapusnya. Tampilan potongannya ada di menu Potongan pada bar tampilan.</p></section>`;
 }
+function jumlahSalinanKomp() {
+  const n = new Map();
+  for (const d of S.elems.values()) if (d.jenis === 'instance') n.set(d.definisi, (n.get(d.definisi) || 0) + 1);
+  for (const def of S.komp.values()) for (const e of def.elemen || []) if (e.jenis === 'instance') n.set(e.definisi, (n.get(e.definisi) || 0) + 1);
+  return n;
+}
 function htmlRingkasan() {
+  // Komponen proyek (v0.42): ganti nama, pilih semua salinan, hapus definisi tak terpakai
+  const jumlahSalinan = jumlahSalinanKomp();
   const komp = [...S.komp].map(([kid, k]) => {
-    const n = [...S.elems.values()].filter(x => x.jenis === 'instance' && x.definisi === kid).length;
-    return `<li>${esc(k.nama)} <span>${esc(kid)} · ${n} salinan</span></li>`;
+    const n = jumlahSalinan.get(kid) || 0;
+    return `<li><input type="text" id="kp-nama-${esc(kid)}" value="${esc(k.nama)}" aria-label="Nama ${esc(kid)}" ${dis()}><span>${esc(kid)} · ${n} salinan</span>
+      ${n ? `<button class="tombol kecil" type="button" data-aksi="komp-pilih" data-kid="${esc(kid)}">Pilih semua</button>` : `<button class="tombol kecil" type="button" data-aksi="komp-hapus" data-kid="${esc(kid)}" ${dis()}>Hapus</button>`}</li>`;
   }).join('');
+  const takTerpakai = [...S.komp.keys()].filter(kid => !jumlahSalinan.get(kid)).length;
   return `<section><h2>Proyek</h2><div class="medan">
     ${medanTeks('s-nama', 'Nama proyek', S.setel.nama)}
     <label for="s-satuan">Satuan ketik dan label ukur</label><select id="s-satuan" ${dis()}><option value="m"${satuanCm() ? '' : ' selected'}>meter (m)</option><option value="cm"${satuanCm() ? ' selected' : ''}>sentimeter (cm)</option></select>
@@ -11457,7 +11638,7 @@ function htmlRingkasan() {
   ${htmlRekapBagian([...S.elems.keys()])}
   <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button><button class="tombol" type="button" data-aksi="ekspor-dae" title="Dibuka di SketchUp lewat File &gt; Import">Unduh model 3D untuk SketchUp (.dae)</button></div>
   <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}${Object.keys(CONTOH_PROYEK).map(k => `<button class="tombol" type="button" data-aksi="buka-contoh" data-contoh="${k}">Contoh: ${esc(CONTOH_PROYEK[k].nama)}</button>`).join('')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka. Contoh dapat ditambahkan ke model sekarang atau menggantikannya.</p></section>
-  ${komp ? `<section><h2>Komponen</h2><ul class="daftar-komp">${komp}</ul></section>` : ''}
+  ${komp ? `<section><h2>Komponen proyek</h2><ul class="daftar-komp">${komp}</ul><p class="meta">Pilih benda lalu tekan G untuk membuat komponen; salinan yang sama di model bisa ikut diganti.</p>${takTerpakai ? `<div class="aksi-panel"><button class="tombol" type="button" data-aksi="komp-bersih" ${dis()}>Hapus ${takTerpakai} definisi tak terpakai</button></div>` : ''}</section>` : ''}
   <section><h2>Pintasan</h2><dl class="pintasan">
     <dt><kbd>Spasi</kbd></dt><dd>Pilih</dd><dt><kbd>M</kbd></dt><dd>Pindah, Ctrl untuk menyalin</dd><dt><kbd>Q</kbd></dt><dd>Putar</dd>
     <dt><kbd>R</kbd></dt><dd>Persegi, Tab: lingkaran, busur</dd><dt><kbd>L</kbd></dt><dd>Dinding</dd><dt><kbd>C</kbd> <kbd>A</kbd></dt><dd>Lingkaran, Busur</dd>
@@ -11698,6 +11879,9 @@ panel.addEventListener('click', e => {
   else if (aksi === 'edit-komponen' && id) masukKomponen(id);
   else if (aksi === 'pecah-komponen' && id) pecahKomponen(id);
   else if (aksi === 'lihat-potongan' && id) buka2D('potongan:' + id);
+  else if (aksi === 'komp-pilih') { const kid = e.target.dataset.kid; S.sel = new Set([...S.elems].filter(([, x]) => x.jenis === 'instance' && x.definisi === kid).map(([i]) => i)); segarPilihan(); toast(`${S.sel.size} salinan ${kid} dipilih.`); }
+  else if (aksi === 'komp-hapus') { const kid = e.target.dataset.kid; if (S.komp.has(kid) && !jumlahSalinanKomp().get(kid)) terapkan([{id: kid, sesudah: null}]); }
+  else if (aksi === 'komp-bersih') { const n = jumlahSalinanKomp(), ids = [...S.komp.keys()].filter(k => !n.get(k)); if (ids.length) { terapkan(ids.map(k => ({id: k, sesudah: null}))); toast(`${ids.length} definisi komponen tak terpakai dihapus.`); } }
   else if (aksi === 'putus-otomatis' && id) putusOtomatis(id);
   else if (aksi === 'putus-hapus' && id) terapkan([...S.elems].filter(([, x]) => x.jenis === 'gambar2d' && x.bentuk === 'putus' && x.lembar === 'potongan:' + id).map(([lid]) => ({id: lid, sesudah: null})));
   else if (aksi === 'lepas-label' && id) lepasLabel(id);
@@ -11774,6 +11958,14 @@ function ubahMedan(e) {
   const t = e.target;
   if (!t.id) return;
   const [awal, f] = t.id.split('-');
+  if (awal === 'kp' && f === 'nama') {
+    const kid = t.id.slice('kp-nama-'.length), def = S.komp.get(kid);
+    if (!def) return;
+    const nm = t.value.trim();
+    if (!nm) return tolakAngka('Nama komponen tidak boleh kosong.');
+    terapkan([{id: kid, sesudah: {...salin(def), nama: nm}}]);
+    return;
+  }
   if (awal === 's') {
     if (f === 'nama') S.setel.nama = t.value.trim() || 'Proyek baru';
     else if (f === 'bahan') { if (BAHAN_DINDING[t.value]) S.setel.bahanDinding = t.value; }
@@ -12027,6 +12219,15 @@ function ubahMedan(e) {
     const def = S.komp.get(d.definisi);
     if (!def) return;
     terapkan([{id: d.definisi, sesudah: {...salin(def), nama: t.value.trim() || def.nama}}]);
+    return;
+  }
+  if (awal === 'i' && f === 'ganti') {
+    const kid = t.value;
+    if (!S.komp.has(kid)) return;
+    const ids = [...S.sel].filter(i => { const x = S.elems.get(i); return x && x.jenis === 'instance' && x.definisi !== kid; });
+    if (!ids.length) return;
+    terapkan(ids.map(i => ({id: i, sesudah: {...salin(S.elems.get(i)), definisi: kid}})));
+    toast(`${ids.length} salinan diganti menjadi ${S.komp.get(kid).nama}.`);
     return;
   }
   if (awal === 'i') {
@@ -17257,6 +17458,9 @@ window.rancangUji = Object.freeze({
   skalaGrafis: n => skalaGrafisSvg(n, 200, 150),
   // alat As grid (v0.42): titik pertama A, arah deretan deg (°), teks ketik (mis. '11x3'); hasil: id garis as yang dibuat
   asGrid: (A, deg, teks) => { setAlat('asgrid'); alatAsGrid.batal(); alatAsGrid.A = {x: A.x, y: A.y}; alatAsGrid.deg = deg; const n0 = S.elems.size; if (teks) alatAsGrid.ketik(teks); else alatAsGrid.buat([0]); return [...S.elems.keys()].slice(n0); },
+  // Jadikan komponen (v0.42) tanpa kotak isian: pilih ids lalu buat; hasil: id definisi, salinan, jumlah kembar, ringkasan RAB
+  komponen: (ids, opsi = {}) => { S.sel = new Set(ids); segarPilihan(); const b = bahanKomponen(); if (b.galat) return {galat: b.galat}; const kembar = cariKembar(b.daftar, keDefinisi(b.daftar, {posisi: titikSisip(b.daftar, opsi.sisip), rotasi: 0, z0: 0})).length; const r = buatKomponen(opsi); return {...r, ditemukan: kembar, instance: [...S.elems.values()].filter(x => x.jenis === 'instance').length}; },
+  kotakKomponen: ids => { S.sel = new Set(ids); segarPilihan(); jadikanKomponen(); return {tampil: !$('#modalKomp').hidden, info: $('#mk-info').textContent, kembar: $('#mk-kembar-teks').textContent, nama: /** @type {HTMLInputElement} */ ($('#mk-nama')).value}; },
   teksLabel: id => { const d = S.elems.get(id); return d ? {teks: teksAnotasi(d), hilang: sumberLabelHilang(d)} : null; },
   elemenDiDenah: (x, y, zl) => elemenDiDenah(x, y, zl),
   ketikPindah: v => { alatPindah.ketik(v); return {elemen: S.elems.size, undo: S.undo.length}; },
