@@ -750,6 +750,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
       <label class="cek" for="m-dimensi"><input type="checkbox" id="m-dimensi" checked> Garis ukuran</label>
       <label class="cek" for="m-dimdinding"><input type="checkbox" id="m-dimdinding"> Ukuran tiap dinding</label>
       <label class="cek" for="m-terhalang"><input type="checkbox" id="m-terhalang" checked> Sembunyikan anotasi terhalang</label>
+      <label class="cek" for="m-skala-grafis" title="Batang skala di pojok kanan bawah setiap lembar berskala; tetap benar walau dicetak diperkecil"><input type="checkbox" id="m-skala-grafis" checked> Skala grafis</label>
     </div>
     <div class="anot-bar" id="m-anot">
       <span class="judul-kecil">Anotasi</span>
@@ -12553,11 +12554,6 @@ function buatSVG(o) {
         isi.push(...ukuranBerantai({dinding: dinding.map(x => x.g), kolom: daftar.filter(x => x.g.jenis === 'kolom').map(x => x.g),
           lantai: daftar.filter(x => x.g.jenis === 'volume' && (x.g.tinggi || 0) <= 0.3).map(x => x.p), luar: {x0, y0, x1, y1}, X, Y}));
       }
-      // panah utara
-      const ax = area.x + area.w - 8, ay = area.y + 9;
-      isi.push(`<circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
-        `<polygon points="${ax},${ay - 6} ${ax + 2.4},${ay + 3} ${ax},${ay + 1.6} ${ax - 2.4},${ay + 3}" fill="#000"/>`,
-        teks(ax, ay - 7.6, 'U', 3, 'text-anchor="middle" font-weight="700"'));
     }
   } else if (o.jenis === 'atap') {
     const atapList = geos.filter(g => g.jenis === 'atap'), bidList = geos.filter(g => g.jenis === 'bidang' && g.peran === 'atap');
@@ -13140,11 +13136,42 @@ function buatSVG(o) {
     }
   }
   if (info && !skala) skala = o.skala || 100;
+  // panah utara (v0.40: juga di denah atap, denah pondasi, rencana plafon) dan skala grafis di semua lembar berskala
+  if (!info && ['denah', 'atap', 'pondasi', 'plafon'].includes(o.jenis)) {
+    const ax = area.x + area.w - 8, ay = area.y + 9;
+    isi.push(`<g class="panah-utara"><circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
+      `<polygon points="${ax},${ay - 6} ${ax + 2.4},${ay + 3} ${ax},${ay + 1.6} ${ax - 2.4},${ay + 3}" fill="#000"/>`,
+      teks(ax, ay - 7.6, 'U', 3, 'text-anchor="middle" font-weight="700"'), '</g>');
+  }
+  const pakaiSkalaGrafis = o.skalaGrafis !== undefined ? !!o.skalaGrafis : (S.setel.lembar || {}).skalaGrafis !== false;
+  if (!info && pakaiSkalaGrafis && skala > 0 && o.jenis !== 'kusen') isi.push(skalaGrafisSvg(skala, area.x + area.w - 6, area.y + area.h - 5));
   // bingkai dan kop gambar
   isi.push(...svgBenda2D(o, proyekLembar));
   const kop = kopGambar(o, W, H, '1 : ' + skala);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`;
   return {svg, info, skala, W, H, peta, anotStat};
+}
+/**
+ * Skala grafis (v0.40): batang hitam-putih sepanjang ±50 mm di kertas, ujung kanannya di (xKanan, yAlas).
+ * 1:100 → 0·1·2·5 m; 1:20 → 0·0,5·1 m. Tetap benar walau lembar dicetak diperkecil, karena ikut terskala bersama gambar.
+ * @param {number} skala penyebut skala
+ * @param {number} xKanan
+ * @param {number} yAlas
+ */
+function skalaGrafisSvg(skala, xKanan, yAlas) {
+  const calon = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500];
+  const L = calon.reduce((a, c) => Math.abs(c * 1000 / skala - 50) < Math.abs(a * 1000 / skala - 50) ? c : a, calon[0]);
+  const tanda = L < 2.5 ? [0, L / 2, L] : [0, L / 5, 2 * L / 5, L];
+  const mm = v => v * 1000 / skala, x0 = xKanan - mm(L), h = 1.4, f = v => fmt(v).replace(/,00$/, '').replace(/(,\d)0$/, '$1');
+  const out = [`<g class="skala-grafis">`];
+  for (let i = 0; i < tanda.length - 1; i++) {
+    const a = x0 + mm(tanda[i]), b = x0 + mm(tanda[i + 1]);
+    out.push(`<rect x="${n2(a)}" y="${n2(yAlas - h)}" width="${n2(b - a)}" height="${h}" fill="${i % 2 ? '#fff' : '#000'}" stroke="#000" stroke-width="0.2"/>`);
+  }
+  for (const t of tanda) out.push(`<text x="${n2(x0 + mm(t))}" y="${n2(yAlas - h - 0.9)}" font-size="2" text-anchor="middle">${esc(f(t))}</text>`);
+  out.push(`<text x="${n2(xKanan + 1.2)}" y="${n2(yAlas - 0.2)}" font-size="2">m</text>`,
+    `<text x="${n2(x0)}" y="${n2(yAlas + 2.6)}" font-size="2" fill="#555">SKALA 1 : ${skala}</text>`, '</g>');
+  return out.join('');
 }
 let hasil2D = null;
 // skala lainnya: angka penyebut bulat 5–5000; bila tidak sah dipakai otomatis
@@ -13196,7 +13223,7 @@ function isiPilihan2D(pilih) {
 /* ---- daftar lembar di panel kiri ---- */
 function simpanLembar(ubah) {
   const l = daftarLembar();
-  S.setel.lembar = {urutan: l.map(x => x.jenis), keluar: l.filter(x => !x.masuk).map(x => x.jenis), ...ubah};
+  S.setel.lembar = {...(S.setel.lembar || {}), urutan: l.map(x => x.jenis), keluar: l.filter(x => !x.masuk).map(x => x.jenis), ...ubah};
   simpanSetelan();
 }
 function renderLembar() {
@@ -13213,6 +13240,7 @@ function renderLembar() {
   renderSampul(aktif === 'sampul');
   renderDetailPanel();
   renderKop();
+  /** @type {HTMLInputElement} */ ($('#m-skala-grafis')).checked = (S.setel.lembar || {}).skalaGrafis !== false;
 }
 // pilihan model kop dan isian data kop (panel kiri)
 let kopTerbuka = false, revisiTerbuka = false;
@@ -14637,6 +14665,7 @@ $('#btn-2d').addEventListener('click', () => buka2D());
 $('#m-tutup').addEventListener('click', tutup2D);
 $('#modal2d').addEventListener('click', e => { if (e.target.id === 'modal2d') tutup2D(); });
 ['#m-jenis', '#m-skala', '#m-kertas', '#m-dimensi', '#m-dimdinding', '#m-terhalang', '#m-level'].forEach(s => $(s).addEventListener('change', segar2D));
+$('#m-skala-grafis').addEventListener('change', e => { if (S.bisaUbah) simpanLembar({skalaGrafis: /** @type {HTMLInputElement} */ (e.target).checked}); segar2D(); });
 $('#m-jenis').addEventListener('change', isiLevel2D);
 $('#m-skala').addEventListener('change', () => {
   const lain = $('#m-skala').value === 'lain';
@@ -15907,6 +15936,9 @@ window.rancangUji = Object.freeze({
   },
   // revisi kop (v0.40): tambah revisi dan ganti model kop tanpa panel; hasil: daftar revisi
   revisi: (tanggal, uraian, model) => { if (tanggal) tambahRevisi(tanggal, uraian); if (model) { S.setel.kop = {...(S.setel.kop || {}), model}; simpanSetelan(); } return daftarRevisi(); },
+  // pengaturan Ruang Lembar (v0.40), mis. {skalaGrafis: false}; hasil: pengaturan lembar sesudahnya
+  lembar: ubah => { simpanLembar(ubah); return {...S.setel.lembar}; },
+  skalaGrafis: n => skalaGrafisSvg(n, 200, 150),
   teksLabel: id => { const d = S.elems.get(id); return d ? {teks: teksAnotasi(d), hilang: sumberLabelHilang(d)} : null; },
   elemenDiDenah: (x, y, zl) => elemenDiDenah(x, y, zl),
   ketikPindah: v => { alatPindah.ketik(v); return {elemen: S.elems.size, undo: S.undo.length}; },

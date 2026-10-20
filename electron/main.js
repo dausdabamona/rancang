@@ -423,6 +423,19 @@ async function ujiAsap() {
     catat('revisi di kop semua lembar', rv.length === 2 && rv[1].no === 2 && jenisL.length > 5 && !tanpaRev.length && sB.includes('20/10/2026 · Rev. 2')
       && sL.includes('1. Ubah pintu P1 dua daun') && sL.includes('2. Tambah kanopi teras') && revBerkas,
       {lembar: jenisL.length, tanpaRev, revBerkas});
+    // v0.40: skala grafis di lembar berskala (panjang batang = L × 1000 / skala mm) dan panah utara di denah atap/pondasi/plafon
+    const batang = svg => { const g = (svg.match(/<g class="skala-grafis">([\s\S]*?)<\/g>/) || [])[1] || ''; const w = [...g.matchAll(/<rect [^>]* width="([\d.]+)"/g)].reduce((a, x) => a + Number(x[1]), 0); const sk = (g.match(/SKALA 1 : (\d+)/) || [])[1]; return {mm: Math.round(w * 10) / 10, skala: Number(sk), label: [...g.matchAll(/text-anchor="middle">([^<]+)</g)].map(x => x[1])}; };
+    const sg = {};
+    for (const j of ['denah', 'atap', 'pondasi', 'plafon', 'depan']) { const g = await metode.gambar2D({jenis: j}); sg[j] = {...batang(g.svg), utara: g.svg.includes('panah-utara')}; }
+    const s20 = batang(await halaman(`window.rancangUji.skalaGrafis(20)`)), s100 = batang(await halaman(`window.rancangUji.skalaGrafis(100)`)), s50 = batang(await halaman(`window.rancangUji.skalaGrafis(50)`));
+    const gd = await metode.gambar2D({jenis: 'detail', kertas: 'A3'}); sg.detail = {...batang(gd.svg), utara: gd.svg.includes('panah-utara')};
+    await halaman(`window.rancangUji.lembar({skalaGrafis: false})`);
+    const mati = (await metode.gambar2D({jenis: 'denah'})).svg.includes('skala-grafis');
+    const lbrSet = await halaman(`window.rancangUji.lembar({skalaGrafis: true})`);
+    const okPanjang = Object.values(sg).every(x => x.skala > 0 && x.mm >= 35 && x.mm <= 70);
+    catat('skala grafis dan panah utara', okPanjang && s20.label.join() === '0,0,5,1' && s20.mm === 50 && s100.label.join() === '0,1,2,5' && s100.mm === 50 && s50.mm === 50 && sg.detail.skala === 10 && !sg.detail.utara
+      && ['denah', 'atap', 'pondasi', 'plafon'].every(j => sg[j].utara) && !sg.depan.utara && !mati && lbrSet.skalaGrafis === true && Array.isArray(lbrSet.urutan),
+      {sg, s20, s100, s50, mati});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;
