@@ -120,6 +120,19 @@ export function modelKPSorong() {
   det('det:3', 'tiangDermaga', cari(d => d.jenis === 'tiang' && !d.miring));
   det('det:3', 'bollard', cari(d => d.tipe === 'bolder'));
 
+  // ---- keterangan 2D (v0.41 Tahap 4): dimensi, sudut, kemiringan, dan label di Potongan A–A dan tampak depan zona
+  const L2 = (lembar, bentuk, titik, lain) => tambah('L', {jenis: 'gambar2d', bentuk, lembar, tempel: 'gambar', titik, gaya: {tebal: 0.18}, ...lain});
+  const P = (y, z) => ({x: 41, y, z});
+  L2('potongan:X1', 'dimensi', [P(-1, ZD), P(4, ZD)], {arah: 'datar', geser: -16, bidang: 'tegak'});
+  L2('potongan:X1', 'dimensi', [P(-1, ZD), P(0, ZD), P(3, ZD), P(4, ZD)], {arah: 'datar', geser: -9, bidang: 'tegak'});
+  L2('potongan:X1', 'dimensi', [P(4, ZD), P(4, ZBP), P(4, ZBB), P(3.4, ZPC), P(3.4, -0.3)], {arah: 'tegak', geser: -10, bidang: 'tegak'});
+  L2('potongan:X1', 'kemiringan', [P(0.5, ZK), P(0.5 + (ZK + 16) / N_MIRING, -16)], {bidang: 'tegak'});
+  L2('potongan:X1', 'sudut', [P(0.5, ZK), P(0.5, -10), P(0.5 + (ZK + 10) / N_MIRING, -10)], {bidang: 'tegak'});
+  const capB = cari(d => d.tipe === 'pilecap' && d.x === AS[7] && d.y === ASY.B), tiangB = cari(d => d.jenis === 'tiang' && d.x === AS[7] && d.y === ASY.B);
+  L2('potongan:X1', 'label', [P(3.3, ZPC + 0.35), P(6.2, ZPC + 1.4)], {bidang: 'tegak', sumber: capB, isi: '{nama} · {tulangan}', ukuran: 2.2});
+  L2('potongan:X1', 'label', [P(3.15, -4), P(6.2, -3)], {bidang: 'tegak', sumber: tiangB, isi: 'Tiang pancang Ø{diameter} · L {panjang} m', ukuran: 2.2});
+  L2('kiri@G1', 'kemiringan', [{x: 0, y: 4.2, z: ZD}, {x: 0, y: 8.2, z: ZD - 2}], {bidang: 'tegak'});
+
   const setel = {nama: 'Dermaga Politeknik KP Sorong (model ulang dari gambar TA 2020)', faktorBesi: 5,
     sampul: {lokasi: 'Politeknik Kelautan dan Perikanan Sorong', pemilik: 'Politeknik KP Sorong', tahun: '2020', penggambar: 'Firdaus Dabamona'}, kop: {kodeLembar: 'PKP'}};
   return {setel, grup, elemen: el};
