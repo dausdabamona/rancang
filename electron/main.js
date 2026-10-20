@@ -406,6 +406,23 @@ async function ujiAsap() {
       && lv1.teks === 'Lantai Kamar 1 · 14,84 m²' && ru && ru.ok && tb.teks === 'P9' && tv.teks === 'Lantai Kamar 1 · 16,96 m²'
       && svgL.includes('Lantai Kamar 1 · 16,96 m²') && di2D === 'V1' && th.hilang && th.teks === 'Lantai Kamar 1 · 16,96 m²' && pnl.lepas && pnl.hilang,
       {lb1: lb1.teks, lv1: lv1.teks, tb, tv, di2D, hilang: th, pnl, ru});
+    // v0.40: revisi di kop: tampil di semua lembar (tiga model kop), tanggal revisi terakhir + Rev. n
+    await halaman(`window.rancangUji.revisi('12/10/2026', 'Ubah pintu P1 dua daun')`);
+    const rv = await halaman(`window.rancangUji.revisi('20/10/2026', 'Tambah kanopi teras')`);
+    const jenisL = await halaman(`window.rancangAPI.daftarLembar().map(l => l.jenis)`);
+    const tanpaRev = [];
+    for (const j of jenisL.filter(x => x !== 'sampul')) { const g = await metode.gambar2D({jenis: j}); if (!g || !g.svg || !g.svg.includes('20/10/2026 · Rev. 2') || !g.svg.includes('2. Tambah kanopi teras')) tanpaRev.push(j); }
+    await halaman(`window.rancangUji.revisi(null, null, 'bawah')`);
+    const sB = (await metode.gambar2D({jenis: 'denah'})).svg;
+    await halaman(`window.rancangUji.revisi(null, null, 'kananLengkap')`);
+    const sL = (await metode.gambar2D({jenis: 'denah'})).svg;
+    await halaman(`window.rancangUji.revisi(null, null, 'kanan')`);
+    await new Promise(r2 => setTimeout(r2, 1500));
+    const tersimpan = JSON.parse(fs.readFileSync(proyek.jalur, 'utf8'));
+    const revBerkas = JSON.stringify(tersimpan).includes('Tambah kanopi teras');
+    catat('revisi di kop semua lembar', rv.length === 2 && rv[1].no === 2 && jenisL.length > 5 && !tanpaRev.length && sB.includes('20/10/2026 · Rev. 2')
+      && sL.includes('1. Ubah pintu P1 dua daun') && sL.includes('2. Tambah kanopi teras') && revBerkas,
+      {lembar: jenisL.length, tanpaRev, revBerkas});
     hasil.ok = true;
   } catch (err) {
     hasil.galat = err.message;

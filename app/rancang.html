@@ -324,6 +324,8 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .kop-logo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
 .kop-logo img{height:40px;width:40px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:2px}
 .kop-logo label.tombol{display:inline-flex;cursor:pointer;color:var(--fg);font-size:12px}
+.baris-rev{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)}
+.baris-rev span{min-width:0;overflow-wrap:anywhere}
 .lembar-kop select,.lembar-kop input{background:var(--panel);border:1px solid var(--line);border-radius:2px;padding:6px 8px;color:var(--fg);font-size:13px}
 .lembar-kop summary{cursor:pointer;font-size:12.5px;color:var(--fg);padding:2px 0}
 .lembar-kop details[open] summary{margin-bottom:6px}
@@ -11814,6 +11816,10 @@ function dataKop() {
     konsultan: k.konsultan || sp.perencana || '', digambar: k.digambar || sp.penggambar || '',
     tanggal: sp.tanggal || new Date().toLocaleDateString('id-ID')};
 }
+// revisi gambar (v0.40): berlaku untuk semua lembar; kop menampilkan tiga revisi terakhir dan tanggal revisi terakhir
+const daftarRevisi = () => (Array.isArray(S.setel.revisi) ? S.setel.revisi : []).filter(r => r && r.tanggal);
+const revisiAkhir = () => { const r = daftarRevisi(); return r.length ? r[r.length - 1] : null; };
+const tanggalKop = dk => { const r = revisiAkhir(); return r ? `${r.tanggal} · Rev. ${r.no}` : dk.tanggal; };
 // pecah teks menjadi baris yang muat di lebar tertentu (perkiraan lebar huruf: 0,56 × ukuran, huruf besar 0,68)
 function bungkusTeks(t, lebar, uk, maks = 3) {
   const lebarHuruf = String(t || '') === String(t || '').toUpperCase() ? 0.68 : 0.56;
@@ -11837,7 +11843,7 @@ function kopGambar(o, W, H, skalaTeks) {
     const kopH = 22, ky = H - m - kopH;
     const nomor = l && l.kode ? `${l.kode} · ${l.urut}/${l.total}` : '–';
     const kolom = [['PROYEK', S.setel.nama, 0.31], ['GAMBAR', judulG, 0.24], ['SKALA', skalaTeks, 0.10], ['KERTAS', o.kertas, 0.07],
-      ['TANGGAL', dk.tanggal, 0.10], ['LEMBAR', nomor, 0.10], ['DIBUAT', 'RANCANG', 0.08]];
+      ['TANGGAL', tanggalKop(dk), 0.10], ['LEMBAR', nomor, 0.10], ['DIBUAT', 'RANCANG', 0.08]];
     let kop = bingkai + gr(m, ky, W - m, ky, 0.5);
     let kx = m;
     kolom.forEach(([lbl, nilai, lebar], i) => {
@@ -11887,6 +11893,14 @@ function kopGambar(o, W, H, skalaTeks) {
     pisah(y + 5 * f, 0.2);
     for (let i = 1; i <= 3; i++) pisah(y + 5 * f + bt * i, 0.12);
     for (const xk of kol.slice(1, 3)) out.push(gr(xk, y, xk, y + h, 0.15));
+    // tiga revisi terakhir, terbaru di baris paling bawah; paraf dibiarkan kosong untuk ditandatangani
+    const rv = daftarRevisi().slice(-3);
+    rv.forEach((r, i) => {
+      const yb = y + 5 * f + bt * i + bt * 0.68, t0 = `${r.no}${r.uraian ? '. ' + r.uraian : ''}`, w0 = kol[1] - kol[0] - 2.4, w1 = kol[2] - kol[1] - 2;
+      const b0 = bungkusTeks(t0, w0, 1.7 * fu, 1)[0] || '';
+      out.push(tk(kol[0] + 1.2, yb, b0, Math.min(1.7 * fu, w0 / Math.max(1, b0.length * 0.56))));
+      out.push(tk(kol[1] + 1, yb, r.tanggal, Math.min(1.7 * fu, w1 / Math.max(1, String(r.tanggal).length * 0.56))));
+    });
     return h;
   };
   const blokTtd = (judul, atas, nama, jabatan) => h => (y) => {
@@ -11954,8 +11968,9 @@ function kopGambar(o, W, H, skalaTeks) {
     bawah.push([blokParaf, 16], [blokJudul(true), 22], [blokSel([['KODE GAMBAR', kodeL, 0.36], ['JUMLAH GAMBAR', jumlahL, 0.34], ['HALAMAN', nomorL, 0.30]]), 15]);
   } else {
     atas.push([blokSatker, 40], [blokDokumen, 26]);
+    if (daftarRevisi().length) atas.push([blokRevisi, 20]);
     bawah.push([blokParaf, 16], [blokJudul(false), 20], [blokSel([['SKALA', skalaTeks, 0.55], ['KERTAS', o.kertas, 0.45]]), 13],
-      [blokSel([['KODE', kodeL, 0.4], ['LEMBAR', nomorL, 0.3], ['JUMLAH', jumlahL, 0.3]]), 13], [blokSel([['TANGGAL', dk.tanggal, 1]]), 12]);
+      [blokSel([['KODE', kodeL, 0.4], ['LEMBAR', nomorL, 0.3], ['JUMLAH', jumlahL, 0.3]]), 13], [blokSel([['TANGGAL', tanggalKop(dk), 1]]), 12]);
   }
   const tAtas = atas.reduce((a, [, t]) => a + t, 0) * f, tBawah = bawah.reduce((a, [, t]) => a + t, 0) * f;
   // kanan lengkap: sisa ruang dibagi ke blok tanda tangan agar rapat ke bawah
@@ -13200,7 +13215,7 @@ function renderLembar() {
   renderKop();
 }
 // pilihan model kop dan isian data kop (panel kiri)
-let kopTerbuka = false;
+let kopTerbuka = false, revisiTerbuka = false;
 function renderKop() {
   const box = $('#m-kop');
   if (!box || box.contains(document.activeElement)) return;
@@ -13213,8 +13228,15 @@ function renderKop() {
     <details id="m-kop-data" ${kopTerbuka ? 'open' : ''}><summary>Data kop</summary><div>
     ${ISIAN_KOP.filter(([key]) => model === 'kananLengkap' || !/^(mengetahui|diperiksa|konsultan|direktur)/.test(key) || model === 'bawah' && false)
       .map(([key, lbl]) => `<label>${esk(lbl)}<input type="text" data-kop="${key}" value="${esk(k[key] || '')}" placeholder="${esk(ph[key] || '')}" ${dis()}></label>`).join('')}
-    <p class="meta">Isian kosong memakai data sampul bila ada; bila tetap kosong, ruangnya dibiarkan untuk ditulis tangan.</p></div></details>`;
+    <p class="meta">Isian kosong memakai data sampul bila ada; bila tetap kosong, ruangnya dibiarkan untuk ditulis tangan.</p></div></details>
+    <details id="m-kop-rev" ${revisiTerbuka ? 'open' : ''}><summary>Revisi gambar (${daftarRevisi().length})</summary><div>
+    ${daftarRevisi().map((r, i) => `<div class="baris-rev"><span><b>Rev. ${esk(r.no)}</b> · ${esk(r.tanggal)}${r.uraian ? ' · ' + esk(r.uraian) : ''}</span><button class="tombol kecil" type="button" data-rev-hapus="${i}" ${dis()}>Hapus</button></div>`).join('') || '<p class="meta">Belum ada revisi.</p>'}
+    <label>Tanggal revisi<input type="text" id="m-rev-tanggal" value="${esk(new Date().toLocaleDateString('id-ID'))}" ${dis()}></label>
+    <label>Uraian perubahan<input type="text" id="m-rev-uraian" placeholder="mis. Ubah pintu P1 menjadi dua daun" ${dis()}></label>
+    <button class="tombol kecil" type="button" id="m-rev-tambah" ${dis()}>Tambah revisi</button>
+    <p class="meta">Revisi berlaku untuk semua lembar: kop menampilkan tiga revisi terakhir dan tanggal revisi terakhir (Rev. n). Paraf dibiarkan kosong untuk ditandatangani.</p></div></details>`;
   box.querySelector('#m-kop-data').addEventListener('toggle', e => { kopTerbuka = e.target.open; });
+  box.querySelector('#m-kop-rev').addEventListener('toggle', e => { revisiTerbuka = e.target.open; });
 }
 // logo kop: diperkecil ke sisi terpanjang 240 px agar data pengaturan tetap ringan
 async function bacaLogo(berkas) {
@@ -13229,6 +13251,30 @@ async function bacaLogo(berkas) {
     return data;
   } finally { URL.revokeObjectURL(url); }
 }
+function tambahRevisi(tanggal, uraian) {
+  const lama = daftarRevisi(), no = lama.reduce((a, r) => Math.max(a, Number(r.no) || 0), 0) + 1;
+  S.setel.revisi = [...lama, {no, tanggal: String(tanggal || new Date().toLocaleDateString('id-ID')).trim(), uraian: String(uraian || '').trim()}];
+  simpanSetelan();
+  return no;
+}
+$('#m-kop').addEventListener('click', e => {
+  if (!S.bisaUbah) return;
+  const t = /** @type {HTMLElement} */ (e.target);
+  if (t.id === 'm-rev-tambah') {
+    const tg = /** @type {HTMLInputElement} */ ($('#m-rev-tanggal')).value.trim(), ur = /** @type {HTMLInputElement} */ ($('#m-rev-uraian')).value.trim();
+    if (!tg) return toast('Isi tanggal revisi.');
+    const no = tambahRevisi(tg, ur);
+    t.blur(); $('#m-kop').innerHTML = ''; renderKop(); segar2D();
+    return toast(`Revisi ${no} ditambahkan ke kop semua lembar.`);
+  }
+  if (t.dataset && t.dataset.revHapus !== undefined) {
+    const r = daftarRevisi(), i = Number(t.dataset.revHapus);
+    if (!r[i]) return;
+    S.setel.revisi = r.filter((_, j) => j !== i); simpanSetelan();
+    t.blur(); $('#m-kop').innerHTML = ''; renderKop(); segar2D();
+    return toast(`Revisi ${r[i].no} dihapus dari kop.`);
+  }
+});
 $('#m-kop').addEventListener('click', e => {
   if (e.target.id !== 'm-kop-logo-hapus' || !S.bisaUbah) return;
   const k = {...(S.setel.kop || {})}; delete k.logo; S.setel.kop = k;
@@ -15859,6 +15905,8 @@ window.rancangUji = Object.freeze({
     const id = [...S.sel][0], d = id && S.elems.get(id);
     return {id, data: d ? ambil(id) : null, teks: d ? teksAnotasi(d) : null};
   },
+  // revisi kop (v0.40): tambah revisi dan ganti model kop tanpa panel; hasil: daftar revisi
+  revisi: (tanggal, uraian, model) => { if (tanggal) tambahRevisi(tanggal, uraian); if (model) { S.setel.kop = {...(S.setel.kop || {}), model}; simpanSetelan(); } return daftarRevisi(); },
   teksLabel: id => { const d = S.elems.get(id); return d ? {teks: teksAnotasi(d), hilang: sumberLabelHilang(d)} : null; },
   elemenDiDenah: (x, y, zl) => elemenDiDenah(x, y, zl),
   ketikPindah: v => { alatPindah.ketik(v); return {elemen: S.elems.size, undo: S.undo.length}; },
