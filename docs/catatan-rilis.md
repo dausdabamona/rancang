@@ -1,3 +1,16 @@
+## Yang baru di 0.45.0
+
+Potongan dan detail setingkat gambar kerja konsultan, dari kajian gambar Dermaga KP Sorong (21 Oktober 2026).
+
+- **Tiang dipendekkan di potongan**: tiang pancang berhenti 1,0 m di bawah LWL dengan garis putus otomatis, sehingga potongan dermaga bisa pada skala kerja (Potongan A–A BBP: 1:200 → 1:100). Di bawahnya tertulis label ujung tiang, mis. "Ujung tiang −33,64 · L 36,00 m". Garis putus manual tetap berlaku.
+- **Daftar muka air di kiri luar gambar**: HWL, MSL, LWL berjajar dengan garis penunjuk ke garis airnya, tidak lagi menempel dan menimpa rantai tinggi.
+- **Penanda potongan**: garis potong lain yang memotong bidang gambar diberi penanda (garis putus, panah arah pandang, huruf dalam lingkaran) di atas potongan.
+- **Kotak Keterangan lembar detail** di kolom catatan kop: satuan tulangan mm, dimensi cm, mutu beton dari elemen sumber detail, besi ulir BjTS 420 dan polos BjTP 280 (bisa diganti lewat `setel.mutuBesi`).
+- **Lembar detail di akhir set** gambar zona; label detail dibungkus sampai 4 baris, tidak dipotong "…".
+- **Penempatan di tengah kertas**: rencana pondasi/pile cap dan rencana balok/pelat dipusatkan (ruang keterangan atas hanya bila perlu); lembar gabungan dari objek yang sama memakai titik pusat yang sama sehingga gambar berdampingan sejajar; lembar bagian di ujung objek tidak menyisakan ruang kosong.
+- **Teks panjang tidak keluar kertas**: judul gambar lembar gabungan dibungkus/diperkecil agar tidak saling menimpa; lokasi dan nama proyek di sampul dibungkus; judul di daftar gambar diperkecil agar muat kolomnya.
+- Pasang **RANCANG-Setup-0.45.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.45.0 dari rilis yang sama.
+
 ## Yang baru di 0.44.1
 
 Perbaikan dari Potongan C–C Dermaga TUKS BBP (21 Oktober 2026): angka ukuran tidak lagi bertumpuk di garis putus.

@@ -131,6 +131,17 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     const n300 = (sp.match(/>300</g) || []).length;
     assert.ok(n300 >= 1 && n300 <= 6, `jarak 300 cm hanya untuk tiang terlihat (ada ${n300})`);
     assert.ok(/>2700</.test(sp), 'jarak tiang menyambung melewati celah garis putus: 2700 cm');
+    // v0.45: tiang dipendekkan 1,0 m di bawah LWL di potongan (skala kerja), dengan label ujung tiang
+    const sx = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X1', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    assert.ok(/Ujung tiang -37,64 · L 40,00 m/.test(sx), 'label ujung tiang di potongan bertiang dipendekkan');
+    assert.ok(/LWL ±0,00/.test(sx), 'daftar muka air tetap tampil');
+    // v0.45: penanda potongan B (lingkaran r 2,4 mm) di potongan melintang A; di potongan B penanda A jatuh di bagian putus sehingga tidak digambar
+    assert.ok(/<circle cx="[\d.]+" cy="[\d.]+" r="2.4" fill="#fff"/.test(sx), 'penanda potongan B di potongan A');
+    assert.ok(!/<circle cx="[\d.]+" cy="[\d.]+" r="2.4" fill="#fff"/.test(sp), 'penanda di bagian putus tidak digambar');
+    // v0.45: kotak Keterangan lembar detail dari mutu model
+    assert.equal(json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'E950', data: {jenis: 'detail', template: 'pileCapDermaga', sumber: 'F1', lembar: 'det:9', skala: 25}}]}})).ok, true);
+    const sdk = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'det:9', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    assert.ok(/KETERANGAN/.test(sdk) && /Mutu beton fc' 29 MPa/.test(sdk) && /BjTS 420, fy 420 MPa/.test(sdk), 'kotak keterangan berisi mutu beton dan besi');
     // v0.44.0: detail perbesaran dengan judul, bingkai persegi, garis penghubung, dan isi rinci (label tulangan, mutu bahan)
     const det = {jenis: 'gambar2d', bentuk: 'perbesar', lembar: 'potongan:X1', tempel: 'gambar', titik: [{x: 6, y: 4.5, z: 2.9}, {x: 6, y: 5.4, z: 2.9}],
       letak: {x: 300, y: 80}, skala: 20, nomor: '7', judul: 'Pertemuan pelat dan balok tepi', bingkai: 'persegi', rasio: 1.5, penghubung: true};
