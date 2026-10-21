@@ -18733,12 +18733,11 @@ function renderDetailPanel() {
   const opsiT = (pilih) => Object.entries(TEMPLATE_DETAIL).map(([k, v]) => `<option value="${k}" ${k === pilih ? 'selected' : ''}>${esk(v.nama)}</option>`).join('')
     + (pustaka.length ? `<optgroup label="Pustaka saya">${pustaka.map(e => `<option value="pustaka:${esk(e.id)}" ${'pustaka:' + e.id === pilih ? 'selected' : ''}>${esk(e.nama)}</option>`).join('')}</optgroup>` : '');
   const opsiSk = (pilih) => SKALA_DETAIL.map(v => `<option value="${v}" ${v === pilih ? 'selected' : ''}>1 : ${v}</option>`).join('');
-  const opsiSb = (pilih, tmpl = 'sambunganKayu') => Object.entries(SAMBUNGAN_PER_TEMPLATE[tmpl] || SAMBUNGAN_KAYU).map(([k, v]) => `<option value="${k}" ${k === pilih ? 'selected' : ''}>${esk(v.ket)}</option>`).join('');
   let h = '';
   if (det.length) {
     h += '<h4>Detail di lembar ini</h4>' + det.map(([id, d], i) => `<div class="detail-baris" data-detail="${id}">
       <label>${i + 1}. Judul<input type="text" data-df="judul" value="${esk(d.judul || '')}" placeholder="${esk(namaDetail({...d, judul: ''}))}" ${dis()}></label>
-      ${SAMBUNGAN_PER_TEMPLATE[d.template] ? `<label>Sambungan<select data-df="sambungan" ${dis()}>${opsiSb(d.sambungan, d.template)}</select></label>` : ''}
+      ${SAMBUNGAN_PER_TEMPLATE[d.template] ? `<label>Sambungan<select data-df="sambungan" ${dis()}>${opsiSambungan(d.sambungan, d.template)}</select></label>` : ''}
       <div class="detail-dua"><label>Skala<select data-df="skala" ${dis()}>${opsiSk(d.skala || TEMPLATE_DETAIL[d.template].skala)}</select></label>
       ${TEMPLATE_DETAIL[d.template].sumber ? `<label>Sumber<select data-df="sumber" ${dis()}>${opsiSumberDetail(d.template, d.sumber)}</select></label>` : ''}</div>
       <div class="detail-dua">${d.template === 'bebas' ? `<button class="tombol kecil" type="button" data-dpustaka="${id}" ${dis()} title="Simpan isi petak ini agar bisa dipakai lagi, juga di proyek lain">Simpan ke pustaka</button>` : ''}
@@ -18749,13 +18748,17 @@ function renderDetailPanel() {
   h += `<details id="m-detail-tambah" ${tambahDetailTerbuka ? 'open' : ''}><summary>+ Tambah detail</summary><div class="detail-form">
     <label>Template<select id="dt-template">${opsiT(t0)}</select></label>
     <label>Sumber<select id="dt-sumber">${opsiSumberDetail(t0, '')}</select></label>
-    <label id="dt-sambungan-l" ${SAMBUNGAN_PER_TEMPLATE[t0] ? '' : 'hidden'}>Sambungan<select id="dt-sambungan">${SAMBUNGAN_PER_TEMPLATE[t0] ? opsiSb('', t0) : opsiSb('tumpuan')}</select></label>
+    <label id="dt-sambungan-l" ${SAMBUNGAN_PER_TEMPLATE[t0] ? '' : 'hidden'}>Sambungan<select id="dt-sambungan">${SAMBUNGAN_PER_TEMPLATE[t0] ? opsiSambungan('', t0) : opsiSambungan('tumpuan')}</select></label>
     <label>Lembar<select id="dt-lembar">${lembarAda.map(j => `<option value="${j}" ${j === aktif ? 'selected' : ''}>${esk(judulLembar(j))}</option>`).join('')}<option value="baru" ${aktif.startsWith('det:') ? '' : 'selected'}>Lembar detail baru</option></select></label>
     <label>Skala<select id="dt-skala">${opsiSk(infoTemplate(t0).skala)}</select></label>
     <button class="tombol utama" type="button" id="dt-tambah" ${dis()}>Tambahkan</button>
     <button class="tombol bahaya kecil" type="button" id="dt-pustaka-hapus" ${t0.startsWith('pustaka:') ? '' : 'hidden'} ${dis()}>Hapus dari pustaka</button></div></details>`;
   box.innerHTML = h;
   box.querySelector('#m-detail-tambah').addEventListener('toggle', e => { tambahDetailTerbuka = e.target.open; });
+}
+// pilihan jenis sambungan per template detail; dipakai panel detail dan saat template diganti (di luar fungsi panel agar terjangkau keduanya)
+function opsiSambungan(pilih, tmpl = 'sambunganKayu') {
+  return Object.entries(SAMBUNGAN_PER_TEMPLATE[tmpl] || SAMBUNGAN_KAYU).map(([k, v]) => `<option value="${k}" ${k === pilih ? 'selected' : ''}>${esk(v.ket)}</option>`).join('');
 }
 $('#m-detail').addEventListener('change', e => {
   const t = e.target;
@@ -18764,7 +18767,7 @@ $('#m-detail').addEventListener('change', e => {
     $('#dt-sumber').innerHTML = opsiSumberDetail(t.value, '');
     $('#dt-skala').value = String(infoTemplate(t.value).skala);
     $('#dt-sambungan-l').hidden = !SAMBUNGAN_PER_TEMPLATE[t.value];
-    if (SAMBUNGAN_PER_TEMPLATE[t.value]) $('#dt-sambungan').innerHTML = opsiSb('', t.value);
+    if (SAMBUNGAN_PER_TEMPLATE[t.value]) $('#dt-sambungan').innerHTML = opsiSambungan('', t.value);
     $('#dt-pustaka-hapus').hidden = !t.value.startsWith('pustaka:');
     return;
   }
