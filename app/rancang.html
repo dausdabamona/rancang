@@ -13767,7 +13767,8 @@ function buatSVGInti(o) {
     return out;
   };
   // xDaftar (v0.45, keputusan 21 Okt 2026) = tepi kanan daftar muka air di luar gambar (kiri): label berjajar di sana, tidak menempel gambar
-  const garisTanahAtauPasut = (xa, xb, X, Y, profilUZ = null, xDaftar = null) => {
+  // zSembunyi (v0.47) = [zBawah, zAtas] bagian tegak yang dihilangkan garis putus (tiang dipendekkan): label dasar laut tidak ditaruh di sana
+  const garisTanahAtauPasut = (xa, xb, X, Y, profilUZ = null, xDaftar = null, zSembunyi = null) => {
     const ps = pasutAktif();
     if (!ps) return [garis(xa, Y(0), xb, Y(0), 0.7)];
     const out = [];
@@ -13787,14 +13788,17 @@ function buatSVGInti(o) {
     }
     if (profilUZ && profilUZ.length >= 2) {
       // dasar laut berprofil: garis lengkung + arsir miring di bawahnya, dipangkas ke lebar gambar
-      const q = profilUZ.map(([u, z]) => [X(u), Y(z)]).filter(([x]) => x >= xa - 0.01 && x <= xb + 0.01).sort((a, b) => a[0] - b[0]);
+      const qz = profilUZ.map(([u, z]) => [X(u), Y(z), z]).filter(([x]) => x >= xa - 0.01 && x <= xb + 0.01).sort((a, b) => a[0] - b[0]);
+      const q = qz.map(([x, y]) => [x, y]);
       if (q.length >= 2) {
         out.push(`<polyline points="${q.map(([x, y]) => `${n2(x)},${n2(y)}`).join(' ')}" fill="none" stroke="#6B4E2E" stroke-width="0.6" stroke-linejoin="round"/>`);
         for (let x = q[0][0] + 1; x < q[q.length - 1][0] - 1; x += 2.5) {
           const i = q.findIndex(p => p[0] >= x), a = q[Math.max(0, i - 1)], b = q[i], y = a[1] + (b[1] - a[1]) * ((x - a[0]) / ((b[0] - a[0]) || 1));
           out.push(garis(x, y, x - 1.4, y + 1.4, 0.15, '#6B4E2E'));
         }
-        out.push(teks(q[0][0] + 1.5, q[0][1] - 0.8, [...S.elems.values()].some(d => d.jenis === 'level' && d.datum === 'dasar' && /asumsi/i.test(d.catatan || '')) ? 'Dasar laut (profil, asumsi)' : 'Dasar laut (profil)', 2, 'fill="#6B4E2E" stroke="#fff" stroke-width="0.7" paint-order="stroke"'));
+        const tampak = qz.find(([, , z]) => !(zSembunyi && z > zSembunyi[0] - 0.05 && z < zSembunyi[1] + 0.05));
+        // label di titik profil pertama yang tidak tertutup garis putus; bila semua tertutup, elevasinya tetap terbaca di tabel dasar laut
+        if (tampak) out.push(teks(tampak[0] + 1.5, tampak[1] - 0.8, [...S.elems.values()].some(d => d.jenis === 'level' && d.datum === 'dasar' && /asumsi/i.test(d.catatan || '')) ? 'Dasar laut (profil, asumsi)' : 'Dasar laut (profil)', 2, 'fill="#6B4E2E" stroke="#fff" stroke-width="0.7" paint-order="stroke"'));
         return out;
       }
     }
@@ -14137,8 +14141,8 @@ function buatSVGInti(o) {
     const tiang = gs.filter(g => g.jenis === 'tiang' && Dp(g.x, g.y) >= -0.05), dMin = tiang.length ? Math.min(...tiang.map(g => Dp(g.x, g.y))) : 0;
     const depan = tiang.filter(g => Dp(g.x, g.y) <= dMin + 0.6), tegakT = depan.filter(g => !(g.miring && g.miring.n > 0));
     const uT = [...new Set(tegakT.map(g => Math.round(Hh(g.x, g.y) * 100) / 100))].filter(u => u > u0 + 0.05 && u < u1 - 0.05 && !dalamPutus(putusU, u)).sort((a, b) => a - b);
-    out.push(ukurOto('dimensi', [W(u0, zTop), W(u1, zTop)], P, {arah: 'datar', geser: uT.length ? -16 : -9}));
     const hindari = putusU.map(r => [X(r.a), X(r.b)]);
+    out.push(ukurOto('dimensi', [W(u0, zTop), W(u1, zTop)], P, {arah: 'datar', geser: uT.length ? -16 : -9, hindari}));   // v0.47: angka total tidak di celah putus
     if (uT.length) out.push(ukurOto('dimensi', [u0, ...uT, u1].map(u => W(u, zTop)), P, {arah: 'datar', geser: -9, hindari}));
     // rantai tinggi di tepi kiri pelat
     const balok = gs.filter(g => g.jenis === 'ringbalk' && g.peran === 'balok' && (Dp(g.awal.x, g.awal.y) >= 0) !== (Dp(g.akhir.x, g.akhir.y) >= 0));
@@ -15175,15 +15179,15 @@ function buatSVGInti(o) {
         // profil dasar laut (v0.45.1): diambil sepanjang bidang potong yang diperpanjang ke seluruh lebar gambar,
         // agar tiang di luar panjang garis potong tetap terlihat bagian yang tertanam
         const prf = profilDasar(), uzP = prf ? (() => { const r = [], n = 240, ua = h0 - 0.8, ub = h1 + 0.8; for (let i = 0; i <= n; i++) { const u = ua + (ub - ua) * (i / n); r.push([u, zDasarDi(px0 + u * vy, py0 - u * vx)]); } return r; })() : null;
-        isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y, uzP, ketOto ? X(h0) - 27 : null));
-        if (!o.fokus) isi.push(...labelUjungTiang(o, {Hh, Dp, X, Y, h0, h1, dalam: pt.dalam, yCatatan: Y(bz0) + (tbD ? 19 : 4), xCatatan: X(h0 - 0.8), hanyaCatatan: pendek}));
+        isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y, uzP, ketOto ? X(h0) - 27 : null, pendek ? [bz0, zPotongT] : null));
+        if (!o.fokus) isi.push(...labelUjungTiang(o, {Hh, Dp, X, Y, h0, h1, dalam: pt.dalam, yCatatan: Y(bz0) + (tbD ? 19 : 4) + (pendek ? 5 : 0), xCatatan: X(h0 - 0.8), hanyaCatatan: pendek}));
         if (asJ) isi.push(...asTegak(asJ, Hh, X, Y, zmax, zmin, h0, h1, 0, pp.u, true));
         const zAtasAs = ketOto ? Math.max(zmax, ...geosP.filter(g => g.jenis === 'plat').map(g => g.z0 + g.tebal)) : zmax;
         if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, zAtasAs, zmin, h0, h1, ketOto ? 14 : 0, pp.u));
         // penanda potongan: garis putus-putus pendek, panah arah pandang, dan huruf potongan dalam lingkaran
         const yPen = Y(zAtasAs) - 8 - (ketOto ? 14 : 0) - (asZ ? 9 : asJ ? 23 : 0) - 3;
         isi.push(...svgPenanda(penandaP, X, yPen, pp.u));
-        if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3, h0, h1, pp.u));
+        if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3 + (pendek ? 5 : 0), h0, h1, pp.u));   // v0.47: beri ruang label ujung tiang
         if (ketOto) isi.push(...ketPotongan({Hh, Dp, X, Y, s, gs: geosP, vx, vy, px0, py0, putusU: pp.u}));
         // kuda-kuda terdekat di belakang bidang potong, dan penampang reng/gording yang terpotong
         for (const rk of rangkaL) {

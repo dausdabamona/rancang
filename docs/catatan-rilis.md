@@ -1,3 +1,15 @@
+## Yang baru di 0.47.0
+
+Daftar potong besi di dalam RANCANG (21 Oktober 2026), tahap 1 dari fitur pembesian (pilih, sarankan, periksa).
+
+- **Lembar baru "Daftar potong besi"** (menu jenis gambar; di set gambar dermaga masuk sesudah lembar detail): tiap mark dengan bagian, sketsa bentuk (lurus berkait, sengkang, bentuk U, spiral), ukuran tekukan dalam mm, panjang potong, jumlah per elemen, jumlah batang, total panjang, dan berat. Di bawahnya ringkasan per diameter (berat, berat + sisa potong, jumlah lonjor 12 m) dan daftar tipe penulangan. Batang lebih dari 12 m ditandai *.
+- **Satu sumber dengan RAB**: volume besi RAB kini dijumlahkan dari daftar batang yang sama, jadi daftar potong dan RAB selalu sama. Angka RAB tidak berubah dari versi sebelumnya (dicek pada semua proyek contoh dan proyek pengguna).
+- **Kode tipe** (K1, KP1, S1, RB1, B1, FP1, PC1, PL1, TG1, TP1) sama dengan lembar Detail penulangan.
+- **Ekspor Excel RAB** mendapat sheet **DAFTAR POTONG BESI** dengan rumus (jumlah batang, total panjang, berat, ringkasan per diameter, lonjor).
+- Alat MCP baru **`daftar_besi`** agar Claude bisa membaca daftar potong besi.
+- **Potongan bergaris putus**: angka ukuran total tidak lagi jatuh di celah putus; label "Dasar laut (profil)" tidak ditaruh di bagian yang dihilangkan; tabel dasar laut digeser agar tidak menempel label ujung tiang.
+- Pasang **RANCANG-Setup-0.47.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.47.0 dari rilis yang sama.
+
 ## Yang baru di 0.46.0
 
 Penyatuan empat perubahan yang dikerjakan bersamaan (PR #41, #42, #43, #45; 21 Oktober 2026).

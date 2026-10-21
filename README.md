@@ -39,6 +39,7 @@ Alat yang tersedia untuk Claude:
 | `daftar_elemen`, `ambil_elemen` | Membaca model |
 | `terapkan_perubahan` | Menambah, mengubah, menghapus elemen (diperiksa dulu, ditolak utuh bila ada yang salah) |
 | `ringkasan_ukuran`, `volume_rab` | Ukuran dan volume RAB |
+| `daftar_besi` | Daftar potong besi: tipe penulangan, panjang potong, jumlah batang, berat per diameter |
 | `gambar_2d` | Denah, tampak, potongan, daftar kusen (PNG atau SVG) |
 | `tangkap_layar_3d` | Tangkapan layar tampilan 3D |
 | `buka_proyek`, `simpan_proyek_sebagai` | Berpindah atau menyimpan berkas proyek |
