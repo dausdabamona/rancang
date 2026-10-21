@@ -1,3 +1,12 @@
+## Yang baru di 0.45.0
+
+Jeti kayu di atas tiang pipa baja (21 Oktober 2026), untuk jeti speedboat Marina BBP.
+
+- **Pilihan tiang pada Dermaga kayu (jeti)**: panel Properti → *Tiang* = *Kayu (ikut jeti)* atau *Pipa baja (elemen Tiang pancang terpisah)*. Dengan pipa baja, jeti hanya menghitung rangka atas kayu (balok kepala, gelagar, papan, skor); tiang dipasang sebagai elemen **Tiang pancang** (berat pipa, sambungan las, coating, isian beton, panjang per titik sesuai kedalaman).
+- RAB: baris tiang kayu (DM-201/202) tidak muncul untuk jeti bertiang baja; baut dihitung per kepala tiang; pengawetan hanya untuk kayu rangka atas.
+- Denah tiang: jeti bertiang baja tidak lagi menggambar tiang kayu persegi; tiang pipa digambar oleh elemen tiangnya.
+- Pasang **RANCANG-Setup-0.45.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.45.0 dari rilis yang sama.
+
 ## Yang baru di 0.44.0
 
 Detail perbesaran yang rapi dan informatif (21 Oktober 2026), acuan gambar konsultan dermaga KP Sorong.
