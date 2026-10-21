@@ -13368,6 +13368,64 @@ function gambarUkur2D(d, q, o, warna, tebal) {
   }
   return {el, hit};
 }
+/**
+ * Susunan as jeti kayu (v0.45.1), dipakai denah (gelembung + rantai ukuran) dan tampak/potongan (asTegak).
+ * gs: daftar data elemen yang digambar (jetiKayu dan tiang). Jeti lebar (≥ 1,5 m) diurutkan dari yang terpanjang:
+ * as jeti terpanjang = portal tiangnya, bernomor 1, 2, …; jeti lebar berikutnya berhuruf A, B, … — bila tegak lurus jeti
+ * terpanjang, huruf dimulai dari baris tiang jeti terpanjang. Hasil null bila tidak ada jeti.
+ */
+function susunAsJeti(gs) {
+  const J = gs.filter(g => g.jenis === 'jetiKayu' && g.awal && g.akhir && g.lebar > 0).map(g => {
+    const L = Math.hypot(g.akhir.x - g.awal.x, g.akhir.y - g.awal.y) || 1e-6, ux = (g.akhir.x - g.awal.x) / L, uy = (g.akhir.y - g.awal.y) / L;
+    return {g, L, ux, uy, nx: -uy, ny: ux, W: g.lebar};
+  });
+  if (!J.length) return null;
+  const W2 = (j, u, v) => ({x: j.g.awal.x + j.ux * u + j.nx * v, y: j.g.awal.y + j.uy * u + j.ny * v});
+  const lokal = (j, q) => ({u: (q.x - j.g.awal.x) * j.ux + (q.y - j.g.awal.y) * j.uy, v: (q.x - j.g.awal.x) * j.nx + (q.y - j.g.awal.y) * j.ny});
+  const dalamJ = (j, q, tol = 0.05) => { const l = lokal(j, q); return l.u >= -tol && l.u <= j.L + tol && Math.abs(l.v) <= j.W / 2 + tol; };
+  const kelompokU = vals => {
+    const a = [...vals].sort((p, q) => p - q), r = [];
+    for (const v of a) { const k = r[r.length - 1]; if (k && v - k.akhir <= 0.3) { k.akhir = v; k.n++; k.jml += v; } else r.push({akhir: v, n: 1, jml: v}); }
+    return r.map(k => Math.round(k.jml / k.n * 1000) / 1000);
+  };
+  let cx = 0, cy = 0, nA = 0;
+  for (const j of J) { const m = W2(j, j.L / 2, 0); cx += m.x * j.L * j.W; cy += m.y * j.L * j.W; nA += j.L * j.W; }
+  cx /= nA; cy /= nA;
+  const tiang = gs.filter(g => g.jenis === 'tiang' && Number.isFinite(g.x) && Number.isFinite(g.y));
+  const lebarJ = J.filter(j => j.W >= 1.5).sort((a, b) => b.L - a.L), jari = J.filter(j => j.W < 1.5);
+  const terpakai = new Set();
+  const tiangJ = new Map(lebarJ.map(j => [j, tiang.filter(t => !terpakai.has(t) && dalamJ(j, t) && terpakai.add(t))]));
+  const utama = lebarJ[0];
+  let huruf = 0;
+  const lebar = lebarJ.map((j, idx) => {
+    const mid = W2(j, j.L / 2, 0), sg = Math.sign((mid.x - cx) * j.nx + (mid.y - cy) * j.ny) || -1, vLuar = sg * j.W / 2;
+    const portal = kelompokU(tiangJ.get(j).map(t => lokal(j, t).u));
+    const tegakUtama = idx > 0 && Math.abs(j.ux * utama.ux + j.uy * utama.uy) < 0.1;
+    let baris = [], uAwal = 0, vJauh = -vLuar;
+    if (tegakUtama) {
+      const sudutU = [W2(utama, 0, -utama.W / 2), W2(utama, 0, utama.W / 2), W2(utama, utama.L, -utama.W / 2), W2(utama, utama.L, utama.W / 2)].map(q => lokal(j, q));
+      baris = kelompokU(tiangJ.get(utama).map(t => lokal(j, t).u)).filter(u => u < 0.02);
+      uAwal = Math.min(0, ...sudutU.map(q => q.u));
+      vJauh = sg > 0 ? Math.min(-j.W / 2, ...sudutU.map(q => q.v)) : Math.max(j.W / 2, ...sudutU.map(q => q.v));
+    }
+    const as = [...baris.map(u => ({u, v0: vJauh})), ...portal.map(u => ({u, v0: -vLuar}))].sort((a, b) => a.u - b.u)
+      .map((a, i) => ({...a, label: idx === 0 ? String(i + 1) : String.fromCharCode(65 + (huruf++) % 26)}));
+    return {j, sg, vLuar, uAwal, as};
+  });
+  return {J, lebar, jari, W2, lokal, dalamJ, cx, cy};
+}
+// as jeti untuk tampak/potongan: hanya jeti yang sejajar sumbu x atau y (garis as = x tetap atau y tetap)
+function asJetiTegak(gs) {
+  const A = susunAsJeti(gs);
+  if (!A || !A.lebar.length) return null;
+  const garis = [];
+  for (const w of A.lebar) {
+    const {j} = w, sejajarX = Math.abs(j.ux) > 0.999, sejajarY = Math.abs(j.uy) > 0.999;
+    if (!sejajarX && !sejajarY) continue;
+    for (const a of w.as) { const q = A.W2(j, a.u, 0); garis.push(sejajarX ? {v: Math.round(q.x * 1000) / 1000, label: a.label, sumbu: 'x'} : {v: Math.round(q.y * 1000) / 1000, label: a.label, sumbu: 'y'}); }
+  }
+  return garis.length ? {garis, jeti: true} : null;
+}
 function lembarKhusus(o) {
   const [W, H] = KERTAS[o.kertas], f = W / 297, sp = S.setel.sampul || {}, m = 10;
   const tk = (x, y, t, uk, extra = '') => `<text x="${n2k(x)}" y="${n2k(y)}" font-size="${n2k(uk)}" ${extra}>${esk(t)}</text>`;
@@ -13850,24 +13908,15 @@ function buatSVGInti(o) {
   };
 
   // ===== Ukuran dan as otomatis denah jeti (v0.45.1) =====
-  // Jeti lebar (≥ 1,5 m): as tiap portal tiang (dari tiang pancang di dalam lantainya) bernomor (jeti terpanjang 1, 2, …;
-  // jeti lebar berikutnya A, B, …), rantai ukuran antar-as + panjang total di sisi luar, lebar di ujung yang bebas.
-  // Jari tambat (lebar < 1,5 m) yang sejajar dan berpangkal sama: rantai tepi jari di ujungnya (lebar | jarak bersih | …),
-  // jarak total, dan panjang jari di sisi luar jari terluar. Satuan mengikuti setelan Satuan ukuran (bawaan denah: m).
+  // Jeti lebar (≥ 1,5 m): as tiap portal tiang bernomor 1, 2, … (jeti terpanjang); jeti lebar yang tegak lurus (lengan akses)
+  // berhuruf A, B, … dimulai dari baris tiang jeti terpanjang. Rantai ukuran antar-as + panjang total di sisi luar,
+  // lebar jeti di ujung yang bebas. Jari tambat sejajar: rantai tepi jari di ujungnya, jarak total, panjang jari.
   const ukuranJetiDenah = (gs, X, Y) => {
     const out = [], sat = satuanUkur('m'), f = v => fmtUkur(v, sat);
-    const J = gs.filter(g => g.jenis === 'jetiKayu' && g.awal && g.akhir && g.lebar > 0).map(g => {
-      const L = Math.hypot(g.akhir.x - g.awal.x, g.akhir.y - g.awal.y) || 1e-6, ux = (g.akhir.x - g.awal.x) / L, uy = (g.akhir.y - g.awal.y) / L;
-      return {g, L, ux, uy, nx: -uy, ny: ux, W: g.lebar};
-    });
-    if (!J.length) return out;
-    const W2 = (j, u, v) => ({x: j.g.awal.x + j.ux * u + j.nx * v, y: j.g.awal.y + j.uy * u + j.ny * v});
+    const A = susunAsJeti(gs);
+    if (!A) return out;
+    const {J, W2, lokal, dalamJ, cx, cy} = A;
     const K = q => [X(q.x), Y(q.y)];
-    const lokal = (j, q) => ({u: (q.x - j.g.awal.x) * j.ux + (q.y - j.g.awal.y) * j.uy, v: (q.x - j.g.awal.x) * j.nx + (q.y - j.g.awal.y) * j.ny});
-    const dalamJ = (j, q, tol = 0.05) => { const l = lokal(j, q); return l.u >= -tol && l.u <= j.L + tol && Math.abs(l.v) <= j.W / 2 + tol; };
-    let cx = 0, cy = 0, nA = 0;
-    for (const j of J) { const m = W2(j, j.L / 2, 0); cx += m.x * j.L * j.W; cy += m.y * j.L * j.W; nA += j.L * j.W; }
-    cx /= nA; cy /= nA;
     // arah kertas tegak lurus garis a→b, menghadap ke titik "keluar"
     const normalKertas = (a, b, keluar) => {
       const [ax, ay] = K(a), [bx, by] = K(b), dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1;
@@ -13884,47 +13933,43 @@ function buatSVGInti(o) {
         if (d < 0.02) continue;
         // teks selalu terbaca dari bawah atau dari kanan: garis diarahkan ke kanan (atau ke atas bila tegak)
         let [ax, ay] = K(titik[i]), [bx, by] = K(titik[i + 1]);
-        if (bx < ax - 0.01 || (Math.abs(bx - ax) <= 0.01 && by > ay)) [ax, ay, bx, by] = [bx, by, ax, ay];
+        const tukar = bx < ax - 0.01 || (Math.abs(bx - ax) <= 0.01 && by > ay);
+        if (tukar) [ax, ay, bx, by] = [bx, by, ax, ay];
         const dx = bx - ax, dy = by - ay, LL = Math.hypot(dx, dy) || 1;
         const sisi = Math.sign(-dy / LL * N[0] + dx / LL * N[1]) || -1;
-        out.push(ukuranGaris(ax + N[0] * k, ay + N[1] * k, bx + N[0] * k, by + N[1] * k, f(d), sisi));
+        const teksUk = f(d), sempit = LL < teksUk.length * 1.45 + 1;
+        out.push(ukuranGaris(ax + N[0] * k, ay + N[1] * k, bx + N[0] * k, by + N[1] * k, sempit ? '' : teksUk, sisi));
+        if (sempit) {
+          // bentang sempit (mis. tepi lantai ke as tiang): angka di luar ujung rantai agar tidak menumpuk
+          const dir = [dx / LL, dy / LL], diAwal = (i === 0) !== tukar, [px, py] = diAwal ? [ax, ay] : [bx, by], arah = diAwal ? -1 : 1;
+          const lebarT = teksUk.length * 1.35 + 1.2, tx = px + N[0] * k + dir[0] * arah * lebarT - dir[1] * 1.6 * sisi, ty = py + N[1] * k + dir[1] * arah * lebarT + dir[0] * 1.6 * sisi;
+          const sudut = Math.atan2(dir[1], dir[0]) * 180 / Math.PI;
+          out.push(`<text x="${n2(tx)}" y="${n2(ty)}" font-size="2.4" text-anchor="middle" dominant-baseline="middle" transform="rotate(${n2(sudut)} ${n2(tx)} ${n2(ty)})">${esc(teksUk)}</text>`);
+        }
       }
     };
-    const kelompokU = vals => {
-      const a = [...vals].sort((p, q) => p - q), r = [];
-      for (const v of a) { const k = r[r.length - 1]; if (k && v - k.akhir <= 0.3) { k.akhir = v; k.n++; k.jml += v; } else r.push({akhir: v, n: 1, jml: v}); }
-      return r.map(k => Math.round(k.jml / k.n * 1000) / 1000);
-    };
-    const tiang = gs.filter(g => g.jenis === 'tiang' && Number.isFinite(g.x) && Number.isFinite(g.y));
-    const lebar = J.filter(j => j.W >= 1.5).sort((a, b) => b.L - a.L), jari = J.filter(j => j.W < 1.5);
-    const terpakai = new Set();
-    let hurufKe = 0;
-    lebar.forEach((j, idx) => {
-      const mid = W2(j, j.L / 2, 0), sg = Math.sign((mid.x - cx) * j.nx + (mid.y - cy) * j.ny) || -1;
-      // sisi luar = sisi yang menjauh dari pusat model
-      const vLuar = sg * j.W / 2, pLuar = u => W2(j, u, vLuar);
+    for (const w of A.lebar) {
+      const {j, sg, vLuar, uAwal} = w, pLuar = u => W2(j, u, vLuar);
       const N = normalKertas(pLuar(0), pLuar(j.L), W2(j, j.L / 2, sg * (j.W / 2 + 50)));
-      const portal = kelompokU(tiang.filter(t => !terpakai.has(t) && dalamJ(j, t)).map(t => { terpakai.add(t); return lokal(j, t).u; }));
-      rantai([0, ...portal.filter(u => u > 0.02 && u < j.L - 0.02), j.L].map(pLuar), N, 6);
-      rantai([pLuar(0), pLuar(j.L)], N, 12, false);
-      // garis as + gelembung: as menembus lebar jeti saja
-      portal.forEach((u, i) => {
-        const label = idx === 0 ? String(i + 1) : String.fromCharCode(65 + (hurufKe++ % 26));
-        const [ax, ay] = K(W2(j, u, -vLuar)), [bx, by] = K(pLuar(u));
+      rantai([uAwal, ...w.as.map(a => a.u).filter(u => u > uAwal + 0.02 && u < j.L - 0.02), j.L].map(pLuar), N, 6);
+      rantai([pLuar(uAwal), pLuar(j.L)], N, 12, false);
+      for (const a of w.as) {
+        const [ax, ay] = K(W2(j, a.u, a.v0)), [bx, by] = K(pLuar(a.u));
         const dx = bx - ax, dy = by - ay, LL = Math.hypot(dx, dy) || 1, ex = dx / LL, ey = dy / LL, qx = bx + N[0] * 17, qy = by + N[1] * 17;
-        out.push(`<line x1="${n2(ax - ex * 2)}" y1="${n2(ay - ey * 2)}" x2="${n2(qx)}" y2="${n2(qy)}" ${gayaAs}/>`, bulatAs(qx + N[0] * 3, qy + N[1] * 3, label));
-      });
-      // lebar jeti di ujung yang tidak menempel jeti lain
+        out.push(`<line x1="${n2(ax - ex * 2)}" y1="${n2(ay - ey * 2)}" x2="${n2(qx)}" y2="${n2(qy)}" ${gayaAs}/>`, bulatAs(qx + N[0] * 3, qy + N[1] * 3, a.label));
+      }
+      // lebar jeti di ujung yang bebas; dilewati bila ujung itu segaris dengan sisi luar jeti lebar lain (rantainya sudah memuat ukuran ini)
       const bebas = u => !J.some(o2 => o2 !== j && dalamJ(o2, W2(j, u, 0), 0.05));
-      const u0 = bebas(j.L + 0.4) ? j.L : bebas(-0.4) ? 0 : null;
+      const segaris = u => A.lebar.some(w2 => w2.j !== j && Math.abs(Math.abs(w2.j.ux * j.ux + w2.j.uy * j.uy)) < 0.1 && Math.abs(lokal(w2.j, W2(j, u, 0)).v - w2.vLuar) < 0.1);
+      const u0 = bebas(j.L + 0.4) && !segaris(j.L) ? j.L : bebas(-0.4) && !segaris(0) ? 0 : null;
       if (u0 !== null) {
         const a = W2(j, u0, -j.W / 2), b = W2(j, u0, j.W / 2);
         rantai([a, b], normalKertas(a, b, W2(j, u0 === 0 ? -50 : j.L + 50, 0)), 6);
       }
-    });
+    }
     // jari tambat: kelompok sejajar, panjang sama, pangkal pada garis yang sama
     const grup = [];
-    for (const j of jari) {
+    for (const j of A.jari) {
       const k = grup.find(g0 => Math.abs(g0[0].ux * j.ux + g0[0].uy * j.uy) > 0.999 && Math.abs(lokal(g0[0], j.g.awal).u) < 0.3 && Math.abs(j.L - g0[0].L) < 0.3);
       if (k) k.push(j); else grup.push([j]);
     }
@@ -14253,7 +14298,7 @@ function buatSVGInti(o) {
         for (let k = 0; k + 1 < l.length; k++) {
           const a = l[k], b = l[k + 1];
           if (b - a < 0.005) continue;
-          out.push(datar ? tanda(X(a), pos, X(b), pos, fmt(b - a), -1) : tanda(pos, Y(a), pos, Y(b), fmt(b - a), sisi === 'kiri' ? -1 : 1));
+          out.push(datar ? tanda(X(a), pos, X(b), pos, fmtUkur(b - a, satuanUkur('m')), -1) : tanda(pos, Y(a), pos, Y(b), fmtUkur(b - a, satuanUkur('m')), sisi === 'kiri' ? -1 : 1));
         }
       });
       return posLapis[posLapis.length - 1];
@@ -14531,9 +14576,9 @@ function buatSVGInti(o) {
       if (o.dimensi) {
         const yd = Y(y0) + 0.9 * s, xd = X(x0) - 0.9 * s;
         isi.push(garis(X(x0), Y(y0) + 1, X(x0), yd + 1.5, 0.13), garis(X(x1), Y(y0) + 1, X(x1), yd + 1.5, 0.13));
-        isi.push(ukuranGaris(X(x0), yd, X(x1), yd, fmt(x1 - x0), -1));
+        isi.push(ukuranGaris(X(x0), yd, X(x1), yd, fmtUkur(x1 - x0, satuanUkur('m')), -1));
         isi.push(garis(X(x0) - 1, Y(y0), xd - 1.5, Y(y0), 0.13), garis(X(x0) - 1, Y(y1), xd - 1.5, Y(y1), 0.13));
-        isi.push(ukuranGaris(xd, Y(y0), xd, Y(y1), fmt(y1 - y0), 1));
+        isi.push(ukuranGaris(xd, Y(y0), xd, Y(y1), fmtUkur(y1 - y0, satuanUkur('m')), 1));
       }
       const ax = area.x + area.w - 8, ay = area.y + 9;
       isi.push(`<circle cx="${ax}" cy="${ay}" r="6" fill="none" stroke="#000" stroke-width="0.25"/>`,
@@ -14948,7 +14993,8 @@ function buatSVGInti(o) {
           const k = da / (da - db), uq = Hh(q.awal.x + (q.akhir.x - q.awal.x) * k, q.awal.y + (q.akhir.y - q.awal.y) * k), aq = arahPandang(q);
           if (uq >= h0 - 0.3 && uq <= h1 + 0.3) penandaP.push({u: uq, nama: q.nama, arah: aq.vx * vy - aq.vy * vx >= 0 ? 1 : -1});
         }
-        ruangAtas = (asZ ? 15 : 0) + (ketOto ? 14 : 0) + (penandaP.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (pendek ? 6 : 0);
+        const asJ = !asZ && o.dimensi && !o.fokus ? asJetiTegak(geosP) : null;   // as jeti kayu (v0.45.1), sama dengan denah
+        ruangAtas = (asZ || asJ ? 15 : 0) + (ketOto ? 14 : 0) + (penandaP.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (pendek ? 6 : 0);
         if (ketOto) { tambahMmU = 78 + (psT ? 24 : 0); ruangKiri = psT ? 44 : 20; }
         skala = pilihSkala(bu1 - bu0, bz1 - bz0);
         const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
@@ -14974,10 +15020,11 @@ function buatSVGInti(o) {
         const prf = profilDasar(), uzP = prf ? (() => { const r = [], n = 240, ua = h0 - 0.8, ub = h1 + 0.8; for (let i = 0; i <= n; i++) { const u = ua + (ub - ua) * (i / n); r.push([u, zDasarDi(px0 + u * vy, py0 - u * vx)]); } return r; })() : null;
         isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y, uzP, ketOto ? X(h0) - 27 : null));
         if (!o.fokus) isi.push(...labelUjungTiang(o, {Hh, Dp, X, Y, h0, h1, dalam: pt.dalam, yCatatan: Y(bz0) + (tbD ? 19 : 4), xCatatan: X(h0 - 0.8), hanyaCatatan: pendek}));
+        if (asJ) isi.push(...asTegak(asJ, Hh, X, Y, zmax, zmin, h0, h1, 0, pp.u));
         const zAtasAs = ketOto ? Math.max(zmax, ...geosP.filter(g => g.jenis === 'plat').map(g => g.z0 + g.tebal)) : zmax;
         if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, zAtasAs, zmin, h0, h1, ketOto ? 14 : 0, pp.u));
         // penanda potongan: garis putus-putus pendek, panah arah pandang, dan huruf potongan dalam lingkaran
-        const yPen = Y(zAtasAs) - 8 - (ketOto ? 14 : 0) - (asZ ? 9 : 0) - 3;
+        const yPen = Y(zAtasAs) - 8 - (ketOto ? 14 : 0) - (asZ || asJ ? 9 : 0) - 3;
         isi.push(...svgPenanda(penandaP, X, yPen, pp.u));
         if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3, h0, h1, pp.u));
         if (ketOto) isi.push(...ketPotongan({Hh, Dp, X, Y, s, gs: geosP, vx, vy, px0, py0, putusU: pp.u}));
@@ -15157,7 +15204,7 @@ function buatSVGInti(o) {
         if (o.dimensi) {
           // ukuran tinggi bertingkat di sisi kiri
           const xd = X(h0) - 1.4 * s;
-          for (let i = 0; i + 1 < level.length; i++) isi.push(ukuranGaris(xd, Y(level[i]), xd, Y(level[i + 1]), fmt(level[i + 1] - level[i]), -1));
+          for (let i = 0; i + 1 < level.length; i++) isi.push(ukuranGaris(xd, Y(level[i]), xd, Y(level[i + 1]), fmtUkur(level[i + 1] - level[i], satuanUkur('m')), -1));
           for (const z of level) isi.push(garis(xd - 1, Y(z), X(h0) - 0.6, Y(z), 0.13));
           // jarak as dinding terpotong di bawah
           const as = [...asDinding].sort((a, b) => a - b).filter((h, i, a) => i === 0 || h - a[i - 1] > 0.05);
@@ -15264,7 +15311,8 @@ function buatSVGInti(o) {
         penandaT.push({u: (ua + ub) / 2, nama: q.nama, arah: aq.vx * euT[0] + aq.vy * euT[1] >= 0 ? 1 : -1});
       }
       const tiangTp = geos.filter(t => t.jenis === 'tiang').map(t => ({u: pr.u(t.x, t.y), z: t.zKepala - geoMiring(t).tegak, panjang: t.panjang}));
-      ruangAtas = (asZ ? 15 : 0) + (penandaT.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (tiangTp.length ? 5 : 0);
+      const asJ = !asZ && o.dimensi ? asJetiTegak(geos) : null;   // as jeti kayu (v0.45.1), sama dengan denah
+      ruangAtas = (asZ || asJ ? 15 : 0) + (penandaT.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (tiangTp.length ? 5 : 0);
       skala = pilihSkala(bu1 - bu0, bz1 - bz0);
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bu1) - su.f(bu0)) * s, tinggiK = (sv.f(bz1) - sv.f(bz0)) * s;
@@ -15318,8 +15366,8 @@ function buatSVGInti(o) {
       // peil tampak (v0.45.1): tanpa lisplang dan perlengkapan; dijarangkan di peilKanan (yang penting tetap tampil)
       const level = [...new Set([0, ...daftar.filter(d => d.jenis !== 'lisplang' && !d.tanpaPeil).map(d => n2(d.z1))])].sort((a, b) => a - b);
       isi.push(...peilKanan(level, X(u1), X(u1) + 4, Y));
-      if (asZ) isi.push(...asTegak(asZ, (x, y) => pr.u(x, y), X, Y, z1, z0, u0, u1, 0, pp.u));
-      isi.push(...svgPenanda(penandaT, X, Y(z1) - 8 - (asZ ? 9 : 0) - 3, pp.u));
+      if (asZ || asJ) isi.push(...asTegak(asZ || asJ, (x, y) => pr.u(x, y), X, Y, z1, z0, u0, u1, 0, pp.u));
+      isi.push(...svgPenanda(penandaT, X, Y(z1) - 8 - (asZ || asJ ? 9 : 0) - 3, pp.u));
       if (tiangTp.length) isi.push(...svgUjungTiang(tiangTp.filter(t => !dalamPutus(pp.u, t.u)), X, t => Y(t.z) + 3.4));
       if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3 + (tiangTp.length ? 5 : 0), u0, u1, pp.u));
       if (asZ && ketAktif() && !o.tanpaPerbesar) isi.push(...ketMiring(geos, pr.u(1, 0), pr.u(0, 1), q => [X(pr.u(q.x, q.y)), Y(zDari(q))]));
@@ -15337,7 +15385,7 @@ function buatSVGInti(o) {
       if (o.dimensi) {
         const yd = Y(z0) + 0.9 * s;
         isi.push(garis(X(u0), Y(z0) + 1, X(u0), yd + 1.5, 0.13), garis(X(u1), Y(z0) + 1, X(u1), yd + 1.5, 0.13));
-        isi.push(ukuranGaris(X(u0), yd, X(u1), yd, fmt(u1 - u0), -1));
+        isi.push(ukuranGaris(X(u0), yd, X(u1), yd, fmtUkur(u1 - u0, satuanUkur('m')), -1));
       }
     }
   }
