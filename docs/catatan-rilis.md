@@ -4,6 +4,9 @@ Perbaikan volume RAB tiang pipa baja (21 Oktober 2026), dari RAB Marina Utara BB
 
 - **Coating hanya di zona tertentu**: panel Properti tiang → *Coating: elevasi atas / bawah*. Bila diisi, luas coating dihitung hanya pada zona itu (mis. zona pasang surut −1,00 s.d. kepala tiang), bukan seluruh panjang tiang. Keterangan RAB menyebut "Luas selimut zona coating saja". Kosongkan untuk perilaku lama (seluruh panjang).
 - **Isian beton tanpa spiral**: panel Properti tiang → *Spiral Ø10-150 isian* = *Tidak* untuk pipa kecil yang hanya diisi beton pengisi; baris besi Ø10 isian tidak lagi muncul di RAB. Bawaan tetap *Ya*.
+- **Peil dan ukuran tinggi tidak lagi bertumpuk**: di tampak dan potongan hanya peil penting yang tampil (±0,00, teratas, terbawah, datum pasang surut/dasar laut, yang diseret pengguna), ditambah peil lain yang berjarak ≥ 4 mm di kertas; rantai ukuran tinggi di potongan hanya memuat elevasi paling penting (≥ 8 mm). Puncak perlengkapan (bolder, kleat, fender) tidak diberi peil. Peil yang tersaring tampil di **detail perbesaran**.
+- **Detail perbesaran jeti kayu**: label papan, gelagar, dan balok kepala (ukuran kayu), rantai tinggi lapis rangka (cm), dan peil tiap lapis di dalam detail. Peil lantai jeti (puncak papan) kini ikut di potongan.
+- **Template detail baru *Sambungan jeti kayu*** (sumber: elemen Dermaga kayu): tiang pipa – balok kepala (pelat dudukan dilas + 2 baut Ø16), balok kepala – gelagar (pelat siku L 50.50.5 + baut Ø12), gelagar – papan (sekrup galvanis, celah papan), sambungan las tiang pipa (las tumpul alur V + cincin penahan), pemasangan kleat tambat, dan pemasangan fender ban. Ukuran diambil dari jeti dan tiang pipa di bawahnya.
 - Pasang **RANCANG-Setup-0.45.1.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.45.1 dari rilis yang sama.
 
 ## Yang baru di 0.45.0
