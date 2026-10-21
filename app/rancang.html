@@ -12994,7 +12994,18 @@ function kopGambar(o, W, H, skalaTeks) {
     });
     return h;
   };
-  const blokCatatan = () => (y) => { label(y + 3.6 * fu, 'CATATAN'); return 0; };
+  const blokCatatan = () => (y) => {
+    label(y + 3.6 * fu, 'CATATAN');
+    // catatan otomatis dari gambar (mis. asumsi dasar laut di potongan dermaga), bernomor dan dibungkus selebar lajur
+    let yy = y + 8 * fu;
+    (o.catatanKop || []).forEach((t, i) => {
+      const b = bungkusTeks(t, lw - 7, 2 * fu, 6);
+      out.push(tk(x0 + 1.6, yy, `${i + 1}.`, 2 * fu));
+      b.forEach((bar, j) => out.push(tk(x0 + 5, yy + j * 2.8 * fu, bar, 2 * fu)));
+      yy += b.length * 2.8 * fu + 1.5 * fu;
+    });
+    return 0;
+  };
   // susunan: [blok, tinggi A3 mm]; tinggi 0 = blok pengisi (sisa ruang)
   const atas = [], bawah = [];
   if (model === 'kananLengkap') {
@@ -13299,9 +13310,13 @@ function lembarKhusus(o) {
     isi.push(tk(cx, 76 * f, (S.setel.nama || '').toUpperCase(), 8 * f, 'text-anchor="middle" font-weight="700"'));
     const baris = [['Lokasi', sp.lokasi], ['Pemilik / instansi', sp.pemilik], ['Tahun anggaran', sp.tahun], ['Perencana', sp.perencana], ['Digambar oleh', sp.penggambar]].filter(([, v]) => v);
     let y = 96 * f;
+    // nilai panjang (mis. alamat lokasi) dibungkus agar tidak melewati bingkai dalam sampul
+    const xNilai = cx + 4 * f, lebarNilai = W - m - 2.5 - 8 * f - xNilai;
     for (const [l, v] of baris) {
-      isi.push(tk(cx - 4 * f, y, l, 3.6 * f, 'text-anchor="end" fill="#555"'), tk(cx + 4 * f, y, v, 3.8 * f, 'font-weight="700"'));
-      y += 9 * f;
+      const bar = bungkusTeks(v, lebarNilai * 0.92, 3.8 * f, 3);
+      isi.push(tk(cx - 4 * f, y, l, 3.6 * f, 'text-anchor="end" fill="#555"'));
+      bar.forEach((t, i) => isi.push(tk(xNilai, y + i * 5 * f, t, 3.8 * f, 'font-weight="700"')));
+      y += 9 * f + (bar.length - 1) * 5 * f;
     }
     isi.push(tk(cx, H - 34 * f, `${lembar.length} lembar · kertas ${o.kertas}`, 3.4 * f, 'text-anchor="middle" fill="#555"'),
       tk(cx, H - 26 * f, sp.tanggal || new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}), 3.6 * f, 'text-anchor="middle"'));
@@ -13493,6 +13508,45 @@ function buatSVGInti(o) {
   const garis = (x1, y1, x2, y2, w, warna = '#000') => `<line x1="${n2(x1)}" y1="${n2(y1)}" x2="${n2(x2)}" y2="${n2(y2)}" stroke="${warna}" stroke-width="${w}"/>`;
   const teks = (x, y, t, uk = 2.5, extra = '') => `<text x="${n2(x)}" y="${n2(y)}" font-size="${uk}" ${extra}>${esc(t)}</text>`;
   // Datum pasang surut (v0.39): garis HWL/MSL/LWL putus-putus biru dan garis dasar laut; tanpa datum = garis tanah ±0,00
+  // Ujung tiang di potongan (v0.45.1): satu label per kelompok elevasi ujung, berisi peil ujung dan benaman
+  // (dasar laut di titik tiang − ujung tiang), ditambah catatan bahwa dasar laut/benaman masih asumsi bila datumnya bercatatan asumsi
+  const labelUjungTiang = (o, c) => {
+    const kel = new Map();
+    for (const [id, d] of S.elems) {
+      if (d.jenis !== 'tiang' || !Number.isFinite(d.zKepala) || !(d.panjang > 0) || S.sembunyi.has(id)) continue;
+      const r = (d.dLuar || d.b * 1000 || 300) / 2000, dp = c.Dp(d.x, d.y), u = c.Hh(d.x, d.y);
+      if (dp < -r - 0.01 || (c.dalam > 0 && dp - r > c.dalam) || u < c.h0 - 0.5 || u > c.h1 + 0.5) continue;
+      const ujung = Math.round((d.zKepala - d.panjang) * 100) / 100, zd = zDasarDi(d.x, d.y);
+      const k = kel.get(ujung) || {ujung, u: -Infinity, ben: []};
+      if (u > k.u) k.u = u;
+      if (Number.isFinite(zd)) k.ben.push(zd - ujung);
+      kel.set(ujung, k);
+    }
+    if (!kel.size) return [];
+    const out = [], f2 = v => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
+    // label di kanan tiang; bila terlalu dekat peil kanan, pindah ke kiri. Label yang berdekatan digeser turun agar tidak bertumpuk
+    const xBatas = c.X(c.h1) - 2, terisi = [];
+    for (const k of [...kel.values()].sort((a, b) => b.ujung - a.ujung)) {
+      const x = c.X(k.u), y = c.Y(k.ujung), kiri = x + 34 > xBatas, arah = kiri ? -1 : 1;
+      let yl = y + 2.5;
+      for (const t of terisi) if (Math.abs(t.x - x) < 40 && Math.abs(t.y - yl) < 6) yl = t.y + 6;
+      terisi.push({x, y: yl});
+      const bMin = Math.min(...k.ben), bMax = Math.max(...k.ben);
+      const ben = k.ben.length ? (bMax - bMin < 0.05 ? `benaman ${f2(bMin)} m` : `benaman ${f2(bMin)}–${f2(bMax)} m`) : '';
+      const xt = x + arah * 4.5, jangkar = kiri ? 'text-anchor="end" ' : '';
+      out.push(garis(x, y, x + arah * 2.5, yl, 0.15), garis(x + arah * 2.5, yl, x + arah * 4, yl, 0.15),
+        teks(xt, yl - 0.3, `Ujung tiang ${fmtElev(k.ujung)}`, 1.9, jangkar + 'font-weight="700" stroke="#fff" stroke-width="0.6" paint-order="stroke"'));
+      if (ben) out.push(teks(xt, yl + 2.1, ben, 1.8, jangkar + 'stroke="#fff" stroke-width="0.6" paint-order="stroke"'));
+    }
+    const dasar = [...S.elems.values()].find(d => d.jenis === 'level' && d.datum === 'dasar');
+    if (dasar && /asumsi/i.test(dasar.catatan || '')) {
+      const t = 'Dasar laut dan benaman tiang masih asumsi; panjang tiang final menunggu sondir/boring dan kalendering.';
+      // kop lajur kanan sederhana punya kotak CATATAN: catatan ditulis di sana; model kop lain: di bawah gambar
+      if (!['bawah', 'kananLengkap'].includes(modelKop())) (o.catatanKop = o.catatanKop || []).push(t);
+      else out.push(teks(c.xCatatan, c.yCatatan + 4, 'Catatan: ' + t, 2, 'font-style="italic" fill="#6B4E2E"'));
+    }
+    return out;
+  };
   const garisTanahAtauPasut = (xa, xb, X, Y, profilUZ = null) => {
     const ps = pasutAktif();
     if (!ps) return [garis(xa, Y(0), xb, Y(0), 0.7)];
@@ -13510,7 +13564,7 @@ function buatSVGInti(o) {
           const i = q.findIndex(p => p[0] >= x), a = q[Math.max(0, i - 1)], b = q[i], y = a[1] + (b[1] - a[1]) * ((x - a[0]) / ((b[0] - a[0]) || 1));
           out.push(garis(x, y, x - 1.4, y + 1.4, 0.15, '#6B4E2E'));
         }
-        out.push(teks(q[0][0] + 1.5, q[0][1] - 0.8, 'Dasar laut (profil)', 2, 'fill="#6B4E2E" stroke="#fff" stroke-width="0.7" paint-order="stroke"'));
+        out.push(teks(q[0][0] + 1.5, q[0][1] - 0.8, [...S.elems.values()].some(d => d.jenis === 'level' && d.datum === 'dasar' && /asumsi/i.test(d.catatan || '')) ? 'Dasar laut (profil, asumsi)' : 'Dasar laut (profil)', 2, 'fill="#6B4E2E" stroke="#fff" stroke-width="0.7" paint-order="stroke"'));
         return out;
       }
     }
@@ -14625,8 +14679,11 @@ function buatSVGInti(o) {
             isi.push(svgKusen(polaKusen(m.kusen.tp, k.W, k.H, k.be, k.sisi), (u, z) => { const [x, y] = k.P(k.s + u, k.n); return [X(Hh(x, y)), Y(k.z0 + z)]; }, Math.min(1, s / 20)));
           }
         }
-        const prf = profilDasar(), uzP = prf ? (() => { const r = [], n = 200; for (let i = 0; i <= n; i++) { const x = pt.awal.x + (pt.akhir.x - pt.awal.x) * (i / n), y = pt.awal.y + (pt.akhir.y - pt.awal.y) * (i / n); r.push([Hh(x, y), zDasarDi(x, y)]); } return r; })() : null;
+        // profil dasar laut (v0.45.1): diambil sepanjang bidang potong yang diperpanjang ke seluruh lebar gambar,
+        // agar tiang di luar panjang garis potong tetap terlihat bagian yang tertanam
+        const prf = profilDasar(), uzP = prf ? (() => { const r = [], n = 240, ua = h0 - 0.8, ub = h1 + 0.8; for (let i = 0; i <= n; i++) { const u = ua + (ub - ua) * (i / n); r.push([u, zDasarDi(px0 + u * vy, py0 - u * vx)]); } return r; })() : null;
         isi.push(...garisTanahAtauPasut(X(h0 - 0.8), X(h1 + 0.8), X, Y, uzP));
+        if (!o.fokus) isi.push(...labelUjungTiang(o, {Hh, Dp, X, Y, h0, h1, dalam: pt.dalam, yCatatan: Y(bz0) + (tbD ? 19 : 4), xCatatan: X(h0 - 0.8)}));
         if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, ketOto ? Math.max(zmax, ...geosP.filter(g => g.jenis === 'plat').map(g => g.z0 + g.tebal)) : zmax, zmin, h0, h1, ketOto ? 14 : 0, pp.u));
         if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3, h0, h1));
         if (ketOto) isi.push(...ketPotongan({Hh, Dp, X, Y, s, gs: geosP, vx, vy, px0, py0}));
