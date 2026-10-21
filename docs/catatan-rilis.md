@@ -9,6 +9,9 @@ Potongan dan detail setingkat gambar kerja konsultan, dari kajian gambar Dermaga
 - **Lembar detail di akhir set** gambar zona; label detail dibungkus sampai 4 baris, tidak dipotong "…".
 - **Penempatan di tengah kertas**: rencana pondasi/pile cap dan rencana balok/pelat dipusatkan (ruang keterangan atas hanya bila perlu); lembar gabungan dari objek yang sama memakai titik pusat yang sama sehingga gambar berdampingan sejajar; lembar bagian di ujung objek tidak menyisakan ruang kosong.
 - **Teks panjang tidak keluar kertas**: judul gambar lembar gabungan dibungkus/diperkecil agar tidak saling menimpa; lokasi dan nama proyek di sampul dibungkus; judul di daftar gambar diperkecil agar muat kolomnya.
+- **Beton terpotong abu-abu** pada potongan dermaga (bukan hitam pekat), seperti gambar konsultan, supaya garis tulangan dan ukuran tetap terbaca.
+- **Tampak dermaga** ikut diberi penanda garis potong dan label ujung tiang.
+- **Template detail baru `balokMemanjang`**: penulangan balok memanjang di atas dua pile cap (tulangan atas/bawah menerus, sengkang berjarak, penanda potongan tumpuan dan lapangan, ukuran bentang dan peil), skala 1:25.
 - Pasang **RANCANG-Setup-0.45.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.45.0 dari rilis yang sama.
 
 ## Yang baru di 0.44.1
