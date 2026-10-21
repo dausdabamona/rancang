@@ -257,6 +257,12 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .kontrol #m-skala-lain-wadah[hidden]{display:none}
 .kontrol select{background:var(--bg);border:1px solid var(--line);border-radius:2px;padding:6px 8px;color:var(--fg);font-size:13px}
 .kontrol .cek{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--fg)}
+/* Baris alat ikon (v0.45.1): anotasi + alat gambar sebaris, dikelompokkan */
+.bar-alat{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:0 18px 10px}
+.bar-alat .anot-bar,.bar-alat .alat2d-bar{padding:0}
+.tombol.ikon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:28px;padding:0!important}
+.tombol.ikon .ik{width:16px;height:16px}
+.grup-alat+.grup-alat{border-left:1px solid var(--line);padding-left:6px;margin-left:2px}
 .anot-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 18px 10px}
 .anot-bar .judul-kecil{font-size:12px;color:var(--muted);margin-right:2px}
 .anot-bar .tombol{padding:5px 10px;font-size:12.5px}
@@ -272,6 +278,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .alat2d-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:0 18px 10px}
 .alat2d-bar .judul-kecil{font-size:12px;color:var(--muted);margin-right:2px}
 .alat2d-bar .grup-alat{display:inline-flex;gap:3px;flex-wrap:wrap}
+.anot-bar .tombol.ikon+.tombol.ikon{margin-left:-5px}
 .alat2d-bar .tombol{padding:5px 9px;font-size:12.5px}
 .alat2d-bar .tombol[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .alat2d-bar select,.alat2d-bar input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:2px;padding:5px 7px;color:var(--fg);font-size:12.5px}
@@ -292,7 +299,11 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .ruang-kerja{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
 .lembar-daftar{width:270px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--bg)}
 .lembar-daftar h3{margin:0;padding:12px 14px 6px;font:600 12px var(--f-ui, inherit);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.lembar-daftar ol{list-style:none;margin:0;padding:0 8px 8px;overflow:auto;flex:1;min-height:0}
+.lembar-daftar ol{list-style:none;margin:0;padding:0 8px 8px;overflow:auto;flex:none;height:min(46vh,440px)}
+/* v0.45.1: daftar lembar tinggi tetap; panel sampul/detail/kop di bawahnya mengisi sisa dan digulir */
+.lembar-bawah{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--line)}
+.lembar-bawah>.lembar-sampul,.lembar-bawah>.lembar-detail,.lembar-bawah>.lembar-kop{max-height:none;overflow:visible}
+.lembar-bawah>:first-child:not([hidden]),.lembar-bawah>[hidden]+:not([hidden]){border-top:0}
 .lembar-daftar li{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:2px;cursor:pointer;font-size:13px;border:1px solid transparent}
 .lembar-daftar li:hover{background:var(--hover)}
 .lembar-daftar li.aktif{background:var(--panel);border-color:var(--accent)}
@@ -338,7 +349,11 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .lembar-kop details > div{display:grid;gap:7px}
 .lembar-kaki{border-top:1px solid var(--line);padding:10px 14px;display:grid;gap:6px}
 .lembar-kaki .meta{font-size:11.5px}
-@media (max-width:760px){.ruang-badan{flex-direction:column}.lembar-daftar{width:auto;max-height:38vh;border-right:0;border-bottom:1px solid var(--line)}}
+/* Unduh set (v0.45.1): tombol ringkas di ujung kanan baris kontrol */
+.kontrol .unduh-set{margin-left:auto;display:flex;align-items:center;gap:6px;align-self:center}
+.unduh-set .tombol.kecil{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;font-size:12px;line-height:1.2;min-height:0}
+.unduh-set .ik{width:13px;height:13px;flex:none}
+@media (max-width:760px){.ruang-badan{flex-direction:column}.lembar-daftar ol{height:22vh}.lembar-daftar{width:auto;max-height:60vh;border-right:0;border-bottom:1px solid var(--line)}}
 .pratinjau-2d.geser{cursor:grabbing}
 .pratinjau-2d svg{display:block;width:100%;height:100%}
 .zoom-2d{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:2px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
@@ -718,13 +733,12 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
     <aside class="lembar-daftar" aria-label="Daftar lembar">
       <h3>Lembar</h3>
       <ol id="m-lembar"></ol>
+      <div class="lembar-bawah">
       <div class="lembar-sampul" id="m-sampul" hidden></div>
       <div class="lembar-detail" id="m-detail"></div>
       <div class="lembar-kop" id="m-kop"></div>
+      </div>
       <div class="lembar-kaki">
-        <button class="tombol utama" type="button" id="m-pdf">Unduh PDF semua lembar</button>
-        <button class="tombol" type="button" id="m-dxf-satu" title="Semua lembar yang dicentang dalam satu berkas DXF, disusun seperti matriks (kiri→kanan, lalu turun)">Unduh DXF semua lembar (1 berkas)</button>
-        <button class="tombol" type="button" id="m-dxf-semua" title="Satu berkas DXF per lembar yang dicentang, dibungkus ZIP">Unduh DXF semua lembar (ZIP)</button>
         <p class="meta" id="m-lembar-info"></p>
       </div>
     </aside>
@@ -761,12 +775,19 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
       <label class="cek" for="m-dimdinding"><input type="checkbox" id="m-dimdinding"> Ukuran tiap dinding</label>
       <label class="cek" for="m-terhalang"><input type="checkbox" id="m-terhalang" checked> Sembunyikan anotasi terhalang</label>
       <label class="cek" for="m-skala-grafis" title="Batang skala di pojok kanan bawah setiap lembar berskala; tetap benar walau dicetak diperkecil"><input type="checkbox" id="m-skala-grafis" checked> Skala grafis</label>
+      <div class="unduh-set" role="group" aria-label="Unduh semua lembar yang dicentang">
+        <span class="judul-kecil">Unduh set</span>
+        <button class="tombol utama kecil" type="button" id="m-pdf" data-judul="Unduh PDF semua lembar yang dicentang"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>PDF</button>
+        <button class="tombol kecil" type="button" id="m-dxf-satu" data-judul="Unduh DXF semua lembar dalam satu berkas, disusun seperti matriks (kiri→kanan, lalu turun)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>DXF</button>
+        <button class="tombol kecil" type="button" id="m-dxf-semua" data-judul="Unduh DXF satu berkas per lembar, dibungkus ZIP"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>ZIP</button>
+      </div>
     </div>
+    <div class="bar-alat">
     <div class="anot-bar" id="m-anot">
       <span class="judul-kecil">Anotasi</span>
-      <button class="tombol" type="button" data-tambah="teks">+ Teks</button>
-      <button class="tombol" type="button" data-tambah="label">+ Label</button>
-      <button class="tombol" type="button" data-tambah="peil">+ Peil</button>
+      <button class="tombol ikon" type="button" data-tambah="teks" aria-label="Tambah teks anotasi" title="Tambah teks anotasi"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h8M6.5 3.5V12"/><path d="M12.5 10.5v4M10.5 12.5h4"/></svg></button>
+      <button class="tombol ikon" type="button" data-tambah="label" aria-label="Tambah label anotasi" title="Tambah label anotasi"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 5.5 8.5H10"/><circle cx="2" cy="12" r="1.1" fill="currentColor"/><path d="M12.5 10.5v4M10.5 12.5h4"/></svg></button>
+      <button class="tombol ikon" type="button" data-tambah="peil" aria-label="Tambah peil (elevasi)" title="Tambah peil (elevasi)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 9h8M5.5 9 3.3 5.5h4.4z"/><path d="M12.5 10.5v4M10.5 12.5h4"/></svg></button>
       <span class="edit-anot" id="m-anot-edit" hidden>
         <input type="text" id="m-anot-teks" aria-label="Teks anotasi terpilih" placeholder="Teks">
         <button class="tombol" type="button" id="m-anot-sembunyi" title="Hanya disembunyikan di gambar ini; tetap ada di gambar lain">Sembunyikan di gambar ini</button>
@@ -781,27 +802,37 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
     </div>
     <div class="alat2d-bar" id="m-alat2d">
       <span class="judul-kecil">Gambar</span>
-      <span class="grup-alat">
-        <button class="tombol" type="button" data-alat2d="pilih" aria-pressed="true" title="Pilih benda 2D. Detail perbesaran dipindah dengan menyeret bingkainya.">Pilih</button>
-        <button class="tombol" type="button" id="g2-geser-gambar" aria-pressed="false" title="Geser letak gambar di kertas: seret gambar ke tempat yang diinginkan. Di lembar detail, seret gambar detail di petaknya. Panah = geser 1 mm (Shift 5 mm).">Geser gambar</button>
-        <button class="tombol" type="button" id="g2-tengah" title="Kembalikan letak gambar (atau detail terpilih di lembar detail) ke posisi otomatis">Ke tengah</button>
-        <button class="tombol" type="button" data-alat2d="garis" aria-pressed="false" title="Garis berantai, Esc berhenti">Garis</button>
-        <button class="tombol" type="button" data-alat2d="polyline" aria-pressed="false" title="Polyline: klik dua kali atau Enter untuk selesai">Polyline</button>
-        <button class="tombol" type="button" data-alat2d="persegi" aria-pressed="false">Persegi</button>
-        <button class="tombol" type="button" data-alat2d="lingkaran" aria-pressed="false">Lingkaran</button>
-        <button class="tombol" type="button" data-alat2d="busur" aria-pressed="false" title="Busur: ujung awal, ujung akhir, titik pada lengkung">Busur</button>
-        <button class="tombol" type="button" data-alat2d="teks" aria-pressed="false">Teks</button>
-        <button class="tombol" type="button" data-alat2d="arsir" aria-pressed="false" title="Bidang arsir: klik sudut-sudutnya">Arsir</button>
-        <button class="tombol" type="button" data-alat2d="rujukan" aria-pressed="false" title="Tanda rujukan detail: klik titik yang ditunjuk, lalu letak lingkaran">Rujukan</button>
-        <button class="tombol" type="button" data-alat2d="simbol" aria-pressed="false" title="Simbol perabot dan sanitair ukuran nyata (denah)">Simbol</button>
-        <button class="tombol" type="button" data-alat2d="legenda" aria-pressed="false" title="Legenda otomatis dari isi lembar">Legenda</button>
-        <button class="tombol" type="button" data-alat2d="putus" aria-pressed="false" title="Garis putus: klik awal dan akhir bagian panjang yang dihilangkan (tiang, trestle); gambar dirapatkan, ukuran tetap nilai sebenarnya">Putus</button>
-        <button class="tombol" type="button" data-alat2d="perbesar" aria-pressed="false" title="Detail perbesaran: klik pusat, klik tepi lingkaran, lalu klik letak detail di kertas">Perbesar</button>
-        <button class="tombol" type="button" data-alat2d="dimensi" aria-pressed="false" title="Dimensi: klik dua titik (Ctrl+klik menambah titik berantai), lalu klik letak garis ukur. Angka dari ukuran sebenarnya">Dimensi</button>
-        <button class="tombol" type="button" data-alat2d="sudut" aria-pressed="false" title="Sudut: klik titik sudut, lalu satu titik di tiap kaki">Sudut</button>
-        <button class="tombol" type="button" data-alat2d="kemiringan" aria-pressed="false" title="Kemiringan: klik dua titik pada garis miring (tiang miring, talud); keluar 1 : n dan derajatnya">Miring</button>
-        <button class="tombol" type="button" data-alat2d="label" aria-pressed="false" title="Label penunjuk: klik benda yang ditunjuk, lalu letak teks. Teks diambil dari data benda dan ikut berubah">Label</button>
-        <button class="tombol" type="button" data-alat2d="viewport" aria-pressed="false" title="Viewport: klik dua sudut kotak di kertas; isinya gambar lain (denah, tampak, potongan, …) dengan skala sendiri. Alt + seret menggeser isinya">Viewport</button>
+      <span class="grup-alat" role="group" aria-label="Atur">
+        <button class="tombol ikon" type="button" aria-label="Pilih" title="Pilih — Pilih benda 2D. Detail perbesaran dipindah dengan menyeret bingkainya." data-alat2d="pilih" aria-pressed="true"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 2v11l3-3 2 4.5 1.8-.8-2-4.4H12.5z"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Geser gambar" title="Geser gambar — Geser letak gambar di kertas: seret gambar ke tempat yang diinginkan. Di lembar detail, seret gambar detail di petaknya. Panah = geser 1 mm (Shift 5 mm)." id="g2-geser-gambar" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v13M1.5 8h13M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Ke tengah" title="Ke tengah — Kembalikan letak gambar (atau detail terpilih di lembar detail) ke posisi otomatis" id="g2-tengah"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5"/><circle cx="8" cy="8" r="1" fill="currentColor"/><path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15"/></svg></button>
+      </span>
+      <span class="grup-alat" role="group" aria-label="Garis &amp; bidang">
+        <button class="tombol ikon" type="button" aria-label="Garis" title="Garis — Garis berantai, Esc berhenti" data-alat2d="garis" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13 13 3"/><circle cx="3" cy="13" r="1.2" fill="currentColor"/><circle cx="13" cy="3" r="1.2" fill="currentColor"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Polyline" title="Polyline — Polyline: klik dua kali atau Enter untuk selesai" data-alat2d="polyline" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13 5.5 5l4 6L14 3"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Persegi" title="Persegi" data-alat2d="persegi" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="11" height="9"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Lingkaran" title="Lingkaran" data-alat2d="lingkaran" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="5.5"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Busur" title="Busur — Busur: ujung awal, ujung akhir, titik pada lengkung" data-alat2d="busur" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12.5a6 6 0 0 1 11 0"/><circle cx="2.5" cy="12.5" r="1" fill="currentColor"/><circle cx="13.5" cy="12.5" r="1" fill="currentColor"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Arsir" title="Arsir — Bidang arsir: klik sudut-sudutnya" data-alat2d="arsir" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="11" height="11"/><path d="M2.5 8.5l6-6M2.5 13.5l11-11M7.5 13.5l6-6"/></svg></button>
+      </span>
+      <span class="grup-alat" role="group" aria-label="Teks">
+        <button class="tombol ikon" type="button" aria-label="Teks" title="Teks" data-alat2d="teks" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3.5h10M8 3.5V13M6 13h4"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Label" title="Label — Label penunjuk: klik benda yang ditunjuk, lalu letak teks. Teks diambil dari data benda dan ikut berubah" data-alat2d="label" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13.5 7 9h7"/><circle cx="2.5" cy="13.5" r="1.2" fill="currentColor"/><path d="M8 6.5h5"/></svg></button>
+      </span>
+      <span class="grup-alat" role="group" aria-label="Ukur">
+        <button class="tombol ikon" type="button" aria-label="Dimensi" title="Dimensi — Dimensi: klik dua titik (Ctrl+klik menambah titik berantai), lalu klik letak garis ukur. Angka dari ukuran sebenarnya" data-alat2d="dimensi" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5v7M14 4.5v7M2 8h12M4.5 6 2 8l2.5 2M11.5 6 14 8l-2.5 2"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Sudut" title="Sudut — Sudut: klik titik sudut, lalu satu titik di tiap kaki" data-alat2d="sudut" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13.5h11M2.5 13.5 11 3"/><path d="M8 13.5a5.5 5.5 0 0 0-1.7-4"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Miring" title="Miring — Kemiringan: klik dua titik pada garis miring (tiang miring, talud); keluar 1 : n dan derajatnya" data-alat2d="kemiringan" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13.5h12V4.5z"/><path d="M10.5 13.5v-2.2h3.5"/></svg></button>
+      </span>
+      <span class="grup-alat" role="group" aria-label="Detail">
+        <button class="tombol ikon" type="button" aria-label="Rujukan" title="Rujukan — Tanda rujukan detail: klik titik yang ditunjuk, lalu letak lingkaran" data-alat2d="rujukan" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="6.5" r="5"/><path d="M4.5 6.5h10M6 10.2 1.8 14.4"/><circle cx="1.8" cy="14.4" r="1" fill="currentColor"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Perbesar" title="Perbesar — Detail perbesaran: klik pusat, klik tepi lingkaran, lalu klik letak detail di kertas" data-alat2d="perbesar" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4.5 4.5M4.5 6.5h4M6.5 4.5v4"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Putus" title="Putus — Garis putus: klik awal dan akhir bagian panjang yang dihilangkan (tiang, trestle); gambar dirapatkan, ukuran tetap nilai sebenarnya" data-alat2d="putus" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8h4l1.2-4 2.6 8L10.5 8h4"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Viewport" title="Viewport — Viewport: klik dua sudut kotak di kertas; isinya gambar lain (denah, tampak, potongan, …) dengan skala sendiri. Alt + seret menggeser isinya" data-alat2d="viewport" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="13" height="11"/><rect x="4" y="5" width="6" height="5.5"/></svg></button>
+      </span>
+      <span class="grup-alat" role="group" aria-label="Sisip">
+        <button class="tombol ikon" type="button" aria-label="Simbol" title="Simbol — Simbol perabot dan sanitair ukuran nyata (denah)" data-alat2d="simbol" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.5V3M3 3a10.5 10.5 0 0 1 10.5 10.5H3"/></svg></button>
+        <button class="tombol ikon" type="button" aria-label="Legenda" title="Legenda — Legenda otomatis dari isi lembar" data-alat2d="legenda" aria-pressed="false"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="3" height="2.5"/><rect x="2" y="9.5" width="3" height="2.5"/><path d="M7 4.2h7M7 10.7h7"/></svg></button>
       </span>
       <select id="g2-arah-dim" aria-label="Arah dimensi" title="Arah garis ukur" hidden><option value="otomatis">Arah otomatis</option><option value="datar">Mendatar</option><option value="tegak">Tegak</option><option value="sejajar">Sejajar garis</option></select>
       <select id="g2-satuan" aria-label="Satuan dimensi" title="Satuan angka dimensi" hidden><option value="">Satuan otomatis</option><option value="m">meter</option><option value="cm">cm</option></select>
@@ -836,6 +867,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
       <span class="edit-anot" id="g2-teks-wadah" hidden><input type="text" id="g2-teks" aria-label="Isi teks terpilih" placeholder="Teks"></span>
       <span class="edit-anot" id="g2-aksi" hidden><button class="tombol" type="button" id="g2-salin" title="Ctrl+D">Salin</button><button class="tombol bahaya" type="button" id="g2-hapus" title="Delete">Hapus</button></span>
       <span class="meta" id="g2-info"></span>
+    </div>
     </div>
     <div class="wadah-2d">
       <div class="pratinjau-2d" id="m-svg"></div>
@@ -15059,7 +15091,7 @@ function segar2D() {
   const o = opsi2D();
   $('#m-info').textContent = o.jenis === 'sampul' ? 'Sampul set gambar. Isi data proyek di panel kiri.' : o.jenis === 'daftar' ? 'Daftar gambar dibuat otomatis dari lembar yang dicentang.' : hasil2D.info || `${o.jenis.startsWith('potongan:') ? namaGambar(o.jenis).replace('POTONGAN', 'Potongan') : namaGambar(o.jenis).toLowerCase().replace(/^\w/, c => c.toUpperCase())}, ${hasil2D.skala === 'TERTERA' ? 'skala tertera di tiap detail, ukuran dalam cm' : `skala 1 : ${hasil2D.skala}`}, kertas ${o.kertas} lanskap.${hasil2D.skala === 'TERTERA' ? '' : ' Ukuran dalam meter.'}`;
   const bisa = !!S.unduh;
-  ['#m-svgbtn', '#m-png', '#m-png3d', '#m-pdf', '#m-dxf', '#m-dxf-satu', '#m-dxf-semua', '#m-dae'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? '' : 'Unduhan tidak tersedia di tampilan ini'; });
+  ['#m-svgbtn', '#m-png', '#m-png3d', '#m-pdf', '#m-dxf', '#m-dxf-satu', '#m-dxf-semua', '#m-dae'].forEach(s => { $(s).disabled = !bisa; $(s).title = bisa ? ($(s).dataset.judul || '') : 'Unduhan tidak tersedia di tampilan ini'; });
 }
 function isiPilihan2D(pilih) {
   isiLevel2D();
@@ -15095,7 +15127,7 @@ function renderLembar() {
     <span class="kode">${l.kode || (l.jenis === 'sampul' ? '—' : '')}</span><span class="nama" title="${esk(l.nama)}">${esk(l.nama)}</span></li>`).join('');
   const n = daftar.filter(l => l.masuk).length;
   const adaSampul = daftar.some(l => l.jenis === 'sampul' && l.masuk);
-  $('#m-lembar-info').textContent = `PDF ${n} halaman${adaSampul ? ` (sampul + ${n - 1} lembar)` : ''}, kertas ${$('#m-kertas').value}. Centang untuk memilih, seret untuk mengubah urutan.`;
+  $('#m-lembar-info').textContent = `${n} hal.${adaSampul ? ` (sampul + ${n - 1})` : ''} · ${$('#m-kertas').value} · centang = pilih, seret = urut`;
   renderSampul(aktif === 'sampul');
   renderDetailPanel();
   renderKop();
