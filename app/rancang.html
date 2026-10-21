@@ -427,6 +427,10 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
 .tampilan button{height:auto;padding:5px 10px;font-size:13px;border-radius:0;font-weight:400}
 .seg>button+button{border-left:1px solid var(--color-divider)}
 .seg[hidden]{display:none}
+/* v0.45.1: tombol tampilan 3D berupa ikon; nama dan penjelasan di tooltip */
+.tampilan button.ikon{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:5px 8px;min-width:32px}
+.tampilan button.ikon .ik{width:16px;height:16px;flex:none}
+.tampilan button.ikon.teks{font-size:12px;padding:5px 8px 5px 6px}
 .tampilan button[aria-pressed="true"],.tampilan button.aktif{background:var(--color-accent);color:var(--color-bg)}
 /* kanvas */
 #view{border:0;border-radius:var(--radius-lg)}
@@ -601,19 +605,19 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
 </nav>
 <div class="tampilan" role="toolbar" aria-label="Tampilan">
   <div class="seg">
-    <button data-lihat="iso" title="Isometrik">Iso</button>
-    <button data-lihat="atas" title="Tampak atas">Atas</button>
-    <button data-lihat="depan" title="Tampak depan, dari selatan">Depan</button>
-    <button data-lihat="kanan" title="Tampak kanan, dari timur">Kanan</button>
-    <button data-lihat="belakang" title="Tampak belakang, dari utara">Belakang</button>
-    <button data-lihat="kiri" title="Tampak kiri, dari barat">Kiri</button>
+    <button class="ikon" data-lihat="iso" aria-label="Isometrik" title="Isometrik"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 13.5 4.9v6.2L8 14.2 2.5 11.1V4.9z"/><path d="M2.5 4.9 8 8l5.5-3.1M8 8v6.2"/></svg></button>
+    <button class="ikon" data-lihat="atas" aria-label="Tampak atas" title="Tampak atas"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="6" height="6" fill="currentColor" fill-opacity=".18"/><circle cx="8" cy="8" r="1" fill="currentColor"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2"/></svg></button>
+    <button class="ikon" data-lihat="depan" aria-label="Tampak depan, dari selatan" title="Tampak depan, dari selatan"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="6" height="6" fill="currentColor" fill-opacity=".18"/><path d="M8 15V12.3M6.3 13.8 8 12.2l1.7 1.6"/></svg></button>
+    <button class="ikon" data-lihat="kanan" aria-label="Tampak kanan, dari timur" title="Tampak kanan, dari timur"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="6" height="6" fill="currentColor" fill-opacity=".18"/><path d="M15 8h-2.7M13.8 6.3 12.2 8l1.6 1.7"/></svg></button>
+    <button class="ikon" data-lihat="belakang" aria-label="Tampak belakang, dari utara" title="Tampak belakang, dari utara"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="6" height="6" fill="currentColor" fill-opacity=".18"/><path d="M8 1v2.7M6.3 2.2 8 3.8l1.7-1.6"/></svg></button>
+    <button class="ikon" data-lihat="kiri" aria-label="Tampak kiri, dari barat" title="Tampak kiri, dari barat"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="6" height="6" fill="currentColor" fill-opacity=".18"/><path d="M1 8h2.7M2.2 6.3 3.8 8 2.2 9.7"/></svg></button>
   </div>
   <div class="seg" id="seg-potongan" role="group" aria-label="Potongan" hidden></div>
   <div class="seg">
-    <button id="btn-paralel" aria-pressed="false" title="Proyeksi paralel (tanpa perspektif)">Paralel</button>
-    <button id="btn-zoom" title="Tampilkan semua (Shift+Z)">Semua</button>
-    <button id="btn-tembus" aria-pressed="false" title="Tembus pandang: dinding dan atap transparan agar isi ruangan mudah dipilih (H)">Tembus</button>
-    <button id="btn-iris-datar" aria-pressed="false" title="Iris datar: potong model setinggi +1,20 m agar tampak seperti denah 3D">Iris datar</button>
+    <button class="ikon" id="btn-paralel" aria-pressed="false" aria-label="Paralel" title="Paralel — Proyeksi paralel (tanpa perspektif)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5h8M2.5 11h8M10.5 3.2 12.8 5l-2.3 1.8M10.5 9.2 12.8 11l-2.3 1.8"/></svg></button>
+    <button class="ikon" id="btn-zoom" aria-label="Semua" title="Semua — Tampilkan semua (Shift+Z)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5V2h3.5M14 5.5V2h-3.5M2 10.5V14h3.5M14 10.5V14h-3.5"/><rect x="5.5" y="5.5" width="5" height="5"/></svg></button>
+    <button class="ikon" id="btn-tembus" aria-pressed="false" aria-label="Tembus" title="Tembus — Tembus pandang: dinding dan atap transparan agar isi ruangan mudah dipilih (H)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8"/><rect x="6" y="6" width="8" height="8" fill="currentColor" fill-opacity=".18" stroke-dasharray="1.6 1.2"/></svg></button>
+    <button class="ikon" id="btn-iris-datar" aria-pressed="false" aria-label="Iris datar" title="Iris datar — Iris datar: potong model setinggi +1,20 m agar tampak seperti denah 3D"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 13.5 4.9v6.2L8 14.2 2.5 11.1V4.9z"/><path d="M1 9h14" stroke-width="1.8"/></svg></button>
   </div>
 </div>
 <main id="view">
@@ -4410,11 +4414,12 @@ function segarPotongan() {
   const tombol = [];
   for (const [id, d] of daftar) {
     const b = document.createElement('button');
-    b.type = 'button'; b.dataset.pot = id; b.textContent = `Potongan ${d.nama}–${d.nama}`;
+    const nm = String(d.nama).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+    b.type = 'button'; b.dataset.pot = id; b.className = 'ikon teks'; b.innerHTML = `<svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 8h12" stroke-dasharray="3 1.4 0.6 1.4"/><path d="M2 4.5V8M14 8v3.5M2 4.5h2.2M14 11.5h-2.2"/></svg>${nm}–${nm}`; b.setAttribute('aria-label', `Potongan ${d.nama}–${d.nama}`);
     b.setAttribute('aria-pressed', String(IRIS.id === id));
     b.title = `Tampilan potongan ${d.nama}–${d.nama} (irisan 3D, dipandang tegak lurus bidang potong). Klik lagi untuk mematikan.`;
     const b2 = document.createElement('button');
-    b2.type = 'button'; b2.dataset.pot2d = id; b2.textContent = '2D';
+    b2.type = 'button'; b2.dataset.pot2d = id; b2.className = 'ikon'; b2.innerHTML = '<svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M3 1.5h7l3 3v10H3z"/><path d="M10 1.5v3h3M5.5 8.5h5M5.5 11h5"/></svg>'; b2.setAttribute('aria-label', `Gambar 2D potongan ${d.nama}–${d.nama}`);
     b2.title = `Buka gambar potongan ${d.nama}–${d.nama} di Ruang Lembar`;
     tombol.push(b, b2);
   }
