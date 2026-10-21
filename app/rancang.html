@@ -782,7 +782,9 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
     <div class="alat2d-bar" id="m-alat2d">
       <span class="judul-kecil">Gambar</span>
       <span class="grup-alat">
-        <button class="tombol" type="button" data-alat2d="pilih" aria-pressed="true" title="Pilih benda 2D">Pilih</button>
+        <button class="tombol" type="button" data-alat2d="pilih" aria-pressed="true" title="Pilih benda 2D. Detail perbesaran dipindah dengan menyeret bingkainya.">Pilih</button>
+        <button class="tombol" type="button" id="g2-geser-gambar" aria-pressed="false" title="Geser letak gambar di kertas: seret gambar ke tempat yang diinginkan. Di lembar detail, seret gambar detail di petaknya. Panah = geser 1 mm (Shift 5 mm).">Geser gambar</button>
+        <button class="tombol" type="button" id="g2-tengah" title="Kembalikan letak gambar (atau detail terpilih di lembar detail) ke posisi otomatis">Ke tengah</button>
         <button class="tombol" type="button" data-alat2d="garis" aria-pressed="false" title="Garis berantai, Esc berhenti">Garis</button>
         <button class="tombol" type="button" data-alat2d="polyline" aria-pressed="false" title="Polyline: klik dua kali atau Enter untuk selesai">Polyline</button>
         <button class="tombol" type="button" data-alat2d="persegi" aria-pressed="false">Persegi</button>
@@ -1105,7 +1107,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * Pengaturan proyek (dokumen `pengaturan/proyek`).
  * @typedef {{nama: string, tebalDinding: number, tinggiDinding: number, kemiringanAtap: number, overstekAtap: number, faktorBesi: number, bahanDinding?: 'bata' | 'tripleks' | 'grc' | 'gypsum',
- *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[], revisi?: {no: number, tanggal: string, uraian?: string}[]}} Setelan
+ *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, gambarGeser?: Object, peilSembunyi?: string[], revisi?: {no: number, tanggal: string, uraian?: string}[]}} Setelan
  */
 
 /** Satu perubahan dari luar (MCP, panel Claude): `data` null = hapus. @typedef {{id: string, data?: DokumenRancang | null, sesudah?: DokumenRancang | null}} PerubahanLuar */
@@ -1290,6 +1292,7 @@ function sah(d) {
     && (d.bentuk !== 'teks' || (typeof d.teks === 'string' && d.teks.length > 0)) && (d.bentuk !== 'rujukan' || (typeof d.detail === 'string' && d.titik.length >= 2));
   if (d.jenis === 'detail') return ['pondasiBatuKali', 'footplat', 'umpak', 'kudaKuda', 'sambunganKayu', 'balokDermaga', 'pileCapDermaga', 'tiangDermaga', 'bollard', 'sambunganJeti', 'bebas'].includes(d.template) && typeof d.lembar === 'string' && /^det:\d+$/.test(d.lembar)
     && (d.sumber == null || typeof d.sumber === 'string') && (d.template !== 'sambunganKayu' || ['tumpuan', 'puncak', 'makelar', 'sokong', 'perpanjangan'].includes(d.sambungan))
+    && (d.geser == null || (Number.isFinite(d.geser.dx) && Number.isFinite(d.geser.dy)))
     && (d.template !== 'sambunganJeti' || ['tiangBalok', 'balokGelagar', 'gelagarPapan', 'lasTiang', 'kleat', 'fender'].includes(d.sambungan));
   if (d.jenis === 'anotasi') {
     const pt = p => titikSah(p) && (p.z === undefined || Number.isFinite(p.z));
@@ -13306,6 +13309,16 @@ function lembarKhusus(o) {
  * @param {{jenis: string, skala?: number, kertas?: string, dimensi?: boolean, terhalang?: boolean, [k: string]: any}} o
  * @returns {{svg: string, info: string, skala: number | string, W: number, H: number, peta?: any, anotStat?: any, petak?: any[], proyek?: any}} `skala` angka penyebut, '-' (sampul/daftar) atau 'TERTERA' (lembar detail)
  */
+// Letak gambar di kertas (v0.45.1): geser {dx, dy} mm per lembar dari setelan `gambarGeser`, diatur dengan alat Geser gambar.
+// Tidak berlaku untuk isi detail perbesaran, viewport, dan lembar gabungan (mereka memakai titik fokus sendiri).
+var GESER2D = {aktif: false, seret: null, sementara: null, raf: 0, detPilih: null};
+function geserGambarLembar(o) {
+  if (o.hanyaIsi) return {dx: 0, dy: 0};
+  const k = o.jenisAsli || o.jenis, sm = GESER2D.sementara;
+  if (sm && !sm.id && sm.kunci === k) return sm;
+  const g = S.setel && S.setel.gambarGeser && S.setel.gambarGeser[k];
+  return g && Number.isFinite(g.dx) && Number.isFinite(g.dy) ? g : {dx: 0, dy: 0};
+}
 function buatSVG(o) {
   if (String(o.jenis).startsWith('gabung:')) return svgGabung(o);
   // lembar berlingkup zona/komponen: '<jenis>@<id grup>'; potongan otomatis ikut zona tempat garis potongnya berada
@@ -13990,7 +14003,7 @@ function buatSVGInti(o) {
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bx1) - su.f(bx0)) * s, tinggiK = (sv.f(by1) - sv.f(by0)) * s;
       let ox = area.x + (area.w - lebarK - tambahMmU) / 2 + ruangKiri, oy = area.y + (area.h - tinggiK - tambahMmV) / 2 + ruangAtas;
-      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(o.fokus.titik.x) - su.f(bx0)) * s; oy = o.fokus.kertas.y - (sv.f(by1) - sv.f(o.fokus.titik.y)) * s; }
+      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(o.fokus.titik.x) - su.f(bx0)) * s; oy = o.fokus.kertas.y - (sv.f(by1) - sv.f(o.fokus.titik.y)) * s; } else { const gG = geserGambarLembar(o); ox += gG.dx; oy += gG.dy; }
       const X = x => ox + (su.f(x) - su.f(bx0)) * s, Y = y => oy + (sv.f(by1) - sv.f(y)) * s;
       const pts = p => p.map(([x, y]) => `${n2(X(x))},${n2(Y(y))}`).join(' ');
       if (!o.fokus && (lebarK > area.w + 0.5 || tinggiK > area.h + 0.5)) info = `Gambar lebih besar dari kertas pada 1 : ${skala}. Pilih skala lebih kecil, kertas A3, atau beri garis putus.`;
@@ -14127,7 +14140,7 @@ function buatSVGInti(o) {
       skala = pilihSkala(bx1 - bx0, by1 - by0);
       const s = 1000 / skala;
       let ox = area.x + (area.w - (bx1 - bx0) * s) / 2, oy = area.y + (area.h - (by1 - by0) * s) / 2;
-      if (o.fokus) { ox = o.fokus.kertas.x - (o.fokus.titik.x - bx0) * s; oy = o.fokus.kertas.y - (by1 - o.fokus.titik.y) * s; }   // viewport (v0.42)
+      if (o.fokus) { ox = o.fokus.kertas.x - (o.fokus.titik.x - bx0) * s; oy = o.fokus.kertas.y - (by1 - o.fokus.titik.y) * s; } else { const gG = geserGambarLembar(o); ox += gG.dx; oy += gG.dy; }   // viewport (v0.42)
       const X = x => ox + (x - bx0) * s, Y = y => oy + (by1 - y) * s;
       const pts = p => p.map(q => `${n2(X(q[0]))},${n2(Y(q[1]))}`).join(' ');
       if ((bx1 - bx0) * s > area.w + 0.5 || (by1 - by0) * s > area.h + 0.5) info = `Gambar lebih besar dari kertas pada 1 : ${skala}. Pilih skala lebih kecil atau kertas A3.`;
@@ -14183,7 +14196,7 @@ function buatSVGInti(o) {
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bx1) - su.f(bx0)) * s, tinggiK = (sv.f(by1) - sv.f(by0)) * s;
       let ox = area.x + (area.w - lebarK) / 2, oy = area.y + area.h * 0.2 + (area.h * 0.8 - tinggiK) / 2;
-      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(o.fokus.titik.x) - su.f(bx0)) * s; oy = o.fokus.kertas.y - (sv.f(by1) - sv.f(o.fokus.titik.y)) * s; }
+      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(o.fokus.titik.x) - su.f(bx0)) * s; oy = o.fokus.kertas.y - (sv.f(by1) - sv.f(o.fokus.titik.y)) * s; } else { const gG = geserGambarLembar(o); ox += gG.dx; oy += gG.dy; }
       const X = x => ox + (su.f(x) - su.f(bx0)) * s, Y = y => oy + (sv.f(by1) - sv.f(y)) * s;
       const pts = p => p.map(q => `${n2(X(q[0]))},${n2(Y(q[1]))}`).join(' ');
       for (const p of dindingP) isi.push(`<polygon points="${pts(p)}" fill="none" stroke="#888" stroke-width="0.13" stroke-dasharray="1.2 0.8"/>`);
@@ -14272,7 +14285,7 @@ function buatSVGInti(o) {
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bx1) - su.f(bx0)) * s, tinggiK = (sv.f(by1) - sv.f(by0)) * s;
       let ox = area.x + (area.w - lebarK) / 2, oy = area.y + area.h * 0.2 + (area.h * 0.8 - tinggiK) / 2;
-      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(o.fokus.titik.x) - su.f(bx0)) * s; oy = o.fokus.kertas.y - (sv.f(by1) - sv.f(o.fokus.titik.y)) * s; }
+      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(o.fokus.titik.x) - su.f(bx0)) * s; oy = o.fokus.kertas.y - (sv.f(by1) - sv.f(o.fokus.titik.y)) * s; } else { const gG = geserGambarLembar(o); ox += gG.dx; oy += gG.dy; }
       const X = x => ox + (su.f(x) - su.f(bx0)) * s, Y = y => oy + (sv.f(by1) - sv.f(y)) * s;
       const pts = p => p.map(q => `${n2(X(q[0]))},${n2(Y(q[1]))}`).join(' ');
       const ket = new Map();
@@ -14329,7 +14342,7 @@ function buatSVGInti(o) {
       const kM = skala / 1000, bx0 = x0 - tp.l * kM, by0 = y0 - tp.b * kM, bx1 = x1 + tp.r * kM, by1 = y1 + tp.t * kM;
       const s = 1000 / skala;
       let ox = area.x + (area.w - (bx1 - bx0) * s) / 2, oy = area.y + area.h * 0.2 + (area.h * 0.8 - (by1 - by0) * s) / 2;
-      if (o.fokus) { ox = o.fokus.kertas.x - (o.fokus.titik.x - bx0) * s; oy = o.fokus.kertas.y - (by1 - o.fokus.titik.y) * s; }   // viewport (v0.42)
+      if (o.fokus) { ox = o.fokus.kertas.x - (o.fokus.titik.x - bx0) * s; oy = o.fokus.kertas.y - (by1 - o.fokus.titik.y) * s; } else { const gG = geserGambarLembar(o); ox += gG.dx; oy += gG.dy; }   // viewport (v0.42)
       const X = x => ox + (x - bx0) * s, Y = y => oy + (by1 - y) * s;
       const pts = p => p.map(q => `${n2(X(q[0]))},${n2(Y(q[1]))}`).join(' ');
       const gs = (a, b2) => `x1="${n2(X(a[0]))}" y1="${n2(Y(a[1]))}" x2="${n2(X(b2[0]))}" y2="${n2(Y(b2[1]))}"`;
@@ -14565,7 +14578,7 @@ function buatSVGInti(o) {
         const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
         const lebarK = (su.f(bu1) - su.f(bu0)) * s, tinggiK = (sv.f(bz1) - sv.f(bz0)) * s;
         let ox = area.x + (area.w - lebarK - tambahMmU) / 2 + ruangKiri, oy = area.y + (area.h - tinggiK - tambahMmV) / 2 + ruangAtas;
-        if (o.fokus) { ox = o.fokus.kertas.x - (su.f(Hh(o.fokus.titik.x, o.fokus.titik.y)) - su.f(bu0)) * s; oy = o.fokus.kertas.y - (sv.f(bz1) - sv.f(zDari(o.fokus.titik))) * s; }
+        if (o.fokus) { ox = o.fokus.kertas.x - (su.f(Hh(o.fokus.titik.x, o.fokus.titik.y)) - su.f(bu0)) * s; oy = o.fokus.kertas.y - (sv.f(bz1) - sv.f(zDari(o.fokus.titik))) * s; } else { const gG = geserGambarLembar(o); ox += gG.dx; oy += gG.dy; }
         const X = u => ox + (su.f(u) - su.f(bu0)) * s, Y = z => oy + (sv.f(bz1) - sv.f(z)) * s;
         const pts = q => q.map(([u, z]) => `${n2(X(u))},${n2(Y(z))}`).join(' ');
         if (!o.fokus && (lebarK > area.w + 0.5 || tinggiK > area.h + 0.5)) info = `Gambar lebih besar dari kertas pada 1 : ${skala}. Pilih skala lebih kecil, kertas A3, atau beri garis putus.`;
@@ -14857,7 +14870,7 @@ function buatSVGInti(o) {
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bu1) - su.f(bu0)) * s, tinggiK = (sv.f(bz1) - sv.f(bz0)) * s;
       let ox = area.x + (area.w - lebarK - tambahMmU) / 2 + ruangKiri, oy = area.y + (area.h - tinggiK - tambahMmV) / 2 + ruangAtas;
-      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(pr.u(o.fokus.titik.x, o.fokus.titik.y)) - su.f(bu0)) * s; oy = o.fokus.kertas.y - (sv.f(bz1) - sv.f(zDari(o.fokus.titik))) * s; }
+      if (o.fokus) { ox = o.fokus.kertas.x - (su.f(pr.u(o.fokus.titik.x, o.fokus.titik.y)) - su.f(bu0)) * s; oy = o.fokus.kertas.y - (sv.f(bz1) - sv.f(zDari(o.fokus.titik))) * s; } else { const gG = geserGambarLembar(o); ox += gG.dx; oy += gG.dy; }
       const X = u => ox + (su.f(u) - su.f(bu0)) * s, Y = z => oy + (sv.f(bz1) - sv.f(z)) * s;
       if (!o.fokus && (lebarK > area.w + 0.5 || tinggiK > area.h + 0.5)) info = `Gambar lebih besar dari kertas pada 1 : ${skala}. Pilih skala lebih kecil, kertas A3, atau beri garis putus.`;
       // arsir penutup atap sesuai bentuk seng
@@ -17015,6 +17028,105 @@ function akhirSeret2DBenda() {
   terapkan(tulis); segar2D();
 }
 $('#m-svg').addEventListener('pointerup', akhirSeret2DBenda, true);
+/* ---- Geser letak gambar di kertas (v0.45.1) ----
+   Lembar gambar: seret = geser seluruh gambar (benda 2D yang menempel ke gambar ikut; benda di kertas, kop, dan detail perbesaran tetap).
+   Lembar detail: seret di dalam petak = geser gambar detail itu di petaknya. Panah = 1 mm, Shift+panah = 5 mm. */
+function setGeser2D(on) {
+  GESER2D.aktif = !!on && S.bisaUbah;
+  $('#g2-geser-gambar').setAttribute('aria-pressed', String(GESER2D.aktif));
+  $('#m-svg').style.cursor = GESER2D.aktif ? 'move' : '';
+  if (GESER2D.aktif) { if (ALAT2D.alat) pakaiAlat2D('pilih'); toast(opsi2D().jenis.startsWith('det:') ? 'Seret gambar detail di petaknya. Panah menggeser 1 mm.' : 'Seret gambar ke letak yang diinginkan. Panah menggeser 1 mm.'); }
+}
+function sasaranGeser2D(p) {
+  const j = opsi2D().jenis;
+  if (j.startsWith('det:')) {
+    const pt = hasil2D && hasil2D.petakDetail ? hasil2D.petakDetail.find(q => p.x >= q.x && p.x <= q.x + q.w && p.y >= q.y && p.y <= q.y + q.h) : null;
+    if (!pt || !S.elems.has(pt.id)) return null;
+    const d = /** @type {any} */ (S.elems.get(pt.id)), g = d.geser || {dx: 0, dy: 0};
+    return {id: pt.id, kunci: j, dx0: g.dx || 0, dy0: g.dy || 0};
+  }
+  if (!hasil2D || !hasil2D.peta) return null;
+  const g = (S.setel.gambarGeser || {})[j] || {dx: 0, dy: 0};
+  return {id: null, kunci: j, dx0: g.dx || 0, dy0: g.dy || 0};
+}
+function pratinjauGeser2D(t, dx, dy) {
+  GESER2D.sementara = {id: t.id, kunci: t.kunci, dx: Math.round(dx * 2) / 2, dy: Math.round(dy * 2) / 2};
+  if (!GESER2D.raf) GESER2D.raf = requestAnimationFrame(() => { GESER2D.raf = 0; segar2D(); });
+}
+function simpanGeser2D(t, dx, dy) {
+  const nilai = Math.abs(dx) < 0.25 && Math.abs(dy) < 0.25 ? null : {dx: Math.round(dx * 2) / 2, dy: Math.round(dy * 2) / 2};
+  GESER2D.sementara = null;
+  if (t.id) {
+    const d = salin(/** @type {any} */ (S.elems.get(t.id)));
+    if (nilai) d.geser = nilai; else delete d.geser;
+    terapkan([{id: t.id, sesudah: d}]);
+    GESER2D.detPilih = t.id;
+  } else {
+    const gg = {...(S.setel.gambarGeser || {})};
+    if (nilai) gg[t.kunci] = nilai; else delete gg[t.kunci];
+    S.setel.gambarGeser = gg; simpanSetelan();
+  }
+  segar2D();
+}
+$('#g2-geser-gambar').addEventListener('click', () => setGeser2D(!GESER2D.aktif));
+$('#g2-tengah').addEventListener('click', () => {
+  const j = opsi2D().jenis;
+  if (j.startsWith('det:')) {
+    const id = GESER2D.detPilih && S.elems.has(GESER2D.detPilih) && S.elems.get(GESER2D.detPilih).lembar === j ? GESER2D.detPilih : null;
+    const daftar = id ? [id] : detailDiLembar(j).map(([i]) => i).filter(i => S.elems.get(i).geser);
+    if (!daftar.length) return toast('Tidak ada detail yang digeser di lembar ini.');
+    terapkan(daftar.map(i => { const d = salin(/** @type {any} */ (S.elems.get(i))); delete d.geser; return {id: i, sesudah: d}; }));
+    segar2D(); return toast(id ? 'Detail dikembalikan ke tengah petaknya.' : 'Semua detail di lembar ini dikembalikan ke tengah petaknya.');
+  }
+  const gg = {...(S.setel.gambarGeser || {})};
+  if (!gg[j]) return toast('Gambar ini sudah di posisi otomatis.');
+  delete gg[j]; S.setel.gambarGeser = gg; simpanSetelan(); segar2D(); toast('Gambar dikembalikan ke tengah kertas.');
+});
+(() => {
+  const wadah = $('#m-svg').parentElement;
+  wadah.addEventListener('pointerdown', e => {
+    if (!GESER2D.aktif || e.button !== 0) return;
+    const p = svgTitik(e);
+    if (!p) return;
+    const t = sasaranGeser2D(p);
+    if (!t) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    GESER2D.seret = {t, x0: p.x, y0: p.y, dx: t.dx0, dy: t.dy0};
+    wadah.setPointerCapture(e.pointerId);
+  }, true);
+  wadah.addEventListener('pointermove', e => {
+    const sr = GESER2D.seret;
+    if (!sr) return;
+    e.stopImmediatePropagation();
+    const p = svgTitik(e);
+    if (!p) return;
+    let ddx = p.x - sr.x0, ddy = p.y - sr.y0;
+    if (e.shiftKey) { if (Math.abs(ddx) >= Math.abs(ddy)) ddy = 0; else ddx = 0; }
+    sr.dx = sr.t.dx0 + ddx; sr.dy = sr.t.dy0 + ddy;
+    pratinjauGeser2D(sr.t, sr.dx, sr.dy);
+  }, true);
+  const akhir = e => {
+    const sr = GESER2D.seret;
+    if (!sr) return;
+    e.stopImmediatePropagation();
+    GESER2D.seret = null;
+    simpanGeser2D(sr.t, sr.dx, sr.dy);
+  };
+  wadah.addEventListener('pointerup', akhir, true);
+  wadah.addEventListener('pointercancel', akhir, true);
+  document.addEventListener('keydown', e => {
+    if (!GESER2D.aktif || $('#modal2d').hidden || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+    const arah = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[e.key];
+    if (!arah) { if (e.key === 'Escape') setGeser2D(false); return; }
+    const j = opsi2D().jenis;
+    const t = j.startsWith('det:') ? (GESER2D.detPilih && S.elems.has(GESER2D.detPilih) && S.elems.get(GESER2D.detPilih).lembar === j ? (() => { const d = /** @type {any} */ (S.elems.get(GESER2D.detPilih)), g = d.geser || {dx: 0, dy: 0}; return {id: GESER2D.detPilih, kunci: j, dx0: g.dx, dy0: g.dy}; })() : null) : sasaranGeser2D({x: 0, y: 0});
+    if (!t) return toast('Seret dulu detail yang akan digeser.');
+    e.preventDefault(); e.stopPropagation();
+    const k = e.shiftKey ? 5 : 1;
+    simpanGeser2D(t, t.dx0 + arah[0] * k, t.dy0 + arah[1] * k);
+  }, true);
+})();
+
 $('#m-svg').addEventListener('pointercancel', akhirSeret2DBenda, true);
 $('#m-svg').addEventListener('dblclick', e => {
   if (!ALAT2D.alat) return;
@@ -17788,7 +17900,7 @@ function lembarDetail(o) {
     });
     if (nilai > nilaiTerbaik + 1e-6) { nilaiTerbaik = nilai; kol = k; }
   }
-  const baris = Math.max(1, Math.ceil(n / kol)), cw = area.w / kol, ch = area.h / baris, diperkecil = [], petakBebas = [], asalPetak = {};
+  const baris = Math.max(1, Math.ceil(n / kol)), cw = area.w / kol, ch = area.h / baris, diperkecil = [], petakBebas = [], asalPetak = {}, petakDetail = [];
   daftar.forEach(([id, d], i) => {
     const cx = area.x + (i % kol) * cw, cy = area.y + Math.floor(i / kol) * ch;
     const {labL, labR, rw, rh} = petak(cw, ch, d, hasil[i]);
@@ -17820,7 +17932,10 @@ function lembarDetail(o) {
       return;
     }
     const lebar = (r.u1 - r.u0) * s, tinggi = (r.z1 - r.z0) * s;
-    const ox = rx + (rw - lebar) / 2, oy = ry + (rh - tinggi) / 2;
+    // geser gambar detail di petaknya (v0.45.1): isian `geser` {dx, dy} mm pada elemen detail
+    const sm = GESER2D.sementara, gd = sm && sm.id === id ? sm : d.geser && Number.isFinite(d.geser.dx) && Number.isFinite(d.geser.dy) ? d.geser : {dx: 0, dy: 0};
+    const ox = rx + (rw - lebar) / 2 + gd.dx, oy = ry + (rh - tinggi) / 2 + gd.dy;
+    petakDetail.push({id, x: cx, y: cy, w: cw, h: ch});
     const X = u => ox + (u - r.u0) * s, Y = z => oy + (r.z1 - z) * s;
     for (const e of r.isi) {
       if (e.k === 'poly') {
@@ -17885,7 +18000,7 @@ function lembarDetail(o) {
   isi.push(...svgBenda2D(o, null, asalPetak));
   const kop = kopGambar(o, W, H, 'TERTERA');
   return {svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`,
-    info, skala: 'TERTERA', W, H, peta: null, anotStat: null, petak: petakBebas};
+    info, skala: 'TERTERA', W, H, peta: null, anotStat: null, petak: petakBebas, petakDetail};
 }
 /* ---- pustaka detail sendiri (v0.26): isi petak detail bebas disimpan untuk dipakai ulang ---- */
 // disimpan di pengaturan proyek (ikut berkas) dan di penyimpanan peramban/aplikasi (bisa dipakai di proyek lain)
@@ -18141,6 +18256,7 @@ function langganan() {
     if (d.kop && typeof d.kop === 'object') S.setel.kop = d.kop;
     if (Array.isArray(d.pustakaDetail)) S.setel.pustakaDetail = d.pustakaDetail;
     if (d.peilGeser && typeof d.peilGeser === 'object') S.setel.peilGeser = d.peilGeser;
+    if (d.gambarGeser && typeof d.gambarGeser === 'object') S.setel.gambarGeser = d.gambarGeser;
     if (Array.isArray(d.peilSembunyi)) S.setel.peilSembunyi = d.peilSembunyi;
     if (!$('#modal2d').hidden) renderLembar();
     tampilNamaProyek(); S.panelKunci = ''; renderPanel();
