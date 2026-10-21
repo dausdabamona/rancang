@@ -68,6 +68,21 @@ test('jeti kayu: model, RAB kayu, dan gambar', {skip: process.env.RANCANG_UJI_EL
     }
     const t3 = await c.callTool({name: 'tangkap_layar_3d', arguments: {tampilan: 'iso'}});
     fs.writeFileSync(path.join(keluar, 'jeti-3d.png'), Buffer.from(t3.content[0].data, 'base64'));
+    // v0.45: tiang pipa baja — jeti hanya rangka atas; tiang dari elemen Z, baris DM-201/202 hilang
+    const baja = {...JETI, kayu: 'Besi', tiang: {b: 0.219, panjang: 8, n: 2, bahan: 'baja'}, balokKepala: {b: 0.1, h: 0.2, ganda: false}};
+    const rb = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [
+      {id: 'J1', data: null}, {id: 'J2', data: null},
+      {id: 'J3', data: {jenis: 'jetiKayu', nama: 'Jeti baja', ...baja, awal: {x: 0, y: 0}, akhir: {x: 0, y: 10}}},
+      {id: 'Z1', data: {jenis: 'tiang', bahan: 'baja', dLuar: 219, tebal: 8, x: -1.14, y: 0.11, zKepala: 2.61, panjang: 9, panjangSegmen: 12, coating: true}}]}}));
+    assert.equal(rb.ok, true, JSON.stringify(rb));
+    const rab2 = json(await c.callTool({name: 'volume_rab', arguments: {}}));
+    const dm2 = rab2.find(d => d.nama === 'PEKERJAAN DERMAGA'), b2 = k => dm2.baris.find(x => x.kode === k);
+    assert.ok(!b2('DM-201') && !b2('DM-202'), 'tiang kayu tidak boleh muncul');
+    // 10 m: 4 bentang → 5 portal × 2 titik = 10 baut kepala tiang; skor 5 × 2 batang × 2 baut = 20
+    assert.ok(b2('DM-203') && b2('DM-207').vol === 30, JSON.stringify(b2('DM-207')));
+    assert.ok(dm2.baris.some(x => /219/.test(x.uraian)), 'baris tiang pipa Ø219');
+    const gp = await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X1', kertas: 'A3'}});
+    assert.equal(gp.content[0].type, 'image');
   } finally {
     await c.close();
     app.kill();

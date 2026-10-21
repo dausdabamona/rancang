@@ -653,7 +653,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | W | plat | Plat lantai beton: alas [{x,y}…], z0 (permukaan BAWAH), tebal, opsional lubang, tul {d, s}, fc. Permukaan atas = z0 + tebal. Masuk RAB beton, besi dua lapis dua arah, bekisting | `{"jenis":"plat","alas":[{"x":0,"y":0},{"x":37,"y":0},{"x":37,"y":8.75},{"x":0,"y":8.75}],"z0":3.88,"tebal":0.12}` |
 | Z | tiang | Tiang pancang dermaga: bahan 'baja' (pipa) / 'spun' / 'beton' (persegi precast) / 'kayu'; x, y (pusat), zKepala (elevasi kepala), panjang (m, ujung bawah = zKepala − panjang). Bulat (baja, spun): dLuar dan tebal dalam MILIMETER. Persegi (beton, kayu): b (m). Opsional: panjangSegmen (m, bawaan 12; sambungan las = segmen − 1), coating (true/false, baja), isian {panjang (m dari kepala), fc, tul{n,d}}. RAB: divisi Pekerjaan Dermaga (pengadaan kg/m'/m³, pemancangan m', sambungan, perataan kepala, coating); beton dan besi isian ke divisi beton. Tiang miring (v0.41): miring {n (1:n, tegak:mendatar, 1–50), arah (derajat arah condong ujung bawah di denah; 0 = +x, 90 = +y)}; panjang = panjang miring. Selimut beton anti karat (v0.41): selimut {atas, bawah (elevasi), tebal (m, ≤ 0,5), fc} | `{"jenis":"tiang","bahan":"baja","x":0,"y":0,"dLuar":508,"tebal":12,"panjang":40,"zKepala":3.5,"panjangSegmen":12,"coating":true,"isian":{"panjang":4,"fc":24.9,"tul":{"n":10,"d":19}}}` |
 | O | perlengkapan | Perlengkapan dermaga: tipe 'bolder' (kapasitas ton) / 'fender' (panjang m, model) / 'pju' (tinggi m) / 'tanggaMonyet' (tinggi m); x, y, z0 (dudukan; fender dan tangga monyet: z0 = puncak, menggantung ke bawah), rotasi (°; +Y lokal = arah ke laut). RAB per buah | `{"jenis":"perlengkapan","tipe":"bolder","kapasitas":15,"x":0,"y":0,"z0":4.2,"rotasi":0}` |
-| J | jetiKayu | Dermaga kayu satu ruas lurus (v0.40): awal{x,y}, akhir{x,y} (as jeti), lebar, zLantai (elevasi atas papan), jarakPortal (jarak maks. portal tiang; dibagi rata), kayu (nama jenis), tiang{b (sisi m), panjang, n (tiang per portal)}, balokKepala{b, h, ganda (true = dua balok menjepit tiang)}, gelagar{b, h, jarak}, papan{tebal, lebar, celah}, skor{pasang, b, h} (silang 45° tiap portal). Opsional portalAwal/portalAkhir false bila ujung menumpu ruas lain (jeti L = dua ruas). Awalan J dipakai bersama batang. RAB: DM-201…208 (kayu m³ per komponen, pemancangan m', baut set, pengawetan m²) | `{"jenis":"jetiKayu","awal":{"x":0,"y":0},"akhir":{"x":52,"y":0},"lebar":2.5,"zLantai":3,"jarakPortal":2.5,"kayu":"Besi","tiang":{"b":0.2,"panjang":8,"n":2},"balokKepala":{"b":0.08,"h":0.2,"ganda":true},"gelagar":{"b":0.08,"h":0.15,"jarak":0.6},"papan":{"tebal":0.04,"lebar":0.2,"celah":0.01},"skor":{"pasang":true,"b":0.06,"h":0.15}}` |
+| J | jetiKayu | Dermaga kayu satu ruas lurus (v0.40): awal{x,y}, akhir{x,y} (as jeti), lebar, zLantai (elevasi atas papan), jarakPortal (jarak maks. portal tiang; dibagi rata), kayu (nama jenis), tiang{b (sisi m), panjang, n (tiang per portal), bahan ('kayu' bawaan / 'baja' = tiang dari elemen Tiang pancang Z terpisah; jeti hanya rangka atas, b = diameter pipa)}, balokKepala{b, h, ganda (true = dua balok menjepit tiang)}, gelagar{b, h, jarak}, papan{tebal, lebar, celah}, skor{pasang, b, h} (silang 45° tiap portal). Opsional portalAwal/portalAkhir false bila ujung menumpu ruas lain (jeti L = dua ruas). Awalan J dipakai bersama batang. RAB: DM-201…208 (kayu m³ per komponen, pemancangan m', baut set, pengawetan m²) | `{"jenis":"jetiKayu","awal":{"x":0,"y":0},"akhir":{"x":52,"y":0},"lebar":2.5,"zLantai":3,"jarakPortal":2.5,"kayu":"Besi","tiang":{"b":0.2,"panjang":8,"n":2},"balokKepala":{"b":0.08,"h":0.2,"ganda":true},"gelagar":{"b":0.08,"h":0.15,"jarak":0.6},"papan":{"tebal":0.04,"lebar":0.2,"celah":0.01},"skor":{"pasang":true,"b":0.06,"h":0.15}}` |
 | L | gambar2d | Benda gambar 2D di Ruang Lembar: bentuk ('garis','polyline','persegi','lingkaran','busur','teks','arsir'; v0.41: 'dimensi' titik [≥2 titik dunia, >2 = berantai], arah 'datar'/'tegak'/'sejajar', geser (mm kertas dari titik pertama), bidang 'denah'/'tegak', satuan 'm'/'cm' opsional, teks opsional; 'sudut' titik [puncak, kaki1, kaki2]; 'kemiringan' titik [2 pada garis miring]; 'label' titik [ujung panah, letak teks], sumber (id elemen), isi (pola {nama}, {tulangan}, …) atau teks), lembar (mis. 'denah', 'potongan:X3', 'sampul'), tempel ('gambar' = titik dunia {x,y,z} meter; 'kertas' = titik {x,y} mm kertas), titik (garis 2 titik; persegi 2 sudut; lingkaran pusat + titik tepi; busur awal, akhir, titik pada busur), gaya {tebal mm, garis 'penuh'/'putus'/'as'/'titik', warna 'hitam'/'abu'/'merah'/'biru'}. Teks: teks, ukuran (mm). Arsir: pola ('beton','bata','tanah','pasir','kayu','keramik'). Polyline: tutup. Simbol perabot (`bentuk:'simbol'`, hanya denah/denah atap/denah pondasi, tempel 'gambar', titik = pusat): simbol ('kasur1','kasur2','lemari','mejaMakan','mejaKerja','sofa','klosetDuduk','klosetJongkok','wastafel','shower','bakMandi','kitchenSet','pohon'), rotasi (0/90/180/270). Legenda otomatis: `bentuk:'legenda'`, tempel 'kertas', titik = sudut kiri atas (mm). Di lembar detail, benda di dalam petak Detail bebas memakai `tempel:'petak'`, `petak` = id detail (E…), titik mm dari pojok kiri atas petak Detail perbesaran (`bentuk:'perbesar'`, tempel 'gambar'): titik [pusat, titik tepi lingkaran sumber] (dunia), letak {x, y} mm kertas, skala (penyebut), nomor; opsional v0.44: judul, bingkai 'lingkaran'/'persegi', rasio (lebar:tinggi bingkai persegi, 1–3), penghubung (true = garis dari lingkaran sumber ke detail), rinci {arsir, tulangan, ukuran, label, bahan} (false = dimatikan; kosong = menyala; isi rinci berlaku di lembar potongan). Viewport bebas (`bentuk:'viewport'`, tempel 'kertas', titik = dua sudut kotak mm): sumber (jenis gambar yang ditampilkan, mis. 'denah:0', 'depan', 'potongan:X3', 'pondasi'), skala (penyebut), pusat {x,y,z} = titik dunia di tengah kotak, judul (opsional; bawaan nama gambar). Isinya dirender ulang dari model | `{"jenis":"gambar2d","bentuk":"teks","lembar":"denah","tempel":"kertas","titik":[{"x":30,"y":180}],"teks":"Catatan: semua ukuran dalam meter","ukuran":2.5,"gaya":{"warna":"hitam"}}` |
 | E | detail | Detail di lembar detail ('det:1', 'det:2', …): template ('pondasiBatuKali','footplat','umpak','kudaKuda','sambunganKayu','balokDermaga','pileCapDermaga','tiangDermaga','bollard','bebas'), sumber (id elemen: pondasi untuk tiga template pertama, atap berangka kayu untuk kuda-kuda dan sambungan; dermaga v0.41: balokDermaga = ringbalk peran balok, pileCapDermaga = pondasi pilecap, tiangDermaga = tiang, bollard = perlengkapan bolder), lembar, skala (5, 10, 20, 25, 50, 75, 100), judul (opsional). sambunganKayu wajib `sambungan`: 'tumpuan','puncak','makelar','sokong','perpanjangan' | `{"jenis":"detail","template":"sambunganKayu","sumber":"A2","sambungan":"tumpuan","lembar":"det:2","skala":10}` |
 | I | instance | definisi (id komponen K…), posisi{x,y}, rotasi (°), z0 | |
@@ -985,7 +985,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * J — dermaga kayu satu ruas (v0.40); awalan J dipakai bersama batang.
  * @typedef {DasarElemen & {jenis: 'jetiKayu', awal: Titik2, akhir: Titik2, lebar: number, zLantai: number, jarakPortal: number, kayu?: string,
- *   tiang: {b: number, panjang: number, n: number}, balokKepala: {b: number, h: number, ganda?: boolean}, gelagar: {b: number, h: number, jarak: number},
+ *   tiang: {b: number, panjang: number, n: number, bahan?: 'kayu' | 'baja'}, balokKepala: {b: number, h: number, ganda?: boolean}, gelagar: {b: number, h: number, jarak: number},
  *   papan: {tebal: number, lebar: number, celah?: number}, skor?: false | {pasang?: boolean, b?: number, h?: number}, portalAwal?: boolean, portalAkhir?: boolean}} JetiKayu
  */
 /**
@@ -1323,7 +1323,7 @@ function sah(d) {
   if (d.jenis === 'jetiKayu') {
     const pos = x => Number.isFinite(x) && x > 0, t = d.tiang, bk = d.balokKepala, gl = d.gelagar, pp = d.papan, sk = d.skor;
     return titikSah(d.awal) && titikSah(d.akhir) && Math.hypot(d.akhir.x - d.awal.x, d.akhir.y - d.awal.y) >= 0.5 && d.lebar >= 0.5 && d.lebar <= 20 && Number.isFinite(d.zLantai)
-      && d.jarakPortal >= 0.5 && !!t && pos(t.b) && t.b <= 1 && pos(t.panjang) && t.panjang <= 40 && t.n >= 1 && t.n <= 10 && !!bk && pos(bk.b) && pos(bk.h)
+      && d.jarakPortal >= 0.5 && !!t && pos(t.b) && t.b <= 1 && pos(t.panjang) && t.panjang <= 40 && t.n >= 1 && t.n <= 10 && (t.bahan == null || t.bahan === 'kayu' || t.bahan === 'baja') && !!bk && pos(bk.b) && pos(bk.h)
       && !!gl && pos(gl.b) && pos(gl.h) && pos(gl.jarak) && !!pp && pos(pp.tebal) && pos(pp.lebar) && (pp.celah == null || pp.celah >= 0)
       && (sk == null || sk === false || sk.pasang === false || (pos(sk.b) && pos(sk.h)));
   }
@@ -2212,10 +2212,12 @@ function geoJeti(d) {
   const portal = [];
   for (let i = 0; i <= nBentang; i++) { if ((i === 0 && d.portalAwal === false) || (i === nBentang && d.portalAkhir === false)) continue; portal.push(e + i * jarak); }
   const nT = Math.max(1, Math.round(ti.n)), vT = nT === 1 ? [0] : Array.from({length: nT}, (_, k) => -W / 2 + ti.b / 2 + k * (W - ti.b) / (nT - 1));
+  // tiang baja (v0.45): titik tiang tetap dihitung untuk acuan elemen Tiang pancang (Z), tetapi jeti tidak menggambar/menghitung tiang kayu
+  const tiangKayu = ti.bahan !== 'baja';
   const benda = /** @type {any[]} */ ([]), tiang = [];
   for (const u of portal) for (const v of vT) {
     const [x, y] = P(u, v); tiang.push({x, y, u, v});
-    benda.push({p: kotak(u - ti.b / 2, u + ti.b / 2, v - ti.b / 2, v + ti.b / 2), z0: zUjung, h: ti.panjang, bahan: 'kayu'});
+    if (tiangKayu) benda.push({p: kotak(u - ti.b / 2, u + ti.b / 2, v - ti.b / 2, v + ti.b / 2), z0: zUjung, h: ti.panjang, bahan: 'kayu'});
   }
   let nBk = 0;
   for (const u of portal) for (const o of ganda ? [-(ti.b + bk.b) / 2, (ti.b + bk.b) / 2] : [0]) {
@@ -2239,15 +2241,15 @@ function geoJeti(d) {
       nSkor++; pSkor += Math.hypot(dv, zT - zB) + 2 * ti.b;
     }
   }
-  const nTiang = tiang.length;
+  const nTitik = tiang.length, nTiang = tiangKayu ? nTitik : 0;
   const vTiang = nTiang * ti.b * ti.b * ti.panjang, vBk = nBk * bk.b * bk.h * W, vGel = nG * gl.b * gl.h * L, vPapan = nPapan * pp.lebar * pp.tebal * W;
   const vSkor = nSkor ? pSkor * sk.b * sk.h : 0;
   // baut Ø16: satu per tiang di balok kepala, dua per batang skor (ujung) ditambah tiang antara
-  const nBaut = nTiang + nSkor * Math.max(2, nT);
+  const nBaut = nTitik + nSkor * Math.max(2, nT);
   // pengawetan: seluruh permukaan kayu
   const luasAwet = nTiang * 4 * ti.b * ti.panjang + nBk * 2 * (bk.b + bk.h) * W + nG * 2 * (gl.b + gl.h) * L + 2 * L * W + (nSkor ? pSkor * 2 * (sk.b + sk.h) : 0);
   return {L, W, P, kotak, denah: kotak(0, L, -W / 2, W / 2), portal, jarak, tiang, vT, vG, skor, zAtas, zPapan, zGel, zBk, zKepala, zUjung, pitch, benda,
-    ukur: {panjang: L, lebar: W, luasLantai: L * W, nPortal: portal.length, jarakPortal: jarak, nTiang, panjangTiang: nTiang * ti.panjang, zKepala, zUjung,
+    ukur: {panjang: L, lebar: W, luasLantai: L * W, nPortal: portal.length, jarakPortal: jarak, nTiang, nTitikTiang: nTitik, tiangBaja: !tiangKayu, panjangTiang: nTiang * ti.panjang, zKepala, zUjung,
       volumeTiang: vTiang, nBalokKepala: nBk, volumeBalokKepala: vBk, nGelagar: nG, volumeGelagar: vGel, nPapan, volumePapan: vPapan,
       nSkor, panjangSkor: pSkor, volumeSkor: vSkor, nBaut, luasAwet, volumeKayu: vTiang + vBk + vGel + vPapan + vSkor}};
 }
@@ -11283,7 +11285,7 @@ const SPEC = {
   pju: [['tinggi', 'Tinggi tiang (m)', 'angka'], ['z0', 'Elevasi dudukan (m)', 'angka0'], ['rotasi', 'Rotasi (°)', 'angka0'], ['x', 'Posisi X (m)', 'angka0'], ['y', 'Posisi Y (m)', 'angka0']],
   jetiKayu: [['kayu', 'Jenis kayu', 'pilih', [['Besi', 'Kayu besi (kelas I)'], ['Merbau', 'Merbau'], ['Ulin', 'Ulin'], ['Bengkirai', 'Bengkirai'], ['Matoa', 'Matoa']]],
     ['lebar', 'Lebar jeti (m)', 'angka'], ['zLantai', 'Elevasi atas lantai (m)', 'angka0'], ['jarakPortal', 'Jarak portal tiang maks. (m)', 'angka'],
-    ['tiang.b', 'Sisi tiang kayu (m)', 'angka'], ['tiang.panjang', 'Panjang tiang (m)', 'angka'], ['tiang.n', 'Tiang per portal', 'bulat'],
+    ['tiang.bahan', 'Tiang', 'pilih', [['kayu', 'Kayu (ikut jeti)'], ['baja', 'Pipa baja (elemen Tiang pancang terpisah)']]], ['tiang.b', 'Sisi tiang kayu / diameter pipa (m)', 'angka'], ['tiang.panjang', 'Panjang tiang (m)', 'angka'], ['tiang.n', 'Tiang per portal', 'bulat'],
     ['balokKepala.b', 'Balok kepala: lebar (m)', 'angka'], ['balokKepala.h', 'Balok kepala: tinggi (m)', 'angka'], ['balokKepala.ganda', 'Balok kepala', 'pilih', [[true, 'Ganda, menjepit tiang'], [false, 'Tunggal di atas tiang']]],
     ['gelagar.b', 'Gelagar: lebar (m)', 'angka'], ['gelagar.h', 'Gelagar: tinggi (m)', 'angka'], ['gelagar.jarak', 'Jarak gelagar maks. (m)', 'angka'],
     ['papan.tebal', 'Papan lantai: tebal (m)', 'angka'], ['papan.lebar', 'Papan lantai: lebar (m)', 'angka'], ['papan.celah', 'Celah antar papan (m)', 'angka0'],
@@ -11381,7 +11383,7 @@ function htmlStruktur(id, d) {
   else if (d.tipe === 'footplat' || d.tipe === 'pilecap') ringkas = `${Math.round(d.p * 100)}×${Math.round(d.l * 100)}×${Math.round(d.tebal * 100)} · ${labelBesi(d.tulPlat.d, d.tulPlat.ulir)}-${Math.round(d.tulPlat.s * 1000)} · ${labelMutu(d.fc)}`;
   else if (d.jenis === 'tiang') ringkas = `${labelTiang(d)} · L ${fmt(d.panjang)} m · kepala ${fmtElev(d.zKepala)}`;
   else if (d.jenis === 'timbunan') ringkas = `puncak ${fmt(d.lebarAtas)} m · ${fmtElev(d.zAtas)} · talud 1:${fmt(d.talud)}`;
-  else if (d.jenis === 'jetiKayu') ringkas = `${d.kayu || 'kayu'} · ${fmt(u.panjang)} × ${fmt(d.lebar)} m · tiang ${Math.round(d.tiang.b * 100)}/${Math.round(d.tiang.b * 100)} @ ${fmt(u.jarakPortal)} m`;
+  else if (d.jenis === 'jetiKayu') ringkas = `${d.kayu || 'kayu'} · ${fmt(u.panjang)} × ${fmt(d.lebar)} m · ${d.tiang.bahan === 'baja' ? 'tiang baja Ø' + Math.round(d.tiang.b * 1000) + ' mm' : 'tiang ' + Math.round(d.tiang.b * 100) + '/' + Math.round(d.tiang.b * 100)} @ ${fmt(u.jarakPortal)} m`;
   else if (d.jenis === 'perlengkapan') ringkas = d.tipe === 'bolder' ? `${fmt(d.kapasitas, 0)} ton` : d.tipe === 'fender' ? `${d.model || 'fender'} · ${fmt(d.panjang)} m` : `tinggi ${fmt(d.tinggi)} m`;
   else ringkas = `${Math.round(d.bawah * 100)}/${Math.round(d.atas * 100)} · tinggi ${Math.round(d.tinggi * 100)} cm · ${labelMutu(d.fc)}`;
   let ukurHtml = '';
@@ -11396,7 +11398,7 @@ function htmlStruktur(id, d) {
   } else if (d.jenis === 'timbunan') {
     ukurHtml += baris2('Panjang as', u.panjang, 'm') + baris2('Lebar puncak', u.lebarAtas, 'm') + baris2('Lebar kaki terbesar', u.lebarBawahMaks, 'm') + baris2('Volume timbunan', u.volumeTimbunan, 'm³') + baris2('Luas talud (dua sisi)', u.luasTalud, 'm²') + baris2('Luas puncak', u.luasPuncak, 'm²');
   } else if (d.jenis === 'jetiKayu') {
-    ukurHtml += baris2('Panjang as', u.panjang, 'm') + baris2('Luas lantai', u.luasLantai, 'm²') + baris2('Portal', u.nPortal, 'buah') + baris2('Tiang kayu', u.nTiang, 'batang')
+    ukurHtml += baris2('Panjang as', u.panjang, 'm') + baris2('Luas lantai', u.luasLantai, 'm²') + baris2('Portal', u.nPortal, 'buah') + (u.tiangBaja ? baris2('Titik tiang baja (elemen Z)', u.nTitikTiang, 'titik') : baris2('Tiang kayu', u.nTiang, 'batang'))
       + baris2('Kepala tiang', u.zKepala, 'm') + baris2('Ujung bawah tiang', u.zUjung, 'm')
       + baris2('Kayu tiang', u.volumeTiang, 'm³') + baris2('Kayu balok kepala', u.volumeBalokKepala, 'm³') + baris2(`Kayu gelagar (${u.nGelagar} jalur)`, u.volumeGelagar, 'm³')
       + baris2(`Papan lantai (${u.nPapan} lembar)`, u.volumePapan, 'm³') + (u.nSkor ? baris2(`Skor (${u.nSkor} batang)`, u.volumeSkor, 'm³') : '')
@@ -14174,7 +14176,7 @@ function buatSVGInti(o) {
           const gj = geoJeti(g), R = g.tiang.b / 2;
           isi.push(`<polygon points="${pts(gj.denah)}" fill="none" stroke="#666" stroke-width="0.13" stroke-dasharray="1.2 0.8"/>`);
           for (const u of gj.portal) { const a = gj.P(u, -gj.W / 2), b = gj.P(u, gj.W / 2); isi.push(garis(X(a[0]), Y(a[1]), X(b[0]), Y(b[1]), 0.25, '#555')); }
-          for (const t of gj.tiang) isi.push(`<polygon points="${pts(rectPusat(t.x, t.y, g.tiang.b, g.tiang.b))}" fill="#fff" stroke="#000" stroke-width="0.3"/>`, garis(X(t.x - R), Y(t.y - R), X(t.x + R), Y(t.y + R), 0.15), garis(X(t.x - R), Y(t.y + R), X(t.x + R), Y(t.y - R), 0.15));
+          if (g.tiang.bahan !== 'baja') for (const t of gj.tiang) isi.push(`<polygon points="${pts(rectPusat(t.x, t.y, g.tiang.b, g.tiang.b))}" fill="#fff" stroke="#000" stroke-width="0.3"/>`, garis(X(t.x - R), Y(t.y - R), X(t.x + R), Y(t.y + R), 0.15), garis(X(t.x - R), Y(t.y + R), X(t.x + R), Y(t.y - R), 0.15));
         } else if (g.jenis === 'pondasi' && g.tipe === 'pilecap') isi.push(`<polygon points="${pts(rectPusat(g.x, g.y, g.p, g.l))}" fill="#F2F2F2" stroke="#000" stroke-width="0.3"/>`);
         else if (g.jenis === 'tiang') {
           // tiang: lingkaran/persegi dengan tanda silang
@@ -14208,7 +14210,7 @@ function buatSVGInti(o) {
         else if (g.jenis === 'kolom') k = `${NAMA_STRUKTUR[g.tipe]} ${Math.round(g.b * 100)}/${Math.round(g.h * 100)} cm, ${g.tul.n}${labelBesi(g.tul.d, g.tul.ulir)}, sengkang Ø${g.sengkang.d}-${Math.round(g.sengkang.s * 1000)}, ${labelMutu(g.fc)}`;
         else if (g.tipe === 'batukali') k = `Pondasi batu kali 1PC:4PS: atas ${Math.round(g.lebarAtas * 100)}, bawah ${Math.round(g.lebarBawah * 100)}, tinggi ${Math.round(g.tinggi * 100)} cm; aanstamping ${Math.round(g.aanstamping * 100)} cm; pasir urug ${Math.round(g.pasir * 100)} cm`;
         else if (g.jenis === 'tiang') k = `Tiang pancang ${labelTiang(g)}${g.miring && g.miring.n > 0 ? ` miring 1:${g.miring.n}` : ' tegak'}, panjang ${fmt(g.panjang)} m, kepala ${fmtElev(g.zKepala)}${g.selimut && g.selimut.tebal > 0 ? `, selimut beton ${Math.round(g.selimut.tebal * 100)} cm ${fmtElev(g.selimut.bawah)} s.d. ${fmtElev(g.selimut.atas)}` : ''}`;
-        else if (g.jenis === 'jetiKayu') { const gj = geoJeti(g); k = `Jeti kayu ${g.kayu || ''}: tiang ${Math.round(g.tiang.b * 100)}/${Math.round(g.tiang.b * 100)} cm panjang ${fmt(g.tiang.panjang)} m, portal ${g.tiang.n} tiang @ ±${fmt(gj.jarak)} m, kepala ${fmtElev(gj.zKepala)}`; }
+        else if (g.jenis === 'jetiKayu') { const gj = geoJeti(g); k = g.tiang.bahan === 'baja' ? `Jeti kayu ${g.kayu || ''} di atas tiang pipa baja Ø${Math.round(g.tiang.b * 1000)} mm: portal ${g.tiang.n} tiang @ ±${fmt(gj.jarak)} m, kepala ${fmtElev(gj.zKepala)}` : `Jeti kayu ${g.kayu || ''}: tiang ${Math.round(g.tiang.b * 100)}/${Math.round(g.tiang.b * 100)} cm panjang ${fmt(g.tiang.panjang)} m, portal ${g.tiang.n} tiang @ ±${fmt(gj.jarak)} m, kepala ${fmtElev(gj.zKepala)}`; }
         else if (g.tipe === 'pilecap') k = `Pile cap ${Math.round(g.p * 100)}×${Math.round(g.l * 100)}×${Math.round(g.tebal * 100)} cm, ${labelBesi(g.tulPlat.d, g.tulPlat.ulir)}-${Math.round(g.tulPlat.s * 1000)} dua lapis dua arah, ${labelMutu(g.fc)}, dasar ${fmtElev(g.z0)}`;
         else if (g.tipe === 'footplat') k = `FP: foot plat ${Math.round(g.p * 100)}×${Math.round(g.l * 100)}×${Math.round(g.tebal * 100)} cm, ${labelBesi(g.tulPlat.d, g.tulPlat.ulir)}-${Math.round(g.tulPlat.s * 1000)} dua arah, pedestal ${Math.round(g.pedestal.b * 100)}/${Math.round(g.pedestal.h * 100)}, ${labelMutu(g.fc)}, dasar ${fmt(g.z0)} m`;
         else k = `U: umpak beton ${Math.round(g.bawah * 100)}/${Math.round(g.atas * 100)} cm, tinggi ${Math.round(g.tinggi * 100)} cm, ${labelMutu(g.fc)}`;
@@ -15911,14 +15913,14 @@ function dataRAB(ids) {
       let j = 0;
       for (const [kayu, x] of jeti) {
         const g = x.g, cm = v => Math.round(v * 100), sub = jeti.size > 1 ? String.fromCharCode(97 + j++) : '';
-        tambah(dD, `DM-201${sub}`, `Pengadaan tiang kayu ${kayu} ${cm(g.tiang.b)}/${cm(g.tiang.b)} cm`, 'm³', x.volumeTiang, `${x.nTiang} batang × ${fmt(x.panjangTiang / x.nTiang)} m`);
-        tambah(dD, `DM-202${sub}`, `Pemancangan tiang kayu ${cm(g.tiang.b)}/${cm(g.tiang.b)} cm di laut`, "m'", x.panjangTiang, `${x.nTiang} titik`);
+        if (x.nTiang) tambah(dD, `DM-201${sub}`, `Pengadaan tiang kayu ${kayu} ${cm(g.tiang.b)}/${cm(g.tiang.b)} cm`, 'm³', x.volumeTiang, `${x.nTiang} batang × ${fmt(x.panjangTiang / x.nTiang)} m`);
+        if (x.nTiang) tambah(dD, `DM-202${sub}`, `Pemancangan tiang kayu ${cm(g.tiang.b)}/${cm(g.tiang.b)} cm di laut`, "m'", x.panjangTiang, `${x.nTiang} titik`);
         tambah(dD, `DM-203${sub}`, `Balok kepala kayu ${kayu} ${g.balokKepala.ganda !== false ? '2×' : ''}${cm(g.balokKepala.b)}/${cm(g.balokKepala.h)} cm`, 'm³', x.volumeBalokKepala);
         tambah(dD, `DM-204${sub}`, `Gelagar kayu ${kayu} ${cm(g.gelagar.b)}/${cm(g.gelagar.h)} cm`, 'm³', x.volumeGelagar);
         tambah(dD, `DM-205${sub}`, `Papan lantai kayu ${kayu} ${cm(g.papan.tebal)}/${cm(g.papan.lebar)} cm, celah ${fmt((g.papan.celah || 0) * 100, 0)} cm`, 'm³', x.volumePapan, `Luas lantai ${fmt(x.luasLantai)} m²; ${x.nPapan} lembar`);
         if (x.nSkor) tambah(dD, `DM-206${sub}`, `Skor/pengaku silang kayu ${kayu} ${cm(g.skor.b)}/${cm(g.skor.h)} cm`, 'm³', x.volumeSkor, `${x.nSkor} batang`);
-        tambah(dD, `DM-207${sub}`, 'Baut Ø16 galvanis + mur + ring plat', 'set', x.nBaut, 'Tiang–balok kepala dan ujung skor');
-        tambah(dD, `DM-208${sub}`, 'Pengawetan kayu (anti rayap dan cacing laut)', 'm²', x.luasAwet, 'Seluruh permukaan kayu');
+        tambah(dD, `DM-207${sub}`, 'Baut Ø16 galvanis + mur + ring plat', 'set', x.nBaut, 'Kepala tiang–balok kepala dan ujung skor');
+        tambah(dD, `DM-208${sub}`, 'Pengawetan kayu (anti rayap dan cacing laut)', 'm²', x.luasAwet, x.nTiang ? 'Seluruh permukaan kayu' : 'Seluruh permukaan kayu rangka atas (tiang baja dihitung di baris tiang pancang)');
       }
     }
   }
