@@ -100,6 +100,16 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     assert.equal(baris('DM-101').vol, 3);
     assert.equal(baris('DM-102').vol, 3);
     fs.writeFileSync(path.join(keluar, 'dermaga-rab.json'), JSON.stringify(rab, null, 1));
+    // v0.46: RAB berharga — harga bawaan bersatuan sama, status asumsi/termasuk/kosong, total = jumlah + PPN 11 %
+    const hr = json(await c.callTool({name: 'hitung_rab', arguments: {}}));
+    const bh = k => hr.divisi.flatMap(d => d.baris).find(b => b.kode === k);
+    assert.equal(bh('DM-011').harga, 37620); assert.equal(bh('DM-011').status, 'asumsi');
+    assert.equal(bh('DM-090').status, 'termasuk'); assert.equal(bh('DM-090').jumlah, 0);
+    assert.equal(bh('ST-011').status, 'perwali');
+    assert.ok(hr.jumlah > 0 && hr.total === hr.jumlah + Math.round(hr.jumlah * 0.11), JSON.stringify({j: hr.jumlah, t: hr.total}));
+    assert.ok(hr.nilaiStatus.asumsi > 0 && hr.porsiAsumsi > 0 && hr.porsiAsumsi < 1);
+    const sumDiv = hr.divisi.reduce((a, d) => a + d.jumlah, 0);
+    assert.ok(Math.abs(sumDiv - hr.jumlah) <= hr.divisi.length, `${sumDiv} vs ${hr.jumlah}`);
     for (const jenis of ['denah', 'pondasi', 'potongan:X1', 'potongan:X2', 'depan']) {
       const g = await c.callTool({name: 'gambar_2d', arguments: {jenis, kertas: 'A3'}});
       assert.equal(g.content[0].type, 'image', jenis + ': ' + JSON.stringify(g.content[0]).slice(0, 200));
@@ -123,6 +133,25 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     const putih = /<g data-g2="L900"><rect [^>]*height="([\d.]+)"/.exec(svg);
     assert.ok(skala > 0 && putih, 'skala dan simbol garis putus ada di SVG');
     assert.ok(Math.abs(Number(putih[1]) - (10 * 1000 / skala + 4)) < 0.6, `tinggi penutup ${putih[1]} mm harus selebar trestle pada 1:${skala}`);
+    // v0.44.1: di potongan memanjang bergaris putus, rantai jarak tiang tidak bertumpuk di celah;
+    // ukuran menyambung dari tiang terlihat terakhir ke tiang terlihat berikutnya dengan nilai sebenarnya
+    const putusPot = {id: 'L901', data: {jenis: 'gambar2d', bentuk: 'putus', lembar: 'potongan:X2', tempel: 'gambar', arah: 'datar', titik: [{x: 4.5, y: 0, z: 0}, {x: 28.5, y: 0, z: 0}], gaya: {tebal: 0.3}}};
+    assert.equal(json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [putusPot]}})).ok, true);
+    const sp = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X2', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    const n300 = (sp.match(/>300</g) || []).length;
+    assert.ok(n300 >= 1 && n300 <= 6, `jarak 300 cm hanya untuk tiang terlihat (ada ${n300})`);
+    assert.ok(/>2700</.test(sp), 'jarak tiang menyambung melewati celah garis putus: 2700 cm');
+    // v0.45: tiang dipendekkan 1,0 m di bawah LWL di potongan (skala kerja), dengan label ujung tiang
+    const sx = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'potongan:X1', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    assert.ok(/Ujung tiang -37,64 · L 40,00 m/.test(sx), 'label ujung tiang di potongan bertiang dipendekkan');
+    assert.ok(/LWL ±0,00/.test(sx), 'daftar muka air tetap tampil');
+    // v0.45: penanda potongan B (lingkaran r 2,4 mm) di potongan melintang A; di potongan B penanda A jatuh di bagian putus sehingga tidak digambar
+    assert.ok(/<circle cx="[\d.]+" cy="[\d.]+" r="2.4" fill="#fff"/.test(sx), 'penanda potongan B di potongan A');
+    assert.ok(!/<circle cx="[\d.]+" cy="[\d.]+" r="2.4" fill="#fff"/.test(sp), 'penanda di bagian putus tidak digambar');
+    // v0.45: kotak Keterangan lembar detail dari mutu model
+    assert.equal(json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'E950', data: {jenis: 'detail', template: 'pileCapDermaga', sumber: 'F1', lembar: 'det:9', skala: 25}}]}})).ok, true);
+    const sdk = (await c.callTool({name: 'gambar_2d', arguments: {jenis: 'det:9', kertas: 'A3', format: 'svg'}})).content.map(k => k.text || '').join('');
+    assert.ok(/KETERANGAN/.test(sdk) && /Mutu beton fc' 29 MPa/.test(sdk) && /BjTS 420, fy 420 MPa/.test(sdk), 'kotak keterangan berisi mutu beton dan besi');
     // v0.44.0: detail perbesaran dengan judul, bingkai persegi, garis penghubung, dan isi rinci (label tulangan, mutu bahan)
     const det = {jenis: 'gambar2d', bentuk: 'perbesar', lembar: 'potongan:X1', tempel: 'gambar', titik: [{x: 6, y: 4.5, z: 2.9}, {x: 6, y: 5.4, z: 2.9}],
       letak: {x: 300, y: 80}, skala: 20, nomor: '7', judul: 'Pertemuan pelat dan balok tepi', bingkai: 'persegi', rasio: 1.5, penghubung: true};

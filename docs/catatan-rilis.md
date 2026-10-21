@@ -1,3 +1,60 @@
+## Yang baru di 0.46.0
+
+Penyatuan empat perubahan yang dikerjakan bersamaan (PR #41, #42, #43, #45; 21 Oktober 2026).
+
+### RAB sampai nilai rupiah
+RAB sampai nilai rupiah, dengan tanda pada harga yang belum pasti (21 Oktober 2026).
+
+- **Menu baru "Hitung RAB (Rp)"** di palet perintah (cari "harga") dan panel proyek, grup, atau pilihan. Volume diambil dari hitungan yang sama dengan ekspor volume RAB; harga satuan bisa diketik langsung di tabel; jumlah per divisi, PPN (bawaan 11 %, bisa diubah), total, dan angka dibulatkan langsung keluar.
+- **Status dasar harga per butir**, ditandai warna: *Perwali* (ada dasar Perwali Kota Sorong 14/2025), *Survei* (hijau muda, sumber diisi sendiri), **Asumsi** (kuning, belum ada dasar peraturan maupun survei), *Kosong* (merah, belum ada harga, dihitung Rp 0), dan *Termasuk* (biaya sudah di baris lain). Harga yang Anda ketik tanpa memilih status otomatis berstatus asumsi.
+- **Ringkasan kesiapan HPS** di atas tabel: berapa rupiah dan berapa persen nilai yang masih asumsi, dan berapa butir belum berharga.
+- **Harga bawaan** dari AHSP RAB Dermaga BBP v1 (upah dan bahan Perwali 14/2025, overhead 10 % di dalam harga satuan) untuk beton fc′ 35, besi, bekisting, tiang pipa baja, bolder, fender, PJU, dan tangga monyet. Kode lain sengaja dibiarkan kosong untuk Anda isi.
+- **Ekspor RAB berharga (.xlsx)** dari panel: harga terisi, kolom Status dan Sumber harga, catatan nilai asumsi; rumus tetap VLOOKUP ke HSP MASTER.
+- Alat MCP baru **`hitung_rab`** agar Claude bisa membaca RAB berharga beserta status tiap harga.
+- Harga, status, dan sumber yang Anda ubah tersimpan di berkas proyek.
+
+### Potongan dan detail setingkat gambar kerja konsultan
+Potongan dan detail setingkat gambar kerja konsultan, dari kajian gambar Dermaga KP Sorong (21 Oktober 2026).
+
+- **Tiang dipendekkan di potongan**: tiang pancang berhenti 1,0 m di bawah LWL dengan garis putus otomatis, sehingga potongan dermaga bisa pada skala kerja (Potongan A–A BBP: 1:200 → 1:100). Di bawahnya tertulis label ujung tiang, mis. "Ujung tiang −33,64 · L 36,00 m". Garis putus manual tetap berlaku.
+- **Daftar muka air di kiri luar gambar**: HWL, MSL, LWL berjajar dengan garis penunjuk ke garis airnya, tidak lagi menempel dan menimpa rantai tinggi.
+- **Penanda potongan**: garis potong lain yang memotong bidang gambar diberi penanda (garis putus, panah arah pandang, huruf dalam lingkaran) di atas potongan.
+- **Kotak Keterangan lembar detail** di kolom catatan kop: satuan tulangan mm, dimensi cm, mutu beton dari elemen sumber detail, besi ulir BjTS 420 dan polos BjTP 280 (bisa diganti lewat `setel.mutuBesi`).
+- **Lembar detail di akhir set** gambar zona; label detail dibungkus sampai 4 baris, tidak dipotong "…".
+- **Penempatan di tengah kertas**: rencana pondasi/pile cap dan rencana balok/pelat dipusatkan (ruang keterangan atas hanya bila perlu); lembar gabungan dari objek yang sama memakai titik pusat yang sama sehingga gambar berdampingan sejajar; lembar bagian di ujung objek tidak menyisakan ruang kosong.
+- **Teks panjang tidak keluar kertas**: judul gambar lembar gabungan dibungkus/diperkecil agar tidak saling menimpa; lokasi dan nama proyek di sampul dibungkus; judul di daftar gambar diperkecil agar muat kolomnya.
+- **Beton terpotong abu-abu** pada potongan dermaga (bukan hitam pekat), seperti gambar konsultan, supaya garis tulangan dan ukuran tetap terbaca.
+- **Tampak dermaga** ikut diberi penanda garis potong dan label ujung tiang.
+- **Template detail baru `balokMemanjang`**: penulangan balok memanjang di atas dua pile cap (tulangan atas/bawah menerus, sengkang berjarak, penanda potongan tumpuan dan lapangan, ukuran bentang dan peil), skala 1:25.
+
+### Ukuran tidak bertumpuk di garis putus
+Perbaikan dari Potongan C–C Dermaga TUKS BBP (21 Oktober 2026): angka ukuran tidak lagi bertumpuk di garis putus.
+
+- **Rantai jarak tiang di potongan bergaris putus**: tiang yang jatuh di bagian yang dihilangkan tidak lagi diberi ukuran sendiri-sendiri (dulu "600 600 600…" bertumpuk di celah). Ukuran menyambung dari tiang terlihat terakhir ke tiang terlihat berikutnya dengan nilai sebenarnya (mis. 10200), dan angkanya diletakkan di samping celah agar tidak tertutup simbol putus.
+- **Tabel jarak dan elevasi dasar laut**: titik profil di bagian yang dihilangkan tidak diberi kolom, dan kolom yang terlalu rapat (< 9 mm) dilewati; kolom ujung tetap tampil.
+- **Ruas ukuran sempit**: angka pada ruas yang lebih pendek dari angkanya (mis. rantai tinggi pelat–balok–pile cap di skala kecil, atau ruas 50 cm di ujung) digeser keluar garis ukur berselang 1–3 baris, tidak saling menimpa.
+
+### Tiang, gambar, dan Ruang Lembar
+Perbaikan volume RAB tiang pipa baja (21 Oktober 2026), dari RAB Marina Utara BBP.
+
+- **Coating hanya di zona tertentu**: panel Properti tiang → *Coating: elevasi atas / bawah*. Bila diisi, luas coating dihitung hanya pada zona itu (mis. zona pasang surut −1,00 s.d. kepala tiang), bukan seluruh panjang tiang. Keterangan RAB menyebut "Luas selimut zona coating saja". Kosongkan untuk perilaku lama (seluruh panjang).
+- **Isian beton tanpa spiral**: panel Properti tiang → *Spiral Ø10-150 isian* = *Tidak* untuk pipa kecil yang hanya diisi beton pengisi; baris besi Ø10 isian tidak lagi muncul di RAB. Bawaan tetap *Ya*.
+- **Peil dan ukuran tinggi tidak lagi bertumpuk**: di tampak dan potongan hanya peil penting yang tampil (±0,00, teratas, terbawah, datum pasang surut/dasar laut, yang diseret pengguna), ditambah peil lain yang berjarak ≥ 4 mm di kertas; rantai ukuran tinggi di potongan hanya memuat elevasi paling penting (≥ 8 mm). Puncak perlengkapan (bolder, kleat, fender) tidak diberi peil. Peil yang tersaring tampil di **detail perbesaran**.
+- **Detail perbesaran jeti kayu**: label papan, gelagar, dan balok kepala (ukuran kayu), rantai tinggi lapis rangka (cm), dan peil tiap lapis di dalam detail. Peil lantai jeti (puncak papan) kini ikut di potongan.
+- **Template detail baru *Sambungan jeti kayu*** (sumber: elemen Dermaga kayu): tiang pipa – balok kepala (pelat dudukan dilas + 2 baut Ø16), balok kepala – gelagar (pelat siku L 50.50.5 + baut Ø12), gelagar – papan (sekrup galvanis, celah papan), sambungan las tiang pipa (las tumpul alur V + cincin penahan), pemasangan kleat tambat, dan pemasangan fender ban. Ukuran diambil dari jeti dan tiang pipa di bawahnya.
+- **Atur letak gambar di kertas**: Ruang Lembar → tombol **Geser gambar**, lalu seret gambar ke letak yang diinginkan (panah = 1 mm, Shift+panah = 5 mm, Esc selesai). Benda 2D yang menempel ke gambar ikut bergeser; kop, catatan di kertas, dan detail perbesaran tetap. Di lembar detail, seret gambar detail di dalam petaknya. Tombol **Ke tengah** mengembalikan ke posisi otomatis. Detail perbesaran tetap dipindah dengan alat *Pilih* lalu menyeret bingkainya.
+- **Ukuran dan as otomatis di denah jeti kayu** (Garis ukuran menyala): as tiap portal tiang bernomor 1, 2, … pada jeti terpanjang dan A, B, … pada jeti lebar berikutnya (lengan akses); rantai ukuran antar-as dan panjang total di sisi luar; lebar jeti di ujung yang bebas; jari tambat: rantai tepi jari di ujungnya (lebar | jarak bersih | …), jarak total, dan panjang jari. Catatan luas lantai jeti di pojok lembar.
+- **As jeti di tampak dan potongan**: gelembung as yang sama dengan denah (angka sepanjang dermaga induk, huruf sepanjang lengan akses) tampil di tampak dan potongan bila Garis ukuran menyala, lengkap dengan rantai ukuran antar-as dan ukuran total as terluar di antara gambar dan gelembung. Denah zona dermaga beton juga mendapat ukuran total as terluar. Huruf as lengan akses dimulai dari baris tiang dermaga induk (A, B), dan rantai ukurannya diperpanjang sampai tepi luar dermaga induk; angka bentang sempit (mis. 20) diletakkan di luar ujung rantai.
+- **Satuan ukuran lembar**: Ruang Lembar → *Satuan ukuran* (Otomatis / mm / cm / m) berlaku untuk dimensi otomatis (denah, tampak, potongan, denah atap), ukuran antar-as, dan dimensi gambar tanpa satuan sendiri; *Luas* (m² / ha) untuk label luas. Alat Dimensi kini juga bisa memakai mm.
+- **Bar tampilan 3D berupa ikon**: Iso, Atas, Depan, Kanan, Belakang, Kiri, Paralel, Semua, Tembus, Iris datar, serta tombol potongan (ikon + huruf, mis. A–A) dan ikon lembar 2D-nya; nama dan penjelasan tetap muncul saat kursor diarahkan.
+- **Ruang Lembar lebih ringkas**: tombol anotasi dan alat gambar kini ikon kecil yang dikelompokkan (Atur · Garis & bidang · Teks · Ukur · Detail · Sisip); nama dan penjelasan alat muncul saat kursor diarahkan. Tombol unduh semua lembar pindah ke ujung kanan baris kontrol sebagai **Unduh set: PDF · DXF · ZIP**. Daftar lembar di kiri kini tingginya tetap; panel sampul, detail, dan kop di bawahnya mengisi sisa tinggi dan bisa digulir.
+- **Potongan dermaga: dasar laut dan ujung tiang** (bila tiang tidak dipendekkan; tiang yang dipendekkan tetap berlabel di bawah garis putus): garis dasar laut berprofil kini digambar selebar seluruh gambar potongan (bukan hanya sepanjang garis potong), sehingga bagian tiang yang tertanam terlihat di semua tiang. Tiap kelompok elevasi ujung tiang diberi label *Ujung tiang −x,xx* dan *benaman* (dasar laut di titik tiang − ujung tiang); label yang berdekatan digeser agar tidak bertumpuk. Bila catatan datum dasar laut memuat kata "asumsi", label garis menjadi *Dasar laut (profil, asumsi)* dan kotak **CATATAN** di kop berisi catatan bahwa panjang tiang final menunggu sondir/boring dan kalendering.
+- **Sampul**: isian panjang (mis. alamat lokasi) dibungkus menjadi beberapa baris agar tidak melewati bingkai.
+- **Sampul bergambar 3D**: Ruang Lembar → lembar Sampul → *Gambar 3D*: *Isometri otomatis (dari tenggara)* atau *Sudut tampilan 3D tersimpan* (tombol **Pakai sudut 3D sekarang** menyimpan sudut kamera 3D saat ini). Gambar dirender ortografis berlatar putih tanpa grid, sumbu, garis potong, dan level, ±200 dpi; sampul berubah menjadi dua lajur: gambar 3D di kiri, judul dan data proyek di kanan. Di PDF gambar 3D masuk sebagai gambar, teks dan bingkai tetap vektor.
+- **Geser isi viewport tanpa Alt**: aktifkan **Geser gambar**, lalu seret di dalam kotak viewport untuk menggeser isinya (Alt + seret tetap bisa, tetapi di Windows tombol Alt sering ditangkap menu aplikasi).
+
+- Pasang **RANCANG-Setup-0.46.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.46.0 dari rilis yang sama.
+
 ## Yang baru di 0.45.0
 
 Jeti kayu di atas tiang pipa baja (21 Oktober 2026), untuk jeti speedboat Marina BBP.
