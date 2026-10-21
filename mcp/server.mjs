@@ -165,8 +165,10 @@ export const ALAT = [
     inputSchema: objek({ids: daftarId})},
   {name: 'hitung_rab', description: 'RAB berharga (Rp) seperti panel Hitung RAB di aplikasi: volume × harga satuan per divisi, jumlah, PPN, total dibulatkan, dan status dasar tiap harga (perwali, survei, asumsi = belum ada dasar Perwali/survei, kosong = belum ada harga, termasuk = biaya di baris lain).',
     inputSchema: objek({ids: daftarId})},
-  {name: 'gambar_2d', description: 'Buat gambar kerja 2D (denah, denah atap, denah pondasi, detail penulangan, daftar kusen, tampak, potongan). Format png (bawaan) untuk dilihat, svg untuk teks.',
-    inputSchema: objek({jenis: {type: 'string', description: 'denah, denah per lantai denah:0 / denah:4 …, atap, pondasi, detail, kusen, depan, belakang, kanan, kiri, potongan:X3, atau lembar detail det:1, det:2 … (lihat info_proyek)'},
+  {name: 'daftar_besi', description: 'Daftar potong besi seperti lembar Daftar Potong Besi di aplikasi: tipe penulangan (kode sama dengan lembar Detail), tiap mark dengan bentuk, diameter, panjang potong, jumlah batang, berat, serta ringkasan per diameter dengan sisa potong dan jumlah lonjor 12 m. Totalnya sama dengan pembesian di volume RAB.',
+    inputSchema: objek({ids: daftarId})},
+  {name: 'gambar_2d', description: 'Buat gambar kerja 2D (denah, denah atap, denah pondasi, detail penulangan, daftar kusen, daftar potong besi, tampak, potongan). Format png (bawaan) untuk dilihat, svg untuk teks.',
+    inputSchema: objek({jenis: {type: 'string', description: 'denah, denah per lantai denah:0 / denah:4 …, atap, pondasi, detail, kusen, besi (daftar potong besi), depan, belakang, kanan, kiri, potongan:X3, atau lembar detail det:1, det:2 … (lihat info_proyek)'},
       skala: {type: 'integer', minimum: 0, maximum: 5000, description: 'Angka penyebut skala, mis. 100 untuk 1:100 atau 150; 0 = otomatis'}, kertas: {type: 'string', enum: ['A4', 'A3']},
       dimensi: {type: 'boolean', description: 'Tampilkan garis ukuran (bawaan ya)'}, level: {type: 'number', description: 'Denah per level: elevasi level (m), mis. 4 untuk lantai 2; kosong = semua level'}, format: {type: 'string', enum: ['png', 'svg']}}, ['jenis'])},
   {name: 'tangkap_layar_3d', description: 'Tangkapan layar tampilan 3D aplikasi.',
@@ -224,6 +226,7 @@ export async function jalankanAlat(nama, a = {}) {
     case 'ringkasan_ukuran': return teks(await rpc(await pastikanAplikasi(), 'ringkasan', {ids: a.ids || []}));
     case 'volume_rab': return teks(await rpc(await pastikanAplikasi(), 'rab', {ids: a.ids || []}));
     case 'hitung_rab': return teks(await rpc(await pastikanAplikasi(), 'hitungRAB', {ids: a.ids || []}));
+    case 'daftar_besi': return teks(await rpc(await pastikanAplikasi(), 'daftarBesi', {ids: a.ids || []}));
     case 'gambar_2d': {
       const info = await pastikanAplikasi();
       const opsi = {jenis: a.jenis, skala: a.skala || 0, kertas: a.kertas || 'A3', dimensi: a.dimensi !== false, ...(Number.isFinite(a.level) ? {level: a.level} : {})};

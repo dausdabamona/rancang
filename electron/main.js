@@ -193,6 +193,7 @@ const metode = {
   gambar2D: ({format, ...opsi}) => halaman(format === 'png' ? `window.rancangAPI.gambar2DPng(${arg(opsi)})` : `window.rancangAPI.gambar2D(${arg(opsi)})`),
   rab: ({ids}) => halaman(`window.rancangAPI.rab(${arg(ids)})`),
   hitungRAB: ({ids}) => halaman(`window.rancangAPI.hitungRAB(${arg(ids)})`),
+  daftarBesi: ({ids}) => halaman(`window.rancangAPI.daftarBesi(${arg(ids)})`),
   ringkasan: ({ids}) => halaman(`window.rancangAPI.ringkasan(${arg(ids)})`),
   ukur: ({id}) => halaman(`window.rancangAPI.ukurElemen(${arg(id)})`),
   pecahAtap: async ({id}) => {
@@ -352,6 +353,14 @@ async function ujiAsap() {
     // v0.35: proyek contoh Asrama Putri terbaca dari build/renderer/contoh (file://) dan dimuat utuh
     const ct = await halaman(`window.rancangUji.contoh('asrama-putri', 'ganti')`);
     catat('buka contoh Asrama Putri', ct && ct.elemen > 300 && ct.kusen >= 9 && /Asrama/.test(ct.nama), {elemen: ct.elemen, kusen: ct.kusen, proyek: ct.nama});
+    // v0.47: daftar potong besi = pembesian RAB (sumber tunggal), lembar Daftar potong besi, dan sheet Excel
+    const dbs = await metode.daftarBesi({}), rabB = (await metode.rab({})).flatMap(dv => dv.baris).filter(b => /^Pembesian/.test(b.uraian));
+    const cocokB = rabB.length > 0 && rabB.length === dbs.perDiameter.length && rabB.every(b => { const x = dbs.perDiameter.find(p => p.besi === b.uraian.split(' ')[1]); return x && Math.abs(x.beratDenganSisaKg - b.vol) < 0.01; });
+    catat('daftar potong besi sama dengan RAB', cocokB && dbs.baris.length > 5 && dbs.tipe.some(t => /^K\d/.test(t.kode)), {baris: dbs.baris.length, tipe: dbs.tipe.map(t => t.kode).join(' ')});
+    const lb = await metode.gambar2D({jenis: 'besi', kertas: 'A3'});
+    catat('lembar daftar potong besi', lb.svg.length > 5000 && /DAFTAR POTONG BESI/.test(lb.svg) && /RINGKASAN PER DIAMETER/.test(lb.svg), {panjang: lb.svg.length, info: lb.info});
+    const ex = await halaman('window.rancangUji.eksporRAB([])');
+    catat('ekspor RAB berisi sheet DAFTAR POTONG BESI', !!ex && ex.sheet.includes('DAFTAR POTONG BESI') && ex.rumus > 20, ex && {sheet: ex.sheet, rumus: ex.rumus, rumusRAB: ex.rumusRAB});
     const dl3 = await metode.gambar2D({jenis: 'denah', level: 4});
     catat('denah lantai 2 contoh', dl3.svg.length > 20000 && /TURUN/.test(dl3.svg), {panjang: dl3.svg.length});
     // v0.36: Meteran (tanpa elemen) dan Dimensi (anotasi ukuran bergeser, tampil di denah)

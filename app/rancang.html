@@ -777,6 +777,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
           <option value="pondasi">Denah pondasi</option>
           <option value="detail">Detail penulangan</option>
           <option value="kusen">Daftar kusen</option>
+          <option value="besi">Daftar potong besi</option>
           <option value="depan">Tampak depan (dari selatan)</option>
           <option value="belakang">Tampak belakang (dari utara)</option>
           <option value="kanan">Tampak kanan (dari timur)</option>
@@ -2207,12 +2208,31 @@ function gabungRekap(a, b) {
 }
 const tambahBeton = (r, fc, v) => { const k = String(fc); r.beton[k] = (r.beton[k] || 0) + v; };
 const tambahBesi = (r, d, ulir, kg) => { const k = labelBesi(d, ulir); r.besi[k] = (r.besi[k] || 0) + kg; };
+/**
+ * Satu baris daftar potong besi (v0.47, sumber tunggal): volume besi RAB dijumlahkan dari daftar ini,
+ * sehingga daftar potong dan RAB selalu sama. `bentuk` menentukan sketsa: 'lurus', 'kait' (kait 12d kedua ujung),
+ * 'sengkang' (a × b bersih + kait 2 × 10d), 'u' (lurus a + tekuk b di kedua ujung), 'spiral' (cincin keliling a).
+ * `ukuran` dalam meter untuk sketsa; `n` boleh pecahan untuk tulangan pelat (luas ÷ jarak).
+ * @typedef {{mark: string, bagian: string, bentuk: 'lurus' | 'kait' | 'sengkang' | 'u' | 'spiral', ukuran: Record<string, number>, d: number, ulir: boolean, pjg: number, n: number}} BatangBesi
+ */
+/**
+ * Catat batang ke daftar dan tambahkan beratnya ke rekap besi.
+ * @param {any} r rekap
+ * @param {BatangBesi[]} daftar
+ * @param {BatangBesi} b
+ */
+function catatBatang(r, daftar, b) {
+  const kg = b.n * b.pjg * beratBesi(b.d);
+  tambahBesi(r, b.d, !!b.ulir, kg);
+  daftar.push(b);
+  return kg;
+}
 // Tulangan elemen memanjang: utama = n × (L + 2×12d); sengkang = (L ÷ s + 1) × (keliling bersih + 2×10d)
-function besiBatang(r, L, b, h, tul, sk, c) {
-  const kgU = tul.n * (L + 2 * 12 * tul.d / 1000) * beratBesi(tul.d);
-  const nS = Math.floor(L / sk.s + 1e-9) + 1, kel = 2 * ((b - 2 * c) + (h - 2 * c)) + 2 * 10 * sk.d / 1000;
-  const kgS = nS * kel * beratBesi(sk.d);
-  tambahBesi(r, tul.d, tul.ulir, kgU); tambahBesi(r, sk.d, false, kgS);
+function besiBatang(r, L, b, h, tul, sk, c, daftar = [], awalan = '') {
+  const kaitU = 12 * tul.d / 1000, kaitS = 10 * sk.d / 1000;
+  const kgU = catatBatang(r, daftar, {mark: awalan + 'a', bagian: 'Tulangan pokok', bentuk: 'kait', ukuran: {a: L, kait: kaitU}, d: tul.d, ulir: !!tul.ulir, pjg: L + 2 * kaitU, n: tul.n});
+  const nS = Math.floor(L / sk.s + 1e-9) + 1, kel = 2 * ((b - 2 * c) + (h - 2 * c)) + 2 * kaitS;
+  const kgS = catatBatang(r, daftar, {mark: awalan + 'b', bagian: `Sengkang jarak ${Math.round(sk.s * 1000)}`, bentuk: 'sengkang', ukuran: {a: b - 2 * c, b: h - 2 * c, kait: kaitS}, d: sk.d, ulir: !!sk.ulir, pjg: kel, n: nS});
   return {kgU, kgS, nS};
 }
 // Bidang-bidang prisma miring (untuk pondasi batu kali dan umpak)
@@ -2346,8 +2366,13 @@ function strukturGeom(d) {
     for (const a of g.anak) benda.push({p: a.p, z0: a.z0, h: a.h, bahan: 'beton'});
     tambahBeton(r, d.fc ?? 18.7, g.volume); r.bekisting += g.bekisting;
     // tulangan plat tangga dua lapis dua arah (Ø d jarak s) di luas miring, ditambah tulangan anak tangga Ø8-150 satu lapis
-    const tul = d.tul || {d: 10, s: 0.15}, kgPlat = g.luasMiring * 2 * 2 * (1 / tul.s) * beratBesi(tul.d), kgAnak = (g.n - 1) * d.lebar * (g.A + g.O) * (1 / 0.15) * beratBesi(8) * 0.5;
-    tambahBesi(r, tul.d, false, kgPlat); tambahBesi(r, 8, false, kgAnak);
+    const tul = d.tul || {d: 10, s: 0.15}, daftar = /** @type {BatangBesi[]} */ ([]), Lm = g.L / Math.cos(g.th);
+    // plat miring dua lapis dua arah: panjang total per lapis per arah = luas miring ÷ jarak
+    let kgPlat = catatBatang(r, daftar, {mark: 'a', bagian: 'Plat miring arah naik, atas & bawah', bentuk: 'lurus', ukuran: {a: Lm}, d: tul.d, ulir: false, pjg: Lm, n: 2 * g.luasMiring / tul.s / Lm});
+    kgPlat += catatBatang(r, daftar, {mark: 'b', bagian: 'Plat miring arah lebar, atas & bawah', bentuk: 'lurus', ukuran: {a: d.lebar}, d: tul.d, ulir: false, pjg: d.lebar, n: 2 * g.luasMiring / tul.s / d.lebar});
+    // tulangan anak tangga Ø8-150 satu lapis (setengah keliling penampang segitiga)
+    const kgAnak = catatBatang(r, daftar, {mark: 'c', bagian: 'Anak tangga, jarak 150', bentuk: 'lurus', ukuran: {a: g.A + g.O}, d: 8, ulir: false, pjg: g.A + g.O, n: (g.n - 1) * d.lebar / 0.15 * 0.5});
+    u.batang = daftar;
     Object.assign(u, {optrede: g.O, antrede: g.A, panjangDenah: g.L, kemiringan: g.th * 180 / Math.PI, luasMiring: g.luasMiring, volume: g.volume, bekisting: g.bekisting, besiPlat: kgPlat, besiAnak: kgAnak,
       railing: d.railing === 'dua' ? 2 * g.L / Math.cos(g.th) : d.railing === 'tanpa' || !d.railing ? 0 : g.L / Math.cos(g.th)});
     return {rekap: r, benda, ukur: u};
@@ -2355,8 +2380,15 @@ function strukturGeom(d) {
   if (d.jenis === 'plat') {
     const p = poligon(d), luas = Math.abs(luasBertanda(p)) - luasLubang(d), K = kelilingCincin(p), z0 = d.z0 || 0;
     benda.push({p, z0, h: d.tebal, bahan: 'beton', lubang: lubangDari(d)});
-    const v = luas * d.tebal, bk = luas + K * d.tebal, tul = d.tul || {d: 10, s: 0.15}, kg = luas * 2 * 2 * (1 / tul.s) * beratBesi(tul.d);
-    tambahBeton(r, d.fc ?? 18.7, v); r.bekisting += bk; tambahBesi(r, tul.d, !!tul.ulir, kg);   // tul.ulir (v0.42.1): besi ulir D
+    const v = luas * d.tebal, bk = luas + K * d.tebal, tul = d.tul || {d: 10, s: 0.15};
+    tambahBeton(r, d.fc ?? 18.7, v); r.bekisting += bk;
+    // dua lapis dua arah: panjang total per lapis per arah = luas ÷ jarak; jumlah batang setara = total ÷ bentang kotak pembatas
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const daftar = /** @type {BatangBesi[]} */ ([]), Lx = Math.max(x1 - x0, 1e-6), Ly = Math.max(y1 - y0, 1e-6);
+    let kg = catatBatang(r, daftar, {mark: 'a', bagian: 'Arah X, atas & bawah', bentuk: 'lurus', ukuran: {a: Lx}, d: tul.d, ulir: !!tul.ulir, pjg: Lx, n: 2 * luas / tul.s / Lx});   // tul.ulir (v0.42.1): besi ulir D
+    kg += catatBatang(r, daftar, {mark: 'b', bagian: 'Arah Y, atas & bawah', bentuk: 'lurus', ukuran: {a: Ly}, d: tul.d, ulir: !!tul.ulir, pjg: Ly, n: 2 * luas / tul.s / Ly});
+    u.batang = daftar;
     Object.assign(u, {luasAlas: luas, keliling: K, volume: v, bekisting: bk, besi: kg, zAtas: z0 + d.tebal});
     return {rekap: r, benda, ukur: u};
   }
@@ -2367,8 +2399,8 @@ function strukturGeom(d) {
     benda.push({p: rectPusat(d.x, d.y, d.b + 0.004, d.h + 0.004), z0, h: atasKolom(d) - z0, bahan: 'beton'});
     const v = d.b * d.h * H, bk = 2 * (d.b + d.h) * H;
     tambahBeton(r, d.fc, v); r.bekisting += bk;
-    const bs = besiBatang(r, H, d.b, d.h, d.tul, d.sengkang, c);
-    Object.assign(u, {volume: v, bekisting: bk, besiUtama: bs.kgU, besiSengkang: bs.kgS, jmlSengkang: bs.nS});
+    const daftar = /** @type {BatangBesi[]} */ ([]), bs = besiBatang(r, H, d.b, d.h, d.tul, d.sengkang, c, daftar);
+    Object.assign(u, {volume: v, bekisting: bk, besiUtama: bs.kgU, besiSengkang: bs.kgS, jmlSengkang: bs.nS, batang: daftar});
   } else if (d.jenis === 'slof' || d.jenis === 'ringbalk') {
     const {L} = infoDinding(d), c = d.selimut ?? 0.025, z0 = d.z0 ?? -d.h;
     // ring balk sedikit lebih lebar dari dinding agar mukanya tidak berkedip dengan muka dinding
@@ -2377,8 +2409,8 @@ function strukturGeom(d) {
     benda.push(bendaJalur(alas, z0, alas, z0 + d.h + (d.jenis === 'ringbalk' ? 0.002 : 0), 'beton'));
     const v = d.b * d.h * L, bk = 2 * d.h * L;
     tambahBeton(r, d.fc, v); r.bekisting += bk;
-    const bs = besiBatang(r, L, d.b, d.h, d.tul, d.sengkang, c);
-    Object.assign(u, {panjang: L, volume: v, bekisting: bk, besiUtama: bs.kgU, besiSengkang: bs.kgS, jmlSengkang: bs.nS});
+    const daftar = /** @type {BatangBesi[]} */ ([]), bs = besiBatang(r, L, d.b, d.h, d.tul, d.sengkang, c, daftar);
+    Object.assign(u, {panjang: L, volume: v, bekisting: bk, besiUtama: bs.kgU, besiSengkang: bs.kgS, jmlSengkang: bs.nS, batang: daftar});
   } else if (d.jenis === 'pondasi' && d.tipe === 'batukali') {
     const {L, ux, uy} = infoDinding(d), nx = -uy, ny = ux, la = d.lebarAtas, lb = d.lebarBawah;
     const zt = d.z0 ?? -0.2, zb = zt - d.tinggi, ax = d.awal.x, ay = d.awal.y;
@@ -2402,10 +2434,13 @@ function strukturGeom(d) {
     tambahBeton(r, d.fc, vPlat + vPed); tambahBeton(r, 7.4, vLk);
     r.bekisting += 2 * (d.p + d.l) * d.tebal + 2 * (d.pedestal.b + d.pedestal.h) * hp;
     // tulangan plat dua arah, satu lapis bawah
-    const tp = d.tulPlat, nX = Math.floor((d.p - 2 * c) / tp.s + 1e-9) + 1, nY = Math.floor((d.l - 2 * c) / tp.s + 1e-9) + 1;
-    const kgPlat = (nX * (d.l - 2 * c + 2 * 12 * tp.d / 1000) + nY * (d.p - 2 * c + 2 * 12 * tp.d / 1000)) * beratBesi(tp.d);
-    tambahBesi(r, tp.d, tp.ulir, kgPlat);
-    const bs = hp > 0 ? besiBatang(r, hp + d.tebal, d.pedestal.b, d.pedestal.h, d.tul, d.sengkang, 0.04) : {kgU: 0, kgS: 0};
+    const tp = d.tulPlat, nX = Math.floor((d.p - 2 * c) / tp.s + 1e-9) + 1, nY = Math.floor((d.l - 2 * c) / tp.s + 1e-9) + 1, kait = 12 * tp.d / 1000;
+    const daftar = /** @type {BatangBesi[]} */ ([]);
+    let kgPlat = catatBatang(r, daftar, {mark: 'a', bagian: 'Plat arah X', bentuk: 'kait', ukuran: {a: d.l - 2 * c, kait}, d: tp.d, ulir: !!tp.ulir, pjg: d.l - 2 * c + 2 * kait, n: nX});
+    kgPlat += catatBatang(r, daftar, {mark: 'b', bagian: 'Plat arah Y', bentuk: 'kait', ukuran: {a: d.p - 2 * c, kait}, d: tp.d, ulir: !!tp.ulir, pjg: d.p - 2 * c + 2 * kait, n: nY});
+    const bs = hp > 0 ? besiBatang(r, hp + d.tebal, d.pedestal.b, d.pedestal.h, d.tul, d.sengkang, 0.04, daftar, 'p') : {kgU: 0, kgS: 0};
+    for (const b of daftar) if (b.mark.startsWith('p')) b.bagian = 'Pedestal: ' + b.bagian.toLowerCase();
+    u.batang = daftar;
     const dalam = Math.max(0, -(z0 - TEBAL_LANTAI_KERJA)), vGal = (d.p + 2 * RUANG_KERJA) * (d.l + 2 * RUANG_KERJA) * dalam;
     r.galian += vGal; r.urugKembali += Math.max(0, vGal - vPlat - vPed - vLk);
     Object.assign(u, {volume: vPlat + vPed, lantaiKerja: vLk, bekisting: r.bekisting, besiPlat: kgPlat, besiPedestal: bs.kgU + bs.kgS, galian: vGal, urugKembali: r.urugKembali, tinggiPedestal: hp});
@@ -2428,9 +2463,10 @@ function strukturGeom(d) {
     tambahBeton(r, d.fc, v); r.bekisting += bk;
     // tulangan dua lapis (atas dan bawah) dua arah, ujung ditekuk sepanjang tinggi bersih
     const nX = Math.floor((d.p - 2 * c) / tp.s + 1e-9) + 1, nY = Math.floor((d.l - 2 * c) / tp.s + 1e-9) + 1, tekuk = 2 * Math.max(0, d.tebal - 2 * c) * 0.5;
-    const kg = 2 * (nX * (d.l - 2 * c + tekuk) + nY * (d.p - 2 * c + tekuk)) * beratBesi(tp.d);
-    tambahBesi(r, tp.d, tp.ulir, kg);
-    Object.assign(u, {volume: v, bekisting: bk, besiPlat: kg, zAtas: z0 + d.tebal});
+    const daftar = /** @type {BatangBesi[]} */ ([]);
+    let kg = catatBatang(r, daftar, {mark: 'a', bagian: 'Arah X, atas & bawah', bentuk: 'u', ukuran: {a: d.l - 2 * c, b: tekuk / 2}, d: tp.d, ulir: !!tp.ulir, pjg: d.l - 2 * c + tekuk, n: 2 * nX});
+    kg += catatBatang(r, daftar, {mark: 'b', bagian: 'Arah Y, atas & bawah', bentuk: 'u', ukuran: {a: d.p - 2 * c, b: tekuk / 2}, d: tp.d, ulir: !!tp.ulir, pjg: d.p - 2 * c + tekuk, n: 2 * nY});
+    Object.assign(u, {volume: v, bekisting: bk, besiPlat: kg, zAtas: z0 + d.tebal, batang: daftar});
   } else if (d.jenis === 'tiang') {
     const B = BAHAN_TIANG[d.bahan], L = d.panjang, zk = d.zKepala, gm = geoMiring(d), z0 = zk - gm.tegak;
     const D = B.bulat ? d.dLuar / 1000 : d.b, bhn = d.bahan === 'baja' ? 'baja' : d.bahan === 'kayu' ? 'kayu' : 'beton';
@@ -2453,9 +2489,9 @@ function strukturGeom(d) {
         const kel = B.bulat ? Math.PI * 2 * Rs : 8 * Rs;
         r.bekisting += kel * hs;
         // tulangan selimut: memanjang n × Dd + spiral/sengkang Ø10-150 di keliling luar − selimut 5 cm
-        const tl = sl.tul, kgU = tl && tl.n > 0 ? tl.n * hs * beratBesi(tl.d) : 0, kgS = (Math.floor(hs / 0.15) + 1) * (B.bulat ? Math.PI * Math.max(0.1, 2 * Rs - 0.1) : 4 * Math.max(0.1, 2 * Rs - 0.1)) * beratBesi(10);
-        if (kgU) tambahBesi(r, tl.d, true, kgU);
-        tambahBesi(r, 10, false, kgS);
+        const tl = sl.tul, daftarS = (u.batang = u.batang || []), kelS = B.bulat ? Math.PI * Math.max(0.1, 2 * Rs - 0.1) : 4 * Math.max(0.1, 2 * Rs - 0.1);
+        const kgU = tl && tl.n > 0 ? catatBatang(r, daftarS, {mark: 'sa', bagian: 'Selimut beton: tulangan memanjang', bentuk: 'lurus', ukuran: {a: hs}, d: tl.d, ulir: true, pjg: hs, n: tl.n}) : 0;
+        const kgS = catatBatang(r, daftarS, {mark: 'sb', bagian: 'Selimut beton: sengkang/spiral jarak 150', bentuk: B.bulat ? 'spiral' : 'sengkang', ukuran: B.bulat ? {a: kelS} : {a: 2 * Rs - 0.1, b: 2 * Rs - 0.1, kait: 0}, d: 10, ulir: false, pjg: kelS, n: Math.floor(hs / 0.15) + 1});
         Object.assign(u, {volumeSelimut: vS, panjangSelimut: hs, bekistingSelimut: kel * hs, besiSelimut: kgU + kgS});
       }
     }
@@ -2476,11 +2512,10 @@ function strukturGeom(d) {
       const Li = Math.min(d.isian.panjang, L), Dd = (d.dLuar - 2 * d.tebal) / 1000, v = Math.PI / 4 * Dd * Dd * Li, fc = d.isian.fc || 24.9;
       tambahBeton(r, fc, v);
       // tulangan memanjang isian + stek 0,5 m ke pile cap; spiral Ø10-150 di keliling bersih
-      const tul = d.isian.tul, kgU = tul && tul.n > 0 ? tul.n * (Li + 0.5) * beratBesi(tul.d) : 0;
+      const tul = d.isian.tul, daftarI = (u.batang = u.batang || []), kelI = Math.PI * Math.max(0.1, Dd - 0.1);
+      const kgU = tul && tul.n > 0 ? catatBatang(r, daftarI, {mark: 'a', bagian: 'Isian: tulangan memanjang + stek 0,5 m ke pile cap', bentuk: 'lurus', ukuran: {a: Li + 0.5}, d: tul.d, ulir: true, pjg: Li + 0.5, n: tul.n}) : 0;
       // spiral Ø10-150 (v0.45.1): isian.spiral = false untuk isian beton tanpa tulangan (pipa kecil, beton pengisi saja)
-      const kgS = d.isian.spiral === false ? 0 : (Math.floor(Li / 0.15) + 1) * Math.PI * Math.max(0.1, Dd - 0.1) * beratBesi(10);
-      if (kgU) tambahBesi(r, tul.d, true, kgU);
-      if (kgS) tambahBesi(r, 10, false, kgS);
+      const kgS = d.isian.spiral === false ? 0 : catatBatang(r, daftarI, {mark: 'b', bagian: 'Isian: spiral jarak 150', bentuk: 'spiral', ukuran: {a: kelI}, d: 10, ulir: false, pjg: kelI, n: Math.floor(Li / 0.15) + 1});
       Object.assign(u, {volumeIsian: v, besiIsian: kgU + kgS, panjangIsian: Li});
     }
   } else if (d.jenis === 'perlengkapan') {
@@ -12445,7 +12480,7 @@ function namaGambar(j) {
   if (j && j.startsWith('denah:')) { const l = levelDenah().find(x => x.kunci === j); return 'DENAH ' + (l ? l.nama.toUpperCase() : 'LEVEL ' + fmtElevasi(+j.slice(6))); }
   return NAMA_2D[j];
 }
-const NAMA_2D = {sampul: 'SAMPUL', daftar: 'DAFTAR GAMBAR', denah: 'DENAH', atap: 'DENAH ATAP', plafon: 'RENCANA PLAFON DAN RANGKA', pondasi: 'DENAH PONDASI', balok: 'RENCANA BALOK', pelat: 'RENCANA PENULANGAN PELAT', detail: 'DETAIL PENULANGAN', kusen: 'DAFTAR KUSEN', depan: 'TAMPAK DEPAN (SELATAN)', belakang: 'TAMPAK BELAKANG (UTARA)', kanan: 'TAMPAK KANAN (TIMUR)', kiri: 'TAMPAK KIRI (BARAT)'};
+const NAMA_2D = {sampul: 'SAMPUL', daftar: 'DAFTAR GAMBAR', denah: 'DENAH', atap: 'DENAH ATAP', plafon: 'RENCANA PLAFON DAN RANGKA', pondasi: 'DENAH PONDASI', balok: 'RENCANA BALOK', pelat: 'RENCANA PENULANGAN PELAT', detail: 'DETAIL PENULANGAN', kusen: 'DAFTAR KUSEN', besi: 'DAFTAR POTONG BESI', depan: 'TAMPAK DEPAN (SELATAN)', belakang: 'TAMPAK BELAKANG (UTARA)', kanan: 'TAMPAK KANAN (TIMUR)', kiri: 'TAMPAK KIRI (BARAT)'};
 // Arah pandang tampak: u = sumbu mendatar di kertas, jauh = jarak dari pengamat
 const PROYEKSI = {
   depan: {u: (x, y) => x, jauh: (x, y) => y},
@@ -12619,8 +12654,8 @@ function irisanBenda(B, Dp, Hh) {
 /* ============ Ruang Lembar: kop bernomor, sampul, daftar gambar, PDF set (v0.26) ============ */
 const n2k = v => Math.round(v * 100) / 100;
 const esk = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
-const LEMBAR_BAKU = ['sampul', 'daftar', 'denah', 'atap', 'plafon', 'pondasi', 'depan', 'belakang', 'kanan', 'kiri', 'potongan:*', 'kusen', 'detail', 'det:*'];
-const LEMBAR_STRUKTUR = new Set(['pondasi', 'balok', 'pelat', 'detail']);
+const LEMBAR_BAKU = ['sampul', 'daftar', 'denah', 'atap', 'plafon', 'pondasi', 'depan', 'belakang', 'kanan', 'kiri', 'potongan:*', 'kusen', 'detail', 'det:*', 'besi'];
+const LEMBAR_STRUKTUR = new Set(['pondasi', 'balok', 'pelat', 'detail', 'besi']);
 const rankLembar = j => { const i = LEMBAR_BAKU.indexOf(j.startsWith('potongan:') ? 'potongan:*' : j.startsWith('det:') ? 'det:*' : j.startsWith('denah:') ? 'denah' : j); return i < 0 ? 99 : i + (j.startsWith('det:') ? nomorDet(j) / 1000 : j.startsWith('denah:') ? (100 + +j.slice(6)) / 10000 : 0); };
 const ISIAN_SAMPUL = [['judul', 'Judul', 'GAMBAR KERJA'], ['nama', 'Nama proyek', ''], ['lokasi', 'Lokasi', ''], ['pemilik', 'Pemilik / instansi', ''],
   ['tahun', 'Tahun anggaran', ''], ['perencana', 'Perencana', ''], ['penggambar', 'Digambar oleh', ''], ['tanggal', 'Tanggal', '']];
@@ -12833,6 +12868,8 @@ function daftarLembarZona(zona) {
   }
   // lembar detail di akhir set, seperti gambar konsultan (v0.45, keputusan 21 Okt 2026)
   for (const j of lembarDetailAda()) if (!kelompok.has(j)) { kelompok.set(j, 'Detail'); bawaan.push(j); }
+  // daftar potong besi seluruh proyek sesudah lembar detail (v0.47)
+  if (adaBesi() && !kelompok.has('besi')) { kelompok.set('besi', 'Detail'); bawaan.push('besi'); }
   const sim = S.setel.lembar || {}, urut = (sim.urutan || []).filter(j => kelompok.has(j));
   for (const j of bawaan) {
     if (urut.includes(j)) continue;
@@ -12861,6 +12898,7 @@ function daftarLembarBiasa() {
   for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && !ada.includes('potongan:' + id)) ada.push('potongan:' + id);
   for (const j of lembarDetailAda()) if (!ada.includes(j)) ada.push(j);
   for (let i = ada.length - 1; i >= 0; i--) if (ada[i].startsWith('det:') && !lembarDetailAda().includes(ada[i])) ada.splice(i, 1);
+  if (!adaBesi() && ada.includes('besi')) ada.splice(ada.indexOf('besi'), 1);   // daftar potong besi hanya bila ada elemen bertulang (v0.47)
   // denah per lantai: lembar per level menggantikan denah gabungan di set lembar/PDF; lembar level yang sudah hilang dibuang
   const lvDenah = levelDenah().map(l => l.kunci);
   for (const j of lvDenah) if (!ada.includes(j)) ada.push(j);
@@ -13172,7 +13210,7 @@ function isiLegenda(o, d, [x0, y0], nk) {
 /* ---- viewport bebas di Ruang Lembar (v0.42) ---- */
 // peta kertas ↔ dunia tiap viewport (dari render terakhir), dipakai menggeser isi viewport (Alt + seret)
 const PETA_VIEWPORT = new Map();
-const sumberViewportSah = j => !!j && !j.startsWith('gabung:') && !j.startsWith('det:') && !j.includes('#') && !['sampul', 'daftar', 'kusen', 'detail'].includes(j);
+const sumberViewportSah = j => !!j && !j.startsWith('gabung:') && !j.startsWith('det:') && !j.includes('#') && !['sampul', 'daftar', 'kusen', 'detail', 'besi'].includes(j);
 function judulViewport(d) { const n = namaGambar(d.sumber) || d.sumber; return String(n).toUpperCase(); }
 // pusat bawaan viewport: tengah kotak model, setinggi 1,5 m (tampak/potongan)
 function pusatBawaanViewport() { const k = kotakModel(); return k ? {x: r2((k.x0 + k.x1) / 2), y: r2((k.y0 + k.y1) / 2), z: 1.5} : {x: 0, y: 0, z: 1.5}; }
@@ -14806,24 +14844,15 @@ function buatSVGInti(o) {
     }
   } else if (o.jenis === 'detail') {
     // penampang tiap tipe kolom dan slof, skala 1:10
-    const tipe = new Map();
-    for (const g of geos) {
-      if (g.jenis !== 'kolom' && g.jenis !== 'slof' && g.jenis !== 'ringbalk') continue;
-      const kunci = JSON.stringify([g.jenis, g.tipe || g.peran || '', g.b, g.h, g.tul, g.sengkang, g.fc, g.selimut]);
-      const t = tipe.get(kunci) || {g, n: 0, panjang: 0};
-      t.n++; t.panjang += g.jenis === 'kolom' ? g.tinggi : infoDinding(g).L;
-      tipe.set(kunci, t);
-    }
+    // kode tipe sama dengan Daftar potong besi (v0.47): satu fungsi tipePenulangan
+    const tipe = new Map([...tipePenulangan(geos)].filter(([, t]) => ['kolom', 'slof', 'ringbalk'].includes(t.g.jenis)));
     skala = 10;
     if (!tipe.size) info = 'Belum ada kolom, slof, atau ring balk untuk dibuat detail penulangannya.';
     else {
       const sel = 72, kolomGrid = Math.max(1, Math.floor(area.w / sel)), s = 100; // 1 m = 100 mm pada 1:10
-      const hitung = {praktis: 0, struktur: 0, slof: 0, ringbalk: 0, balok: 0};
-      [...tipe.values()].sort((a, b) => (a.g.jenis + (a.g.tipe || '')).localeCompare(b.g.jenis + (b.g.tipe || ''))).forEach((t, i) => {
+      [...tipe.values()].sort((a, b) => a.urut.localeCompare(b.urut)).forEach((t, i) => {
         const g = t.g, cx0 = area.x + (i % kolomGrid) * sel + 6, cy0 = area.y + Math.floor(i / kolomGrid) * 62 + 6;
-        const jenisKey = g.jenis === 'kolom' ? g.tipe : g.jenis === 'ringbalk' && g.peran === 'balok' ? 'balok' : g.jenis;
-        hitung[jenisKey]++;
-        const kode = (jenisKey === 'praktis' ? 'KP' : jenisKey === 'struktur' ? 'K' : jenisKey === 'ringbalk' ? 'RB' : jenisKey === 'balok' ? 'B' : 'S') + hitung[jenisKey];
+        const kode = t.kode;
         const w = g.b * s, h = g.h * s, c = (g.selimut ?? 0.025) * s, ds = g.sengkang.d / 10, db = g.tul.d / 10;
         isi.push(`<rect x="${n2(cx0)}" y="${n2(cy0)}" width="${n2(w)}" height="${n2(h)}" fill="#F4F4F4" stroke="#000" stroke-width="0.4"/>`,
           `<rect x="${n2(cx0 + c)}" y="${n2(cy0 + c)}" width="${n2(w - 2 * c)}" height="${n2(h - 2 * c)}" rx="${n2(ds * 1.5)}" fill="none" stroke="#000" stroke-width="${n2(Math.max(0.25, ds))}"/>`);
@@ -14848,6 +14877,113 @@ function buatSVGInti(o) {
         baris.forEach(([tk, uk, wt], j) => isi.push(teks(tx, cy0 + 3 + j * 3.6, tk, uk, `font-weight="${wt}"`)));
       });
       if (Math.ceil(tipe.size / kolomGrid) * 62 > area.h) info = 'Tipe penampang terlalu banyak untuk satu lembar. Pakai kertas A3.';
+    }
+  } else if (o.jenis === 'besi') {
+    // Daftar potong besi (v0.47, keputusan 21 Okt 2026): tabel per mark dengan sketsa bentuk, ringkasan per diameter, dan tipe penulangan.
+    // Sumber sama dengan volume besi RAB (daftar batang di strukturGeom); lembar zona memakai anggota grupnya saja
+    const db = daftarBesi(LINGKUP ? [...LINGKUP] : []);
+    skala = 0;
+    if (!db.baris.length) info = 'Belum ada elemen bertulang (kolom, sloof, balok, pelat, pondasi, pile cap, tangga, isian tiang) untuk dibuat daftar potong besinya.';
+    else {
+      const kol = /** @type {[string, number, string][]} */ ([['Mark', 13, 's'], ['Bagian', 52, 's'], ['Bentuk', 24, 'c'], ['Ukuran (mm)', 32, 's'], ['Besi', 10, 'c'], ['Panjang potong (m)', 17, 'n'], ['Jml per elemen', 14, 'n'],
+        ['Elemen', 12, 'n'], ['Jml batang', 15, 'n'], ['Total panjang (m)', 18, 'n'], ['Berat (kg)', 18, 'n']]);
+      const lebarDasar = kol.reduce((a, k) => a + k[1], 0), kx = Math.min(1.25, area.w / lebarDasar);
+      const lebarK = kol.map(k => k[1] * kx), xK = [];
+      lebarK.reduce((x, w) => { xK.push(x); return x + w; }, area.x);
+      const nTipe = db.tipe.length, nD = db.perDiameter.length;
+      // tinggi baris menyesuaikan kertas: tabel utama + dua tabel bawah (ringkasan dan tipe) + catatan
+      const kepalaH = 8, bawahBaris = Math.max(nD + 1, nTipe) + 1;
+      let rh = (area.h - 6 - kepalaH - 10 - 8) / (db.baris.length + bawahBaris);
+      rh = Math.min(5.6, rh);
+      if (rh < 3.4) { info = `Daftar potong besi (${db.baris.length} baris) terlalu panjang untuk kertas ${o.kertas}; pakai kertas A3 atau buat per grup (lembar zona).`; rh = 3.4; }
+      const fs = Math.min(2.2, rh * 0.5), y0 = area.y + 4;
+      const sel = (x, y, w, h, t, jenis, tebal = false) => {
+        const tx = jenis === 'n' ? x + w - 1.2 : jenis === 'c' ? x + w / 2 : x + 1.2, anchor = jenis === 'n' ? 'end' : jenis === 'c' ? 'middle' : 'start';
+        return teks(tx, y + h / 2 + fs * 0.36, t, fs, `text-anchor="${anchor}"${tebal ? ' font-weight="700"' : ''}`);
+      };
+      isi.push(teks(area.x, y0 - 0.6, 'DAFTAR POTONG BESI', 3, 'font-weight="700"'));
+      const yT = y0 + 1.5, wTot = lebarK.reduce((a, b) => a + b, 0);
+      // kepala tabel (dua baris teks bila perlu)
+      isi.push(`<rect x="${n2(area.x)}" y="${n2(yT)}" width="${n2(wTot)}" height="${kepalaH}" fill="#EDEDED" stroke="#000" stroke-width="0.3"/>`);
+      kol.forEach(([nm], i) => {
+        const b = bungkusTeks(nm, lebarK[i] - 1.6, fs, 2);
+        b.forEach((t, j) => isi.push(teks(xK[i] + lebarK[i] / 2, yT + kepalaH / 2 + (j - (b.length - 1) / 2) * fs * 1.15 + fs * 0.36, t, fs, 'text-anchor="middle" font-weight="700"')));
+      });
+      const mm = v => String(Math.round(v * 1000));
+      const sketsa = (b, x, y, w, h) => {
+        const cx = x + w / 2, cy = y + h / 2, ww = w - 5, hh = Math.min(h * 0.55, 3), gs = 'fill="none" stroke="#000" stroke-width="0.35" stroke-linejoin="round" stroke-linecap="round"';
+        if (b.bentuk === 'lurus') return `<line x1="${n2(cx - ww / 2)}" y1="${n2(cy)}" x2="${n2(cx + ww / 2)}" y2="${n2(cy)}" ${gs}/>`;
+        if (b.bentuk === 'kait') { const a = cx - ww / 2, c = cx + ww / 2, yb = cy + hh / 2, k = hh * 0.8; return `<polyline points="${n2(a + k * 0.6)},${n2(yb - k)} ${n2(a)},${n2(yb)} ${n2(c)},${n2(yb)} ${n2(c - k * 0.6)},${n2(yb - k)}" ${gs}/>`; }
+        if (b.bentuk === 'u') { const a = cx - ww / 2, c = cx + ww / 2, yt = cy - hh / 2, yb = cy + hh / 2; return `<polyline points="${n2(a)},${n2(yb)} ${n2(a)},${n2(yt)} ${n2(c)},${n2(yt)} ${n2(c)},${n2(yb)}" ${gs}/>`; }
+        if (b.bentuk === 'sengkang') {
+          const r = (b.ukuran.b || 1) / (b.ukuran.a || 1), hs = Math.min(h - 1.2, hh * 1.6), ws = Math.min(ww * 0.5, hs / Math.max(r, 0.2)), xs = cx - ws / 2, ys = cy - hs / 2, k = Math.min(1.2, hs * 0.35);
+          return `<rect x="${n2(xs)}" y="${n2(ys)}" width="${n2(ws)}" height="${n2(hs)}" ${gs}/><polyline points="${n2(xs + k)},${n2(ys + k)} ${n2(xs)},${n2(ys)}" ${gs}/>`;
+        }
+        if (b.bentuk === 'spiral') return `<circle cx="${n2(cx)}" cy="${n2(cy)}" r="${n2(Math.min(h * 0.38, 1.8))}" ${gs}/>`;
+        return '';
+      };
+      const ukuranTeks = b => {
+        const u = b.ukuran || {};
+        if (b.bentuk === 'kait') return `${mm(u.a)} + kait ${mm(u.kait)} ×2`;
+        if (b.bentuk === 'sengkang') return `${mm(u.a)} × ${mm(u.b)}${u.kait ? ` + kait ${mm(u.kait)} ×2` : ''}`;
+        if (b.bentuk === 'u') return `${mm(u.a)} + tekuk ${mm(u.b)} ×2`;
+        if (b.bentuk === 'spiral') return `Ø ${mm(u.a / Math.PI)} (keliling ${mm(u.a)})`;
+        return mm(u.a);
+      };
+      let y = yT + kepalaH, kodeLalu = '', adaPanjang = false;
+      const angka = v => (Math.abs(v - Math.round(v)) < 1e-6 ? fmt(v, 0) : fmt(v, 2));
+      for (const b of db.baris) {
+        if (b.kode !== kodeLalu && kodeLalu) isi.push(garis(area.x, y, area.x + wTot, y, 0.3));
+        kodeLalu = b.kode;
+        const panjang = b.pjg > 12 + 1e-6;
+        adaPanjang ||= panjang;
+        const nilai = [b.markLengkap + (panjang ? '*' : ''), b.bagian, '', ukuranTeks(b), b.besi, fmt(b.pjg, 2), angka(b.perEl), fmt(b.nEl, 0), angka(b.nTot), fmt(b.totPjg, 2), fmt(b.kg, 2)];
+        nilai.forEach((t, i) => { if (t) isi.push(sel(xK[i], y, lebarK[i], rh, t, kol[i][2], i === 0)); });
+        isi.push(sketsa(b, xK[2], y, lebarK[2], rh));
+        y += rh;
+        isi.push(garis(area.x, y, area.x + wTot, y, 0.12));
+      }
+      const yAkhir = y;
+      isi.push(`<rect x="${n2(area.x)}" y="${n2(yT)}" width="${n2(wTot)}" height="${n2(yAkhir - yT)}" fill="none" stroke="#000" stroke-width="0.35"/>`);
+      for (let i = 1; i < kol.length; i++) isi.push(garis(xK[i], yT, xK[i], yAkhir, 0.12));
+      // tabel bawah kiri: ringkasan per diameter; kanan: tipe penulangan
+      const yB = yAkhir + 7, kolD = /** @type {[string, number, string][]} */ ([['Besi', 14, 'c'], ['Total panjang (m)', 26, 'n'], ['Berat (kg)', 24, 'n'], [`+ sisa potong ${fmt(db.faktorSisa, 0)}% (kg)`, 30, 'n'], ['Lonjor 12 m', 20, 'n']]);
+      isi.push(teks(area.x, yB - 1, 'RINGKASAN PER DIAMETER', 2.4, 'font-weight="700"'));
+      let xx = area.x;
+      const xD = kolD.map(([, w]) => { const x0 = xx; xx += w; return x0; }), wD = xx - area.x;
+      isi.push(`<rect x="${n2(area.x)}" y="${n2(yB)}" width="${n2(wD)}" height="${n2(rh)}" fill="#EDEDED" stroke="#000" stroke-width="0.3"/>`);
+      kolD.forEach(([nm, w], i) => isi.push(sel(xD[i], yB, w, rh, nm, 'c', true)));
+      let yd = yB + rh;
+      const barisD = [...db.perDiameter.map(x => [x.besi, fmt(x.pjg, 2), fmt(x.kg, 2), fmt(x.kgSisa, 2), fmt(x.lonjor, 0)]),
+        ['Jumlah', fmt(db.perDiameter.reduce((a, x) => a + x.pjg, 0), 2), fmt(db.jumlah.kg, 2), fmt(db.jumlah.kgSisa, 2), fmt(db.jumlah.lonjor, 0)]];
+      barisD.forEach((r, j) => {
+        const akhir = j === barisD.length - 1;
+        if (akhir) isi.push(`<rect x="${n2(area.x)}" y="${n2(yd)}" width="${n2(wD)}" height="${n2(rh)}" fill="#F5F5F5" stroke="none"/>`);
+        r.forEach((t, i) => isi.push(sel(xD[i], yd, kolD[i][1], rh, t, kolD[i][2], akhir)));
+        yd += rh; isi.push(garis(area.x, yd, area.x + wD, yd, 0.12));
+      });
+      isi.push(`<rect x="${n2(area.x)}" y="${n2(yB)}" width="${n2(wD)}" height="${n2(yd - yB)}" fill="none" stroke="#000" stroke-width="0.35"/>`);
+      for (let i = 1; i < kolD.length; i++) isi.push(garis(xD[i], yB, xD[i], yd, 0.12));
+      const xT = area.x + wD + 8, wTp = Math.max(60, area.x + wTot - xT), kolT = /** @type {[string, number, string][]} */ ([['Kode', 12, 's'], ['Elemen', 26, 's'], ['Penampang dan tulangan', wTp - 12 - 26 - 14, 's'], ['Jumlah', 14, 'n']]);
+      isi.push(teks(xT, yB - 1, 'TIPE PENULANGAN', 2.4, 'font-weight="700"'));
+      xx = xT;
+      const xTk = kolT.map(([, w]) => { const x0 = xx; xx += w; return x0; });
+      isi.push(`<rect x="${n2(xT)}" y="${n2(yB)}" width="${n2(wTp)}" height="${n2(rh)}" fill="#EDEDED" stroke="#000" stroke-width="0.3"/>`);
+      kolT.forEach(([nm, w], i) => isi.push(sel(xTk[i], yB, w, rh, nm, 'c', true)));
+      let yt = yB + rh;
+      for (const t of db.tipe) {
+        const ur = bungkusTeks(t.uraian, kolT[2][1] - 2, fs, 1)[0] || '';
+        [t.kode, t.nama, ur, `${t.n} bh`].forEach((v, i) => isi.push(sel(xTk[i], yt, kolT[i][1], rh, v, kolT[i][2], i === 0)));
+        yt += rh; isi.push(garis(xT, yt, xT + wTp, yt, 0.12));
+      }
+      isi.push(`<rect x="${n2(xT)}" y="${n2(yB)}" width="${n2(wTp)}" height="${n2(yt - yB)}" fill="none" stroke="#000" stroke-width="0.35"/>`);
+      for (let i = 1; i < kolT.length; i++) isi.push(garis(xTk[i], yB, xTk[i], yt, 0.12));
+      // catatan
+      const yc = Math.max(yd, yt) + 4.5;
+      const cat = ['Berat besi = 0,00617 × d² kg/m. Jumlah berat sama dengan pembesian di volume RAB (sumber data yang sama).',
+        'Kebutuhan minimum menurut data model: sengkang rapat di tumpuan, tulangan tambahan tumpuan, dan stek yang belum dimodelkan belum termasuk.'];
+      if (adaPanjang) cat.push('* Panjang potong lebih dari 12 m: dipasang dari beberapa lonjor dengan sambungan lewatan (tambahan lewatan belum termasuk).');
+      cat.forEach((t, i) => isi.push(teks(area.x, yc + i * 3.2, t, 2, 'fill="#333"')));
     }
   } else if (o.jenis === 'kusen') {
     // daftar kusen: tiap kode digambar sekali, pintu dan jendela berkode sama berdampingan sesuai ambangnya
@@ -15470,10 +15606,10 @@ function buatSVGInti(o) {
       teks(ax, ay - 7.6, 'U', 3, 'text-anchor="middle" font-weight="700"'), '</g>');
   }
   const pakaiSkalaGrafis = o.skalaGrafis !== undefined ? !!o.skalaGrafis : (S.setel.lembar || {}).skalaGrafis !== false;
-  if (!info && pakaiSkalaGrafis && skala > 0 && o.jenis !== 'kusen') isi.push(skalaGrafisSvg(skala, area.x + area.w - 6, area.y + area.h - 5));
+  if (!info && pakaiSkalaGrafis && skala > 0 && o.jenis !== 'kusen' && o.jenis !== 'besi') isi.push(skalaGrafisSvg(skala, area.x + area.w - 6, area.y + area.h - 5));
   // bingkai dan kop gambar
   isi.push(...svgBenda2D(o, proyekLembar));
-  const kop = kopGambar(o, W, H, '1 : ' + skala);
+  const kop = kopGambar(o, W, H, o.jenis === 'besi' ? '-' : '1 : ' + skala);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif"><rect width="${W}" height="${H}" fill="#fff"/>${isi.join('')}${kop}</svg>`;
   return {svg, info, skala, W, H, peta, anotStat};
 }
@@ -16387,6 +16523,115 @@ const KODE_NAMA = [[/closet|kloset/i, 'SA-001', 'unit'], [/wastafel/i, 'SA-002',
  * @param {Iterable<string>} ids
  * @returns {{divisi: any[], geos: any[], t: Record<string, any>}}
  */
+/**
+ * Kunci dan kode tipe penulangan (v0.47): elemen bertulang yang penampang dan tulangannya sama digolongkan satu tipe.
+ * Kolom, sloof, ring balk, dan balok memakai kunci dan urutan yang sama dengan lembar Detail penulangan (K1, KP1, S1, RB1, B1),
+ * jenis lain berkode FP (foot plat), PC (pile cap), PL (pelat), TG (tangga), TP (tulangan tiang pancang).
+ * @param {any} g geometri elemen
+ * @returns {{kunci: string, awalan: string, urut: string} | null}
+ */
+function kunciPenulangan(g) {
+  if (g.jenis === 'kolom' || g.jenis === 'slof' || g.jenis === 'ringbalk') {
+    const jk = g.jenis === 'kolom' ? g.tipe : g.jenis === 'ringbalk' && g.peran === 'balok' ? 'balok' : g.jenis;
+    return {kunci: JSON.stringify([g.jenis, g.tipe || g.peran || '', g.b, g.h, g.tul, g.sengkang, g.fc, g.selimut]), awalan: {praktis: 'KP', struktur: 'K', ringbalk: 'RB', balok: 'B', slof: 'S'}[jk] || 'S', urut: g.jenis + (g.tipe || '')};
+  }
+  if (g.jenis === 'pondasi' && g.tipe === 'footplat') return {kunci: JSON.stringify(['footplat', g.p, g.l, g.tebal, g.tulPlat, g.pedestal, g.puncakPedestal, g.z0, g.tul, g.sengkang, g.fc, g.selimut]), awalan: 'FP', urut: 'pondasifootplat'};
+  if (g.jenis === 'pondasi' && g.tipe === 'pilecap') return {kunci: JSON.stringify(['pilecap', g.p, g.l, g.tebal, g.tulPlat, g.fc, g.selimut]), awalan: 'PC', urut: 'pondasipilecap'};
+  if (g.jenis === 'plat') return {kunci: JSON.stringify(['plat', g.tebal, g.tul || null, g.fc]), awalan: 'PL', urut: 'plat'};
+  if (g.jenis === 'tangga') return {kunci: JSON.stringify(['tangga', g.tebalPlat, g.tul || null, g.fc]), awalan: 'TG', urut: 'tangga'};
+  if (g.jenis === 'tiang') return {kunci: JSON.stringify(['tiang', g.bahan, g.dLuar, g.tebal, g.isian || null, g.selimut || null]), awalan: 'TP', urut: 'tiang'};
+  return null;
+}
+/**
+ * Beri kode tipe ke daftar geometri: Map kunci → {kode, g, n, panjang, anggota}.
+ * @param {any[]} geos
+ */
+function tipePenulangan(geos) {
+  const tipe = new Map();
+  for (const g of geos) {
+    const k = kunciPenulangan(g);
+    if (!k) continue;
+    const t = tipe.get(k.kunci) || {g, n: 0, panjang: 0, awalan: k.awalan, urut: k.urut, kode: '', anggota: []};
+    t.n++; t.panjang += g.jenis === 'kolom' ? g.tinggi : g.jenis === 'slof' || g.jenis === 'ringbalk' ? infoDinding(g).L : 0;
+    t.anggota.push(g);
+    tipe.set(k.kunci, t);
+  }
+  const hit = {};
+  for (const t of [...tipe.values()].sort((a, b) => a.urut.localeCompare(b.urut))) t.kode = t.awalan + (hit[t.awalan] = (hit[t.awalan] || 0) + 1);
+  return tipe;
+}
+const NAMA_TIPE_BESI = {K: 'Kolom struktur', KP: 'Kolom praktis', S: 'Sloof', RB: 'Ring balk', B: 'Balok', FP: 'Foot plat', PC: 'Pile cap', PL: 'Pelat', TG: 'Tangga', TP: 'Tiang pancang'};
+/**
+ * Daftar potong besi (v0.47, keputusan 21 Okt 2026): dari daftar batang tiap elemen (sumber yang sama dengan volume RAB besi).
+ * Baris digabung per tipe, mark, bentuk, diameter, panjang potong, dan jumlah per elemen.
+ * @param {string[]} [ids] elemen atau grup; kosong = seluruh model
+ */
+function daftarBesi(ids) {
+  const semua = ids && ids.length ? ids : [...S.elems.keys()];
+  const {el} = ekspansi(semua), geos = [];
+  for (const id of el) { if (S.sembunyi.has(id)) continue; for (const g of geometriElemen(id, S.elems.get(id))) geos.push(g); }
+  const tipe = tipePenulangan(geos), kodeDari = new Map();
+  for (const t of tipe.values()) for (const g of t.anggota) kodeDari.set(g, t);
+  const gab = new Map();
+  for (const g of geos) {
+    const t = kodeDari.get(g);
+    if (!t) continue;
+    const bt = /** @type {BatangBesi[] | undefined} */ (ukur(g).batang);
+    if (!bt) continue;
+    t.ada = true;
+    for (const b of bt) {
+      const k = [t.kode, b.mark, b.bentuk, b.d, b.ulir ? 1 : 0, Math.round(b.pjg * 1000), Math.round(b.n * 1e6)].join('|');
+      const x = gab.get(k) || {kode: t.kode, mark: b.mark, bagian: b.bagian, bentuk: b.bentuk, ukuran: b.ukuran, d: b.d, ulir: b.ulir, besi: labelBesi(b.d, b.ulir), pjg: b.pjg, perEl: b.n, nEl: 0, nTot: 0, totPjg: 0, kg: 0};
+      x.nEl++; x.nTot += b.n; x.totPjg += b.n * b.pjg; x.kg += b.n * b.pjg * beratBesi(b.d);
+      gab.set(k, x);
+    }
+  }
+  const nomor = s2 => { const m = /^([A-Z]+)(\d+)$/.exec(s2); return m ? [m[1], +m[2]] : [s2, 0]; };
+  const baris = [...gab.values()].sort((a, b) => { const [pa, na] = nomor(a.kode), [pb, nb] = nomor(b.kode); return pa.localeCompare(pb) || na - nb || a.mark.localeCompare(b.mark) || b.pjg - a.pjg; });
+  // mark unik: mark sama dengan panjang berbeda diberi nomor urut (B1-a1, B1-a2, …)
+  const jml = new Map();
+  for (const b of baris) jml.set(b.kode + b.mark, (jml.get(b.kode + b.mark) || 0) + 1);
+  const ke = new Map();
+  for (const b of baris) { const k = b.kode + b.mark, i = (ke.get(k) || 0) + 1; ke.set(k, i); b.markLengkap = `${b.kode}-${b.mark}${jml.get(k) > 1 ? i : ''}`; }
+  const f = faktorBesi(), ringkas = new Map();
+  for (const b of baris) {
+    const x = ringkas.get(b.besi) || {besi: b.besi, d: b.d, ulir: b.ulir, pjg: 0, kg: 0};
+    x.pjg += b.totPjg; x.kg += b.kg; ringkas.set(b.besi, x);
+  }
+  const perD = [...ringkas.values()].sort((a, b) => (a.ulir === b.ulir ? a.d - b.d : a.ulir ? -1 : 1))
+    .map(x => ({...x, kgSisa: x.kg * f, lonjor: Math.ceil(x.pjg * f / 12 - 1e-9)}));
+  const tipeL = [...tipe.values()].filter(t => t.ada).sort((a, b) => { const [pa, na] = nomor(a.kode), [pb, nb] = nomor(b.kode); return pa.localeCompare(pb) || na - nb; })
+    .map(t => ({kode: t.kode, nama: NAMA_TIPE_BESI[t.awalan] || t.awalan, uraian: uraianTipeBesi(t.g), n: t.n, panjang: t.panjang}));
+  return {tipe: tipeL, baris, perDiameter: perD, faktorSisa: S.setel.faktorBesi ?? 5,
+    jumlah: {kg: perD.reduce((a, x) => a + x.kg, 0), kgSisa: perD.reduce((a, x) => a + x.kgSisa, 0), lonjor: perD.reduce((a, x) => a + x.lonjor, 0)}};
+}
+/** Bentuk ringkas daftar potong besi untuk MCP (batas 32 KB): angka dibulatkan, sketsa tidak dikirim. */
+function ringkasDaftarBesi(r) {
+  const r3 = v => Math.round(v * 1000) / 1000;
+  const out = {tipe: r.tipe.map(t => ({...t, panjang: r3(t.panjang)})),
+    baris: r.baris.map(b => ({mark: b.markLengkap, tipe: b.kode, bagian: b.bagian, bentuk: b.bentuk, besi: b.besi, panjangPotong: r3(b.pjg), perElemen: r3(b.perEl), elemen: b.nEl, jumlahBatang: r3(b.nTot), totalPanjang: r3(b.totPjg), beratKg: r3(b.kg)})),
+    perDiameter: r.perDiameter.map(x => ({besi: x.besi, totalPanjang: r3(x.pjg), beratKg: r3(x.kg), beratDenganSisaKg: r3(x.kgSisa), lonjor12m: x.lonjor})),
+    faktorSisaPersen: r.faktorSisa, jumlah: {beratKg: r3(r.jumlah.kg), beratDenganSisaKg: r3(r.jumlah.kgSisa), lonjor12m: r.jumlah.lonjor}};
+  if (JSON.stringify(out).length > 30000) return {catatan: 'Daftar terlalu panjang untuk satu jawaban; minta per grup atau per ids. Ringkasan tetap disertakan.', tipe: out.tipe, perDiameter: out.perDiameter, faktorSisaPersen: out.faktorSisaPersen, jumlah: out.jumlah, jumlahBaris: out.baris.length};
+  return out;
+}
+// Ada elemen bertulang yang menghasilkan daftar potong besi?
+const adaBesi = () => [...S.elems.values()].some((/** @type {any} */ d) => (['kolom', 'slof', 'ringbalk', 'plat', 'tangga'].includes(d.jenis) || (d.jenis === 'pondasi' && (d.tipe === 'footplat' || d.tipe === 'pilecap'))
+  || (d.jenis === 'tiang' && ((d.isian && d.isian.panjang > 0 && d.dLuar) || (d.selimut && d.selimut.tebal > 0)))) || (d.jenis === 'instance'));
+// Uraian singkat penampang dan tulangan sebuah tipe untuk daftar potong besi
+function uraianTipeBesi(g) {
+  const sk = s2 => `${labelBesi(s2.d, s2.ulir)}-${Math.round(s2.s * 1000)}`, mutu = labelMutu(g.fc ?? 18.7).split(' (')[0];
+  if (g.jenis === 'kolom' || g.jenis === 'slof' || g.jenis === 'ringbalk') return `${Math.round(g.b * 100)}/${Math.round(g.h * 100)} · ${g.tul.n}${labelBesi(g.tul.d, g.tul.ulir)} · sengkang ${sk(g.sengkang)} · ${mutu}`;
+  if (g.tipe === 'footplat') return `${Math.round(g.p * 100)}×${Math.round(g.l * 100)}×${Math.round(g.tebal * 100)} · ${sk(g.tulPlat)} dua arah · pedestal ${Math.round(g.pedestal.b * 100)}/${Math.round(g.pedestal.h * 100)} ${g.tul.n}${labelBesi(g.tul.d, g.tul.ulir)} · ${mutu}`;
+  if (g.tipe === 'pilecap') return `${Math.round(g.p * 100)}×${Math.round(g.l * 100)}×${Math.round(g.tebal * 100)} · ${sk(g.tulPlat)} dua lapis dua arah · ${mutu}`;
+  if (g.jenis === 'plat') { const t = g.tul || {d: 10, s: 0.15}; return `tebal ${Math.round(g.tebal * 100)} · ${sk(t)} atas & bawah · ${mutu}`; }
+  if (g.jenis === 'tangga') { const t = g.tul || {d: 10, s: 0.15}; return `plat ${Math.round(g.tebalPlat * 100)} · Ø${t.d}-${Math.round(t.s * 1000)} · ${mutu}`; }
+  if (g.jenis === 'tiang') {
+    const i = g.isian, t = i && i.tul;
+    return `${labelTiang(g)}${i && i.panjang > 0 ? ` · isian ${fmt(i.panjang)} m${t && t.n > 0 ? ` ${t.n}D${t.d}` : ''}${i.spiral === false ? '' : ' + spiral Ø10-150'} · ${labelMutu(i.fc || 24.9).split(' (')[0]}` : ''}${g.selimut && g.selimut.tebal > 0 ? ` · selimut beton ${Math.round(g.selimut.tebal * 100)} cm` : ''}`;
+  }
+  return '';
+}
 function dataRAB(ids) {
   const t = total(ids), f = faktorBesi(), r = t.rekap, {el} = ekspansi(ids);
   const geos = [];
@@ -16721,10 +16966,49 @@ async function eksporRAB(ids, opsi = {}) {
       ['Harga bawaan', SUMBER_BBP + '. Overhead sudah di dalam harga satuan.']] : [])]
     .forEach(([a, b], i) => { sel(inf, i, 0, a); sel(inf, i, 1, b); });
   batasi(inf, berharga ? 8 : 6, 1); inf['!cols'] = [{wch: 24}, {wch: 110}];
+  // Sheet DAFTAR POTONG BESI (v0.47): sumber yang sama dengan baris pembesian RAB; berat dan jumlah berupa rumus
+  const db = daftarBesi(ids), pb = lembar();
+  let rp = 0;
+  if (db.baris.length) {
+    sel(pb, rp++, 0, 'DAFTAR POTONG BESI');
+    ['Mark', 'Tipe', 'Bagian', 'Bentuk', 'Besi', 'Ø (mm)', 'Panjang potong (m)', 'Jml per elemen', 'Elemen', 'Jml batang', 'Total panjang (m)', 'Berat (kg/m)', 'Berat (kg)'].forEach((h, c) => sel(pb, rp, c, h));
+    rp++;
+    const r0 = rp + 1, nmBentuk = {lurus: 'Lurus', kait: 'Lurus, kait kedua ujung', sengkang: 'Sengkang tertutup', u: 'Bentuk U', spiral: 'Spiral/cincin'};
+    for (const b of db.baris) {
+      const R = rp + 1;
+      [b.markLengkap, b.kode, b.bagian, nmBentuk[b.bentuk] || b.bentuk, b.besi].forEach((v, c) => sel(pb, rp, c, v));
+      sel(pb, rp, 5, b.d, nr); sel(pb, rp, 6, b.pjg, '0.000'); sel(pb, rp, 7, b.perEl, nf); sel(pb, rp, 8, b.nEl, nr);
+      sel(pb, rp, 9, {f: `H${R}*I${R}`}, nf); sel(pb, rp, 10, {f: `G${R}*J${R}`}, nf); sel(pb, rp, 11, {f: `0.00617*F${R}^2`}, '0.000'); sel(pb, rp, 12, {f: `K${R}*L${R}`}, nf);
+      rp++;
+    }
+    const r1 = rp;
+    sel(pb, rp, 0, 'Jumlah'); sel(pb, rp, 10, {f: `SUM(K${r0}:K${r1})`}, nf); sel(pb, rp, 12, {f: `SUM(M${r0}:M${r1})`}, nf); rp += 2;
+    sel(pb, rp++, 0, 'RINGKASAN PER DIAMETER');
+    ['Besi', 'Total panjang (m)', 'Berat (kg)', `Berat + sisa potong (kg)`, 'Lonjor 12 m'].forEach((h, c) => sel(pb, rp, c, h));
+    rp++;
+    const rf = rp + db.perDiameter.length + 2;   // baris faktor sisa potong
+    for (const x of db.perDiameter) {
+      const R = rp + 1;
+      sel(pb, rp, 0, x.besi);
+      sel(pb, rp, 1, {f: `SUMIFS($K$${r0}:$K$${r1},$E$${r0}:$E$${r1},A${R})`}, nf); sel(pb, rp, 2, {f: `SUMIFS($M$${r0}:$M$${r1},$E$${r0}:$E$${r1},A${R})`}, nf);
+      sel(pb, rp, 3, {f: `C${R}*(1+$B$${rf}/100)`}, nf); sel(pb, rp, 4, {f: `ROUNDUP(B${R}*(1+$B$${rf}/100)/12,0)`}, nr);
+      rp++;
+    }
+    rp++;
+    sel(pb, rp, 0, 'Sisa potong (%)'); sel(pb, rp, 1, S.setel.faktorBesi ?? 5, nr); rp += 2;
+    sel(pb, rp++, 0, 'TIPE PENULANGAN');
+    ['Kode', 'Elemen', 'Penampang dan tulangan', 'Jumlah (bh)'].forEach((h, c) => sel(pb, rp, c, h));
+    rp++;
+    for (const t of db.tipe) { [t.kode, t.nama, t.uraian].forEach((v, c) => sel(pb, rp, c, v)); sel(pb, rp, 3, t.n, nr); rp++; }
+    rp++;
+    sel(pb, rp++, 0, 'Berat besi = 0,00617 × d² kg/m. Jumlah sama dengan baris pembesian di sheet RAB (sumber data yang sama). Kebutuhan minimum menurut data model; lewatan batang > 12 m belum termasuk.');
+    batasi(pb, rp, 12); pb['!cols'] = [{wch: 12}, {wch: 8}, {wch: 40}, {wch: 22}, {wch: 7}, {wch: 7}, {wch: 12}, {wch: 12}, {wch: 8}, {wch: 11}, {wch: 14}, {wch: 11}, {wch: 13}];
+  }
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, 'RAB');
   X.utils.book_append_sheet(wb, hm, 'HSP MASTER');
   X.utils.book_append_sheet(wb, bv, 'BACKUP VOLUME');
+  if (db.baris.length) X.utils.book_append_sheet(wb, pb, 'DAFTAR POTONG BESI');
   X.utils.book_append_sheet(wb, inf, 'INFO');
   const data = X.write(wb, {bookType: 'xlsx', type: 'array'});
   const dasar = (S.setel.nama || 'rancang').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'rancang';
@@ -19151,6 +19435,7 @@ window.rancangAPI = Object.freeze({
   pdfSet: async (o = {}) => { const r = await buatPDFSet({...opsi2D(), ...o}); return {jumlah: r.jumlah, raster: r.raster, pdf: await keDataURL(r.blob)}; },
   rab: ids => { const r = dataRAB(ids && ids.length ? ids : semuaId()); return r.divisi; },
   hitungRAB: ids => ringkasHitungRAB(hitungRAB(ids && ids.length ? ids : semuaId())),
+  daftarBesi: ids => ringkasDaftarBesi(daftarBesi(ids && ids.length ? ids : semuaId())),
   panelRAB: () => { bukaRAB(); return {tampil: !$('#modalRab').hidden, ringkas: $('#mr-ringkas').textContent.replace(/\s+/g, ' ').trim(), baris: $('#mr-tabel').querySelectorAll('tr[data-kunci]').length, asumsi: $('#mr-tabel').querySelectorAll('tr.st-asumsi').length}; },
   ringkasan: ids => total(ids && ids.length ? ids : semuaId()),
   ukurElemen: id => { const d = S.elems.get(id); return d ? ukur(d) : null; },
@@ -19170,6 +19455,20 @@ window.rancangAPI = Object.freeze({
 
 // Kait uji asap (electron --uji-asap): meniru pilihan dan gerak kursor tanpa event pointer sungguhan. Bukan API untuk Claude.
 window.rancangUji = Object.freeze({
+  // ekspor RAB tanpa dialog unduh (v0.47): kembalikan nama sheet dan isi sheet DAFTAR POTONG BESI untuk uji
+  eksporRAB: async (ids, denganBerkas = false) => {
+    const lama = S.unduh;
+    let tangkap = /** @type {Blob | null} */ (null);
+    S.unduh = {save: async ({data}) => { tangkap = data; }};
+    try { await eksporRAB(ids && ids.length ? ids : [...S.elems.keys()]); } finally { S.unduh = lama; }
+    const berkas = /** @type {Blob | null} */ (tangkap);
+    if (!berkas) return null;
+    const X = await muatXLSX(), wb = X.read(new Uint8Array(await berkas.arrayBuffer()), {type: 'array', cellFormula: true, sheetStubs: true});
+    const pb = wb.Sheets['DAFTAR POTONG BESI'];
+    const nRumus = ws => Object.keys(ws).filter(k => k[0] !== '!' && ws[k] && ws[k].f).length;
+    const b64 = denganBerkas ? btoa(Array.from(new Uint8Array(await berkas.arrayBuffer()), c => String.fromCharCode(c)).join('')) : undefined;
+    return {b64, sheet: wb.SheetNames, besi: pb ? X.utils.sheet_to_json(pb, {header: 1}).slice(0, 4) : null, rumus: pb ? nRumus(pb) : 0, rumusRAB: nRumus(wb.Sheets.RAB)};
+  },
   pilih: ids => { S.sel.clear(); for (const id of ids) S.sel.add(id); segarPilihan(); return $('#kursor-info').textContent; },
   // alat Pindah + Ctrl (v0.40): salin pilihan sejauh (dx, dy, dz) seperti klik dua titik, lalu teks larik (mis. '24x' atau '/4')
   // diketik di kotak ukur; hasil: jumlah elemen dan langkah Undo sesudahnya
@@ -19348,7 +19647,10 @@ const ALAT_CLAUDE = [
     }},
   {name: 'hitung_rab', description: 'RAB berharga (Rp): volume × harga satuan per divisi, total dengan PPN, dan status dasar tiap harga (perwali, survei, asumsi, kosong, termasuk). Asumsi = belum ada dasar Perwali atau survei.',
     inputSchema: {type: 'object', properties: {ids: {type: 'array', items: {type: 'string'}}}},
-    execute(inp) { langkahClaude('Menghitung RAB berharga…'); return ringkasHitungRAB(hitungRAB(Array.isArray(inp.ids) && inp.ids.length ? inp.ids.map(String) : semuaId())); }}
+    execute(inp) { langkahClaude('Menghitung RAB berharga…'); return ringkasHitungRAB(hitungRAB(Array.isArray(inp.ids) && inp.ids.length ? inp.ids.map(String) : semuaId())); }},
+  {name: 'daftar_besi', description: 'Daftar potong besi: tipe penulangan (kode sama dengan lembar Detail), tiap mark dengan bentuk, diameter, panjang potong, jumlah batang, berat, dan ringkasan per diameter (dengan sisa potong dan jumlah lonjor 12 m). Totalnya sama dengan pembesian di RAB.',
+    inputSchema: {type: 'object', properties: {ids: {type: 'array', items: {type: 'string'}}}},
+    execute(inp) { langkahClaude('Menyusun daftar potong besi…'); return ringkasDaftarBesi(daftarBesi(Array.isArray(inp.ids) && inp.ids.length ? inp.ids.map(String) : semuaId())); }}
 ];
 function gelembung(peran, teks) {
   const el = document.createElement('div');
