@@ -163,6 +163,8 @@ export const ALAT = [
     inputSchema: objek({ids: daftarId})},
   {name: 'volume_rab', description: 'Volume pekerjaan RAB per divisi (kode HSP, uraian, satuan, volume) seperti ekspor Excel di aplikasi.',
     inputSchema: objek({ids: daftarId})},
+  {name: 'hitung_rab', description: 'RAB berharga (Rp) seperti panel Hitung RAB di aplikasi: volume × harga satuan per divisi, jumlah, PPN, total dibulatkan, dan status dasar tiap harga (perwali, survei, asumsi = belum ada dasar Perwali/survei, kosong = belum ada harga, termasuk = biaya di baris lain).',
+    inputSchema: objek({ids: daftarId})},
   {name: 'gambar_2d', description: 'Buat gambar kerja 2D (denah, denah atap, denah pondasi, detail penulangan, daftar kusen, tampak, potongan). Format png (bawaan) untuk dilihat, svg untuk teks.',
     inputSchema: objek({jenis: {type: 'string', description: 'denah, denah per lantai denah:0 / denah:4 …, atap, pondasi, detail, kusen, depan, belakang, kanan, kiri, potongan:X3, atau lembar detail det:1, det:2 … (lihat info_proyek)'},
       skala: {type: 'integer', minimum: 0, maximum: 5000, description: 'Angka penyebut skala, mis. 100 untuk 1:100 atau 150; 0 = otomatis'}, kertas: {type: 'string', enum: ['A4', 'A3']},
@@ -221,6 +223,7 @@ export async function jalankanAlat(nama, a = {}) {
     case 'pecah_atap': return teks(await rpc(await pastikanAplikasi(), 'pecahAtap', {id: a.id}));
     case 'ringkasan_ukuran': return teks(await rpc(await pastikanAplikasi(), 'ringkasan', {ids: a.ids || []}));
     case 'volume_rab': return teks(await rpc(await pastikanAplikasi(), 'rab', {ids: a.ids || []}));
+    case 'hitung_rab': return teks(await rpc(await pastikanAplikasi(), 'hitungRAB', {ids: a.ids || []}));
     case 'gambar_2d': {
       const info = await pastikanAplikasi();
       const opsi = {jenis: a.jenis, skala: a.skala || 0, kertas: a.kertas || 'A3', dimensi: a.dimensi !== false, ...(Number.isFinite(a.level) ? {level: a.level} : {})};

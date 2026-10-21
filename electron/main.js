@@ -192,6 +192,7 @@ const metode = {
   },
   gambar2D: ({format, ...opsi}) => halaman(format === 'png' ? `window.rancangAPI.gambar2DPng(${arg(opsi)})` : `window.rancangAPI.gambar2D(${arg(opsi)})`),
   rab: ({ids}) => halaman(`window.rancangAPI.rab(${arg(ids)})`),
+  hitungRAB: ({ids}) => halaman(`window.rancangAPI.hitungRAB(${arg(ids)})`),
   ringkasan: ({ids}) => halaman(`window.rancangAPI.ringkasan(${arg(ids)})`),
   ukur: ({id}) => halaman(`window.rancangAPI.ukurElemen(${arg(id)})`),
   pecahAtap: async ({id}) => {

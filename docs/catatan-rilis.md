@@ -1,3 +1,42 @@
+## Yang baru di 0.46.0
+
+Penyatuan empat perubahan yang dikerjakan bersamaan (PR #41, #42, #43, #45; 21 Oktober 2026).
+
+### RAB sampai nilai rupiah
+RAB sampai nilai rupiah, dengan tanda pada harga yang belum pasti (21 Oktober 2026).
+
+- **Menu baru "Hitung RAB (Rp)"** di palet perintah (cari "harga") dan panel proyek, grup, atau pilihan. Volume diambil dari hitungan yang sama dengan ekspor volume RAB; harga satuan bisa diketik langsung di tabel; jumlah per divisi, PPN (bawaan 11 %, bisa diubah), total, dan angka dibulatkan langsung keluar.
+- **Status dasar harga per butir**, ditandai warna: *Perwali* (ada dasar Perwali Kota Sorong 14/2025), *Survei* (hijau muda, sumber diisi sendiri), **Asumsi** (kuning, belum ada dasar peraturan maupun survei), *Kosong* (merah, belum ada harga, dihitung Rp 0), dan *Termasuk* (biaya sudah di baris lain). Harga yang Anda ketik tanpa memilih status otomatis berstatus asumsi.
+- **Ringkasan kesiapan HPS** di atas tabel: berapa rupiah dan berapa persen nilai yang masih asumsi, dan berapa butir belum berharga.
+- **Harga bawaan** dari AHSP RAB Dermaga BBP v1 (upah dan bahan Perwali 14/2025, overhead 10 % di dalam harga satuan) untuk beton fc′ 35, besi, bekisting, tiang pipa baja, bolder, fender, PJU, dan tangga monyet. Kode lain sengaja dibiarkan kosong untuk Anda isi.
+- **Ekspor RAB berharga (.xlsx)** dari panel: harga terisi, kolom Status dan Sumber harga, catatan nilai asumsi; rumus tetap VLOOKUP ke HSP MASTER.
+- Alat MCP baru **`hitung_rab`** agar Claude bisa membaca RAB berharga beserta status tiap harga.
+- Harga, status, dan sumber yang Anda ubah tersimpan di berkas proyek.
+
+### Potongan dan detail setingkat gambar kerja konsultan
+Potongan dan detail setingkat gambar kerja konsultan, dari kajian gambar Dermaga KP Sorong (21 Oktober 2026).
+
+- **Tiang dipendekkan di potongan**: tiang pancang berhenti 1,0 m di bawah LWL dengan garis putus otomatis, sehingga potongan dermaga bisa pada skala kerja (Potongan A–A BBP: 1:200 → 1:100). Di bawahnya tertulis label ujung tiang, mis. "Ujung tiang −33,64 · L 36,00 m". Garis putus manual tetap berlaku.
+- **Daftar muka air di kiri luar gambar**: HWL, MSL, LWL berjajar dengan garis penunjuk ke garis airnya, tidak lagi menempel dan menimpa rantai tinggi.
+- **Penanda potongan**: garis potong lain yang memotong bidang gambar diberi penanda (garis putus, panah arah pandang, huruf dalam lingkaran) di atas potongan.
+- **Kotak Keterangan lembar detail** di kolom catatan kop: satuan tulangan mm, dimensi cm, mutu beton dari elemen sumber detail, besi ulir BjTS 420 dan polos BjTP 280 (bisa diganti lewat `setel.mutuBesi`).
+- **Lembar detail di akhir set** gambar zona; label detail dibungkus sampai 4 baris, tidak dipotong "…".
+- **Penempatan di tengah kertas**: rencana pondasi/pile cap dan rencana balok/pelat dipusatkan (ruang keterangan atas hanya bila perlu); lembar gabungan dari objek yang sama memakai titik pusat yang sama sehingga gambar berdampingan sejajar; lembar bagian di ujung objek tidak menyisakan ruang kosong.
+- **Teks panjang tidak keluar kertas**: judul gambar lembar gabungan dibungkus/diperkecil agar tidak saling menimpa; lokasi dan nama proyek di sampul dibungkus; judul di daftar gambar diperkecil agar muat kolomnya.
+- **Beton terpotong abu-abu** pada potongan dermaga (bukan hitam pekat), seperti gambar konsultan, supaya garis tulangan dan ukuran tetap terbaca.
+- **Tampak dermaga** ikut diberi penanda garis potong dan label ujung tiang.
+- **Template detail baru `balokMemanjang`**: penulangan balok memanjang di atas dua pile cap (tulangan atas/bawah menerus, sengkang berjarak, penanda potongan tumpuan dan lapangan, ukuran bentang dan peil), skala 1:25.
+
+### Ukuran tidak bertumpuk di garis putus
+Perbaikan dari Potongan C–C Dermaga TUKS BBP (21 Oktober 2026): angka ukuran tidak lagi bertumpuk di garis putus.
+
+- **Rantai jarak tiang di potongan bergaris putus**: tiang yang jatuh di bagian yang dihilangkan tidak lagi diberi ukuran sendiri-sendiri (dulu "600 600 600…" bertumpuk di celah). Ukuran menyambung dari tiang terlihat terakhir ke tiang terlihat berikutnya dengan nilai sebenarnya (mis. 10200), dan angkanya diletakkan di samping celah agar tidak tertutup simbol putus.
+- **Tabel jarak dan elevasi dasar laut**: titik profil di bagian yang dihilangkan tidak diberi kolom, dan kolom yang terlalu rapat (< 9 mm) dilewati; kolom ujung tetap tampil.
+- **Ruas ukuran sempit**: angka pada ruas yang lebih pendek dari angkanya (mis. rantai tinggi pelat–balok–pile cap di skala kecil, atau ruas 50 cm di ujung) digeser keluar garis ukur berselang 1–3 baris, tidak saling menimpa.
+
+<!-- CATATAN-45 -->
+- Pasang **RANCANG-Setup-0.46.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.46.0 dari rilis yang sama.
+
 ## Yang baru di 0.45.0
 
 Jeti kayu di atas tiang pipa baja (21 Oktober 2026), untuk jeti speedboat Marina BBP.
