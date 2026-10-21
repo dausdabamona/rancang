@@ -100,6 +100,16 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     assert.equal(baris('DM-101').vol, 3);
     assert.equal(baris('DM-102').vol, 3);
     fs.writeFileSync(path.join(keluar, 'dermaga-rab.json'), JSON.stringify(rab, null, 1));
+    // v0.46: RAB berharga — harga bawaan bersatuan sama, status asumsi/termasuk/kosong, total = jumlah + PPN 11 %
+    const hr = json(await c.callTool({name: 'hitung_rab', arguments: {}}));
+    const bh = k => hr.divisi.flatMap(d => d.baris).find(b => b.kode === k);
+    assert.equal(bh('DM-011').harga, 37620); assert.equal(bh('DM-011').status, 'asumsi');
+    assert.equal(bh('DM-090').status, 'termasuk'); assert.equal(bh('DM-090').jumlah, 0);
+    assert.equal(bh('ST-011').status, 'perwali');
+    assert.ok(hr.jumlah > 0 && hr.total === hr.jumlah + Math.round(hr.jumlah * 0.11), JSON.stringify({j: hr.jumlah, t: hr.total}));
+    assert.ok(hr.nilaiStatus.asumsi > 0 && hr.porsiAsumsi > 0 && hr.porsiAsumsi < 1);
+    const sumDiv = hr.divisi.reduce((a, d) => a + d.jumlah, 0);
+    assert.ok(Math.abs(sumDiv - hr.jumlah) <= hr.divisi.length, `${sumDiv} vs ${hr.jumlah}`);
     for (const jenis of ['denah', 'pondasi', 'potongan:X1', 'potongan:X2', 'depan']) {
       const g = await c.callTool({name: 'gambar_2d', arguments: {jenis, kertas: 'A3'}});
       assert.equal(g.content[0].type, 'image', jenis + ': ' + JSON.stringify(g.content[0]).slice(0, 200));

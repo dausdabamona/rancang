@@ -348,6 +348,25 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .zoom-2d .sesuai{font-size:12px;padding:0 8px}
 .modal-kaki{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 18px 16px}
 .modal-kaki .meta{flex:1 1 240px}
+/* Hitung RAB (v0.46): warna status harga, terbaca di tema terang dan gelap */
+.rab-ringkas{display:flex;flex-wrap:wrap;gap:8px 22px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.rab-ringkas div{display:grid;gap:2px}.rab-ringkas b{font:700 17px var(--f-display);font-variant-numeric:tabular-nums}
+.rab-ringkas .meta{font-size:12px}
+.rab-legenda{display:flex;flex-wrap:wrap;gap:6px;padding:8px 18px;font-size:12px}
+.rab-legenda span{padding:2px 8px;border-radius:2px;border:1px solid var(--line)}
+.rab-tabel{flex:1;overflow:auto;padding:0 18px}
+.rab-tabel table{width:100%;border-collapse:collapse;font-size:13px}
+.rab-tabel th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:700;padding:6px;border-bottom:2px solid var(--line);z-index:1}
+.rab-tabel td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.rab-tabel td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rab-tabel tr.div td{font-weight:700;padding-top:12px}.rab-tabel tr.sub td{font-weight:700}
+.rab-tabel input,.rab-tabel select{font:inherit;width:100%;min-width:0;box-sizing:border-box}
+.rab-tabel input.h{text-align:right;width:120px}
+.rab-ppn input{width:60px}
+.st-survei{background:color-mix(in srgb,#2E8B3A 20%,transparent)}
+.st-asumsi{background:color-mix(in srgb,#F2C230 42%,transparent)}
+.st-kosong{background:color-mix(in srgb,#C8372D 22%,transparent)}
+.st-termasuk{background:var(--rc-hover);color:var(--muted)}
 
 /* Notifikasi */
 #toasts{position:fixed;right:max(16px,calc(16px + env(safe-area-inset-right,0px)));bottom:calc(64px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:40;pointer-events:none;max-width:min(340px,calc(100vw - 32px))}
@@ -885,6 +904,20 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
     </div>
   </div>
 </div>
+<div class="modal" id="modalRab" hidden role="dialog" aria-modal="true" aria-labelledby="mr-judul">
+  <div class="modal-isi" style="width:min(1240px,100%);height:min(900px,100%)">
+    <div class="modal-kepala"><h2 id="mr-judul">Hitung RAB (Rp)</h2><button type="button" id="mr-tutup" aria-label="Tutup">×</button></div>
+    <div class="rab-ringkas" id="mr-ringkas"></div>
+    <div class="rab-legenda" aria-label="Arti warna status harga"><span class="st-perwali">Perwali: ada dasar peraturan</span><span class="st-survei">Survei: survei atau penawaran</span><span class="st-asumsi">Asumsi: belum ada dasar, wajib diganti sebelum HPS</span><span class="st-kosong">Kosong: belum ada harga (Rp 0)</span><span class="st-termasuk">Termasuk: biaya sudah di baris lain</span></div>
+    <div class="rab-tabel" id="mr-tabel"></div>
+    <div class="modal-kaki">
+      <p class="meta" id="mr-catatan">Ketik harga satuan atau ganti status; perubahan tersimpan di proyek ini. Harga yang diketik tanpa dasar otomatis berstatus asumsi. Harga berlaku per kode HSP: butir berkode sama ikut berubah.</p>
+      <label class="rab-ppn" for="mr-ppn">PPN <input type="number" id="mr-ppn" min="0" max="20" step="0.5"> %</label>
+      <button class="tombol" type="button" id="mr-reset">Kembalikan harga bawaan</button>
+      <button class="tombol utama" type="button" id="mr-ekspor">Ekspor RAB berharga (.xlsx)</button>
+    </div>
+  </div>
+</div>
 <div id="toasts" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
@@ -1105,7 +1138,8 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * Pengaturan proyek (dokumen `pengaturan/proyek`).
  * @typedef {{nama: string, tebalDinding: number, tinggiDinding: number, kemiringanAtap: number, overstekAtap: number, faktorBesi: number, bahanDinding?: 'bata' | 'tripleks' | 'grc' | 'gypsum',
- *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[], revisi?: {no: number, tanggal: string, uraian?: string}[]}} Setelan
+ *   satuan?: 'm' | 'cm', sampul?: Object, lembar?: Object, kop?: Object, pustakaDetail?: any[], peilGeser?: Object, peilSembunyi?: string[], revisi?: {no: number, tanggal: string, uraian?: string}[],
+ *   hargaRAB?: Record<string, {harga: number, status: string, sumber?: string}>, ppnRAB?: number}} Setelan
  */
 
 /** Satu perubahan dari luar (MCP, panel Claude): `data` null = hapus. @typedef {{id: string, data?: DokumenRancang | null, sesudah?: DokumenRancang | null}} PerubahanLuar */
@@ -10584,7 +10618,7 @@ function butirPalet(teks) {
   if (!saring || saring === 'perintah') {
     const P = [
       ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
-      ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
+      ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Hitung RAB (Rp)', 'harga', () => bukaRAB()], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
       ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Jadikan komponen', 'G', () => jadikanKomponen()], ['Komponen proyek', '', () => { S.sel.clear(); segarPilihan(); if (!TATA.sisi) $('#btn-sisi').click(); setTimeout(() => { const h = [...panel.querySelectorAll('h2')].find(x => x.textContent === 'Komponen proyek'); if (h) h.scrollIntoView({block: 'start'}); else toast('Belum ada komponen di proyek ini. Pilih benda lalu tekan G.'); }, 60); }], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
       ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
     ];
@@ -10826,6 +10860,7 @@ window.addEventListener('keyup', e => {
 });
 window.addEventListener('keydown', e => {
   if (!$('#modalProyek').hidden) { if (e.key === 'Escape') $('#mp-batal').click(); return; }
+  if (!$('#modalRab').hidden) { if (e.key === 'Escape') tutupRAB(); return; }
   if (!$('#modalKomp').hidden) { if (e.key === 'Escape') $('#mk-batal').click(); else if (e.key === 'Enter') { e.preventDefault(); $('#mk-buat').click(); } return; }
   if (!$('#modal2d').hidden) {
     if (e.target && e.target.matches && e.target.matches('input, textarea, select')) return;
@@ -11610,13 +11645,13 @@ function htmlGrup(id, g) {
   <section><h2>Ukuran grup</h2>${htmlTotal()}</section>
   ${htmlRekapBagian([id])}
   ${metaUbah(g)}
-  <div class="aksi-panel"><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB grup ini (.xlsx)</button>${tombol('masuk-grup', 'Buka grup', 'utama')}${tombol('pecah-grup', 'Pecah grup')}${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
+  <div class="aksi-panel"><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB grup ini (.xlsx)</button><button class="tombol" type="button" data-aksi="hitung-rab">Hitung RAB grup ini (Rp)</button>${tombol('masuk-grup', 'Buka grup', 'utama')}${tombol('pecah-grup', 'Pecah grup')}${tombol('hapus-sel', 'Hapus', 'bahaya')}</div>`;
 }
 function htmlBanyak() {
   return `<section><h2>Pilihan</h2><p class="judul">${S.sel.size} objek terpilih</p></section>
   <section><h2>Ukuran pilihan</h2>${htmlTotal()}</section>
   ${htmlRekapBagian([...S.sel])}
-  <div class="aksi-panel"><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB pilihan (.xlsx)</button>${tombolPlafon()}${S.edit ? '' : tombol('buat-grup', 'Buat grup (Ctrl+G)', 'utama') + tombol('jadikan-komponen', 'Jadikan komponen')}${tombol('hapus-sel', 'Hapus semua', 'bahaya')}</div>`;
+  <div class="aksi-panel"><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB pilihan (.xlsx)</button><button class="tombol" type="button" data-aksi="hitung-rab">Hitung RAB pilihan (Rp)</button>${tombolPlafon()}${S.edit ? '' : tombol('buat-grup', 'Buat grup (Ctrl+G)', 'utama') + tombol('jadikan-komponen', 'Jadikan komponen')}${tombol('hapus-sel', 'Hapus semua', 'bahaya')}</div>`;
 }
 function htmlLevel() {
   const lv = daftarLevel(), nBantu = [...S.elems.values()].filter(d => d.jenis === 'bantu').length;
@@ -11670,7 +11705,7 @@ function htmlRingkasan() {
   ${htmlLevel()}
   ${htmlDaftarPotong()}
   ${htmlRekapBagian([...S.elems.keys()])}
-  <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button><button class="tombol" type="button" data-aksi="ekspor-dae" title="Dibuka di SketchUp lewat File &gt; Import">Unduh model 3D untuk SketchUp (.dae)</button></div>
+  <div class="aksi-panel"><button class="tombol utama" type="button" data-aksi="hitung-rab">Hitung RAB (Rp)</button><button class="tombol" type="button" data-aksi="ekspor-rab">Ekspor volume RAB (.xlsx)</button><button class="tombol" type="button" data-aksi="ekspor-dae" title="Dibuka di SketchUp lewat File &gt; Import">Unduh model 3D untuk SketchUp (.dae)</button></div>
   <section><h2>Berkas proyek</h2><div class="aksi-panel"><button class="tombol" type="button" data-aksi="simpan-proyek">Simpan proyek (.json)</button>${tombol('buka-proyek', 'Buka proyek (.json)')}${Object.keys(CONTOH_PROYEK).map(k => `<button class="tombol" type="button" data-aksi="buka-contoh" data-contoh="${k}">Contoh: ${esc(CONTOH_PROYEK[k].nama)}</button>`).join('')}</div><p class="meta">Model juga tersimpan otomatis di aplikasi. Berkas .json untuk cadangan, arsip, atau dikirim ke orang lain. Ctrl+S menyimpan, Ctrl+O membuka. Contoh dapat ditambahkan ke model sekarang atau menggantikannya.</p></section>
   ${komp ? `<section><h2>Komponen proyek</h2><ul class="daftar-komp">${komp}</ul><p class="meta">Pilih benda lalu tekan G untuk membuat komponen; salinan yang sama di model bisa ikut diganti.</p>${takTerpakai ? `<div class="aksi-panel"><button class="tombol" type="button" data-aksi="komp-bersih" ${dis()}>Hapus ${takTerpakai} definisi tak terpakai</button></div>` : ''}</section>` : ''}
   <section><h2>Pintasan</h2><dl class="pintasan">
@@ -11933,6 +11968,7 @@ panel.addEventListener('click', e => {
   else if (aksi === 'buka-proyek') bukaProyek();
   else if (aksi === 'buka-contoh') bukaContoh(/** @type {HTMLElement} */ (e.target).dataset.contoh);
   else if (aksi === 'ekspor-rab') eksporRAB(S.sel.size ? [...S.sel] : [...S.elems.keys()]);
+  else if (aksi === 'hitung-rab') bukaRAB(S.sel.size ? [...S.sel] : null);
   else if (aksi === 'ekspor-dae') unduhDAE();
   else if (aksi === 'buat-kusen' && id) {
     const b = S.elems.get(id);
@@ -16194,11 +16230,13 @@ function dataRAB(ids) {
   for (const x of lain.values()) tambah(d8, x.kode, x.uraian, x.sat, x.vol, x.ket ?? (x.kode ? '' : 'Isi kode HSP yang sesuai'));
   return {divisi: divisi.filter(d => d.baris.length), geos, t};
 }
-async function eksporRAB(ids) {
+/** Ekspor RAB ke Excel. opsi.harga = isi harga satuan dan status dari panel Hitung RAB (v0.46). */
+async function eksporRAB(ids, opsi = {}) {
   if (!S.unduh) return toast('Unduhan tidak tersedia di tampilan ini.');
+  const berharga = !!opsi.harga;
   let X;
   try { X = await muatXLSX(); } catch { return toast('Pustaka Excel gagal dimuat. Periksa koneksi lalu coba lagi.'); }
-  const {divisi, geos} = dataRAB(ids);
+  const {geos} = dataRAB(ids), hr = berharga ? hitungRAB(ids) : null, divisi = hr ? hr.divisi : dataRAB(ids).divisi;
   if (!divisi.length) return toast('Belum ada volume untuk diekspor.');
   const romawi = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
   const nf = '#,##0.00', nr = '#,##0';
@@ -16213,11 +16251,11 @@ async function eksporRAB(ids) {
   const tgl = new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'});
   // Sheet RAB
   const ws = lembar();
-  sel(ws, 0, 0, 'RENCANA ANGGARAN BIAYA (VOLUME DARI MODEL RANCANG)');
+  sel(ws, 0, 0, berharga ? 'RENCANA ANGGARAN BIAYA (VOLUME DARI MODEL RANCANG, HARGA DENGAN STATUS DASAR)' : 'RENCANA ANGGARAN BIAYA (VOLUME DARI MODEL RANCANG)');
   sel(ws, 1, 0, 'Pekerjaan'); sel(ws, 1, 2, ': ' + (S.setel.nama || 'Proyek'));
   sel(ws, 2, 0, 'Tanggal'); sel(ws, 2, 2, ': ' + tgl);
   const H = 4;
-  ['No', 'Uraian Pekerjaan', 'Kode HSP', 'Satuan', 'Volume', 'Harga Satuan (Rp)', 'Jumlah Harga (Rp)', 'Keterangan'].forEach((h, c) => sel(ws, H, c, h));
+  ['No', 'Uraian Pekerjaan', 'Kode HSP', 'Satuan', 'Volume', 'Harga Satuan (Rp)', 'Jumlah Harga (Rp)', 'Keterangan', ...(berharga ? ['Status harga', 'Sumber harga'] : [])].forEach((h, c) => sel(ws, H, c, h));
   let r = H + 1;
   const subtotal = [];
   divisi.forEach((d, i) => {
@@ -16226,31 +16264,43 @@ async function eksporRAB(ids) {
     d.baris.forEach((b, j) => {
       const R = r + 1;
       sel(ws, r, 0, j + 1); sel(ws, r, 1, b.uraian); sel(ws, r, 2, b.kode); sel(ws, r, 3, b.satuan); sel(ws, r, 4, b.vol, nf);
-      sel(ws, r, 5, {f: `IFERROR(VLOOKUP(C${R},'HSP MASTER'!$A:$D,4,0),0)`}, nr);
-      sel(ws, r, 6, {f: `E${R}*F${R}`}, nr); sel(ws, r, 7, b.ket); r++;
+      // butir tanpa kode HSP: harga ditulis langsung karena tidak bisa di-VLOOKUP
+      sel(ws, r, 5, berharga && !b.kode ? b.harga : {f: `IFERROR(VLOOKUP(C${R},'HSP MASTER'!$A:$D,4,0),${berharga ? Math.round(b.harga) : 0})`}, nr);
+      sel(ws, r, 6, {f: `E${R}*F${R}`}, nr); sel(ws, r, 7, b.ket);
+      if (berharga) { sel(ws, r, 8, b.status === 'asumsi' ? 'ASUMSI ⚠' : b.status === 'kosong' ? 'KOSONG ⚠' : STATUS_HARGA[b.status]); sel(ws, r, 9, b.sumber); }
+      r++;
     });
     sel(ws, r, 1, 'Jumlah ' + (romawi[i] || i + 1)); sel(ws, r, 6, {f: `SUM(G${r0 + 1}:G${r})`}, nr);
     subtotal.push(`G${r + 1}`); r += 2;
   });
   const rJ = r;
   sel(ws, r, 1, 'JUMLAH'); sel(ws, r, 6, {f: subtotal.join('+')}, nr); r++;
-  sel(ws, r, 1, 'PPN 11%'); sel(ws, r, 6, {f: `ROUND(G${rJ + 1}*11%,0)`}, nr); r++;
+  const ppnX = hr ? hr.ppn : 11;
+  sel(ws, r, 1, `PPN ${String(ppnX).replace('.', ',')}%`); sel(ws, r, 6, {f: `ROUND(G${rJ + 1}*${ppnX}%,0)`}, nr); r++;
   sel(ws, r, 1, 'TOTAL'); sel(ws, r, 6, {f: `G${rJ + 1}+G${rJ + 2}`}, nr); r++;
   sel(ws, r, 1, 'DIBULATKAN'); sel(ws, r, 6, {f: `ROUNDDOWN(G${rJ + 3},-3)`}, nr); r++;
   r++;
   sel(ws, r, 1, 'Catatan: harga satuan diambil dari sheet HSP MASTER berdasarkan Kode HSP. Volume dihitung dari panjang as dan ukuran model RANCANG.');
-  batasi(ws, r, 7);
-  ws['!cols'] = [{wch: 5}, {wch: 52}, {wch: 11}, {wch: 7}, {wch: 12}, {wch: 17}, {wch: 19}, {wch: 44}];
-  ws['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: 7}}];
+  if (hr) {
+    r++; sel(ws, r, 1, `Nilai berstatus ASUMSI (belum ada dasar Perwali atau survei): Rp ${fmtRp(hr.nilaiStatus.asumsi)} = ${fmt(hr.porsiAsumsi * 100, 1)} % dari jumlah; ${hr.nStatus.asumsi} butir. Wajib diganti dengan survei/penawaran sebelum dipakai untuk HPS.`);
+    if (hr.nStatus.kosong) { r++; sel(ws, r, 1, `${hr.nStatus.kosong} butir berstatus KOSONG (belum ada harga) dihitung Rp 0; total belum lengkap.`); }
+  }
+  batasi(ws, r, berharga ? 9 : 7);
+  ws['!cols'] = [{wch: 5}, {wch: 52}, {wch: 11}, {wch: 7}, {wch: 12}, {wch: 17}, {wch: 19}, {wch: 44}, ...(berharga ? [{wch: 12}, {wch: 50}] : [])];
+  ws['!merges'] = [{s: {r: 0, c: 0}, e: {r: 0, c: berharga ? 9 : 7}}];
   // Sheet HSP MASTER (stub)
   const hm = lembar(), kode = new Map();
   const UMUM = {'ST-010': 'Pembesian besi polos (per kg)', 'ST-011': 'Pembesian besi ulir (per kg)'};
   for (const d of divisi) for (const b of d.baris) if (b.kode && !kode.has(b.kode)) kode.set(b.kode, UMUM[b.kode] ? {...b, uraian: UMUM[b.kode]} : b);
-  sel(hm, 0, 0, 'HSP MASTER — isi kolom D, atau ganti sheet ini dengan HSP MASTER dari berkas RAB Anda (kolom A kode, D harga)');
-  ['Kode', 'Uraian', 'Satuan', 'Harga Satuan (Rp)', 'Acuan'].forEach((h, c) => sel(hm, 2, c, h));
+  sel(hm, 0, 0, berharga ? 'HSP MASTER — harga dari panel Hitung RAB; kolom E status dasar harga (ASUMSI = belum ada dasar Perwali/survei)' : 'HSP MASTER — isi kolom D, atau ganti sheet ini dengan HSP MASTER dari berkas RAB Anda (kolom A kode, D harga)');
+  ['Kode', 'Uraian', 'Satuan', 'Harga Satuan (Rp)', berharga ? 'Status harga' : 'Acuan', ...(berharga ? ['Sumber harga'] : [])].forEach((h, c) => sel(hm, 2, c, h));
   let rh = 3;
-  for (const [k, b] of [...kode].sort((a, c) => a[0].localeCompare(c[0]))) { sel(hm, rh, 0, k); sel(hm, rh, 1, b.uraian); sel(hm, rh, 2, b.satuan); sel(hm, rh, 3, 0, nr); rh++; }
-  batasi(hm, rh, 4); hm['!cols'] = [{wch: 11}, {wch: 52}, {wch: 8}, {wch: 18}, {wch: 24}];
+  for (const [k, b] of [...kode].sort((a, c) => a[0].localeCompare(c[0]))) {
+    sel(hm, rh, 0, k); sel(hm, rh, 1, b.uraian); sel(hm, rh, 2, b.satuan); sel(hm, rh, 3, berharga ? Math.round(b.harga) : 0, nr);
+    if (berharga) { sel(hm, rh, 4, b.status === 'asumsi' ? 'ASUMSI ⚠' : b.status === 'kosong' ? 'KOSONG ⚠' : STATUS_HARGA[b.status]); sel(hm, rh, 5, b.sumber); }
+    rh++;
+  }
+  batasi(hm, rh, berharga ? 5 : 4); hm['!cols'] = [{wch: 11}, {wch: 52}, {wch: 8}, {wch: 18}, {wch: berharga ? 13 : 24}, ...(berharga ? [{wch: 60}] : [])];
   // Sheet BACKUP VOLUME: rincian per elemen
   const bv = lembar();
   ['ID', 'Jenis', 'Nama', 'Grup', 'Ukuran utama', 'Luas (m²)', 'Volume (m³)', 'Keterangan'].forEach((h, c) => sel(bv, 0, c, h));
@@ -16280,9 +16330,11 @@ async function eksporRAB(ids) {
   [['Proyek', S.setel.nama || 'Proyek'], ['Tanggal ekspor', tgl], ['Sumber', 'Aplikasi RANCANG'], ['Cakupan', ids.length === S.elems.size ? 'Seluruh model' : `${ids.length} objek terpilih`],
     ['Faktor sisa potong besi', `${fmt(S.setel.faktorBesi ?? 5, 0)}%`],
     ['Asumsi', 'Volume dinding dari panjang as; plester, acian, dan cat dihitung dua sisi; urugan kembali belum dikurangi slof; tanah asli dianggap ±0,00.'],
-    ['Cara pakai', 'Isi harga di sheet HSP MASTER (kolom D) atau tempel HSP MASTER dari berkas RAB Anda dengan kode yang sama. Harga di sheet RAB otomatis terisi lewat VLOOKUP.']]
+    ['Cara pakai', 'Isi harga di sheet HSP MASTER (kolom D) atau tempel HSP MASTER dari berkas RAB Anda dengan kode yang sama. Harga di sheet RAB otomatis terisi lewat VLOOKUP.'],
+    ...(berharga ? [['Status harga', 'PERWALI = ada dasar Perwali Kota Sorong 14/2025; SURVEI = survei/penawaran; ASUMSI ⚠ = belum ada dasar, wajib diganti sebelum HPS; KOSONG ⚠ = belum ada harga (Rp 0); TERMASUK = biaya sudah di baris lain. Berkas ini ditulis tanpa warna sel; tandai warna di Excel bila perlu (saring kolom Status).'],
+      ['Harga bawaan', SUMBER_BBP + '. Overhead sudah di dalam harga satuan.']] : [])]
     .forEach(([a, b], i) => { sel(inf, i, 0, a); sel(inf, i, 1, b); });
-  batasi(inf, 6, 1); inf['!cols'] = [{wch: 24}, {wch: 110}];
+  batasi(inf, berharga ? 8 : 6, 1); inf['!cols'] = [{wch: 24}, {wch: 110}];
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, 'RAB');
   X.utils.book_append_sheet(wb, hm, 'HSP MASTER');
@@ -16290,8 +16342,145 @@ async function eksporRAB(ids) {
   X.utils.book_append_sheet(wb, inf, 'INFO');
   const data = X.write(wb, {bookType: 'xlsx', type: 'array'});
   const dasar = (S.setel.nama || 'rancang').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'rancang';
-  await simpanBerkas(`${dasar}_volume-rab.xlsx`, new Blob([data]));
+  await simpanBerkas(`${dasar}_${berharga ? 'rab-rp' : 'volume-rab'}.xlsx`, new Blob([data]));
 }
+
+/* ============ Hitung RAB berharga (v0.46) ============ */
+// Harga satuan per kode HSP dengan status dasar harga: perwali, survei, asumsi, kosong, termasuk.
+// Harga bawaan = HSP hasil AHSP RAB Dermaga TUKS BBP v1 (upah dan bahan Perwali Kota Sorong 14/2025, overhead 10 % sudah di dalam HSP).
+// Status bawaan perwali bila porsi komponen non-Perwali < 50 %, selain itu asumsi. Kode lain sengaja tanpa harga bawaan (tidak dikarang).
+// Harga bawaan hanya dipakai bila satuannya sama dengan satuan butir (mis. DM-011 per kg hanya untuk tiang pipa baja).
+const SUMBER_BBP = 'AHSP RAB Dermaga BBP v1 (Perwali 14/2025, OH 10 %)';
+const HARGA_BAWAAN = {
+  'ST-K35': [2762705, 'm³', 'perwali'], 'ST-011': [22160, 'kg', 'perwali'], 'ST-010': [22160, 'kg', 'perwali'], 'ST-020': [516692, 'm²', 'perwali'],
+  'DM-011': [37620, 'kg', 'asumsi', 'Harga pipa baja Ø508 × 12 mm per kg belum ada di Perwali'], 'DM-012': [450179, "m'", 'asumsi', 'Sewa ponton dan alat pancang di luar Perwali'],
+  'DM-013': [1023963, 'titik', 'asumsi', 'Kawat las dan alat las di luar Perwali'], 'DM-014': [280431, 'titik', 'asumsi', 'Alat potong di luar Perwali'],
+  'DM-015': [114118, 'm²', 'asumsi', 'Coating epoxy coal tar di luar Perwali'], 'DM-101': [16652075, 'bh', 'asumsi', 'Bolder 15 ton; harga barang di luar Perwali'],
+  'DM-102': [21052075, 'bh', 'asumsi', 'Fender karet V 300H L 1,50 m; harga barang di luar Perwali'], 'DM-103': [14249675, 'titik', 'asumsi', 'Lampu PJU tiang 6 m; harga barang di luar Perwali'],
+  'DM-104': [3833638, 'bh', 'perwali']
+};
+const STATUS_HARGA = {perwali: 'Perwali', survei: 'Survei', asumsi: 'Asumsi', kosong: 'Kosong', termasuk: 'Termasuk'};
+// Butir informasi yang biayanya sudah masuk baris lain (beton, besi, bekisting dihitung di divisi beton)
+const KODE_TERMASUK = new Set(['ST-030', 'ST-031', 'DM-090']);
+const kunciHarga = b => b.kode || '#' + b.uraian;
+const fmtRp = n => Math.round(Number.isFinite(n) ? n : 0).toLocaleString('id-ID');
+/**
+ * Harga satuan, status, dan sumber untuk satu butir RAB: ubahan pengguna (setel.hargaRAB) → harga bawaan → kosong.
+ * @param {{kode: string, uraian: string, satuan: string, ket?: string}} b
+ */
+function hargaButir(b) {
+  const u = (S.setel.hargaRAB || {})[kunciHarga(b)];
+  if (u && (u.harga > 0 || u.status === 'termasuk')) return {harga: u.status === 'termasuk' ? 0 : +u.harga, status: STATUS_HARGA[u.status] ? u.status : 'asumsi', sumber: u.sumber || '', ubah: true};
+  if (KODE_TERMASUK.has(b.kode)) return {harga: 0, status: 'termasuk', sumber: b.ket || 'Sudah termasuk baris lain', ubah: false};
+  const hb = HARGA_BAWAAN[b.kode];
+  if (hb && hb[1] === b.satuan) return {harga: hb[0], status: hb[2], sumber: SUMBER_BBP + (hb[3] ? '; ' + hb[3] : ''), ubah: false};
+  // tiang kelompok lain (DM-02x, DM-03x, …) memakai harga kelompok 01 sebagai asumsi bila satuannya sama
+  const m = /^DM-(\d\d)([1-5])$/.exec(b.kode || ''), h1 = m && m[1] !== '01' ? HARGA_BAWAAN['DM-01' + m[2]] : null;
+  if (h1 && h1[1] === b.satuan) return {harga: h1[0], status: 'asumsi', sumber: `Disamakan dengan tiang kelompok 01 (DM-01${m[2]}); ganti bila spesifikasi berbeda`, ubah: false};
+  return {harga: 0, status: 'kosong', sumber: '', ubah: false};
+}
+/**
+ * RAB berharga untuk sekumpulan elemen: volume dari dataRAB, harga dari hargaButir.
+ * @param {Iterable<string>} ids
+ */
+function hitungRAB(ids) {
+  const {divisi} = dataRAB(ids), ppn = Number.isFinite(S.setel.ppnRAB) ? S.setel.ppnRAB : 11;
+  const nilai = {perwali: 0, survei: 0, asumsi: 0, kosong: 0, termasuk: 0}, n = {...nilai};
+  let jumlah = 0;
+  const div = divisi.map(d => {
+    let sub = 0;
+    const baris = d.baris.map(b => { const h = hargaButir(b), j = b.vol * h.harga; sub += j; nilai[h.status] += j; n[h.status]++; return {...b, ...h, jumlah: Math.round(j)}; });
+    jumlah += sub;
+    return {nama: d.nama, baris, jumlah: Math.round(sub)};
+  });
+  jumlah = Math.round(jumlah);
+  const nilaiPpn = Math.round(jumlah * ppn / 100), total = jumlah + nilaiPpn;
+  return {divisi: div, jumlah, ppn, nilaiPpn, total, dibulatkan: Math.floor(total / 1000) * 1000,
+    nilaiStatus: Object.fromEntries(Object.entries(nilai).map(([k, v]) => [k, Math.round(v)])), nStatus: n, porsiAsumsi: jumlah ? nilai.asumsi / jumlah : 0};
+}
+/** Bentuk ringkas hasil hitungRAB untuk MCP (batas 32 KB): sumber hanya untuk butir asumsi/survei. */
+function ringkasHitungRAB(h) {
+  const r = {jumlah: h.jumlah, ppnPersen: h.ppn, ppn: h.nilaiPpn, total: h.total, dibulatkan: h.dibulatkan, nilaiStatus: h.nilaiStatus, jumlahButirStatus: h.nStatus, porsiAsumsi: +h.porsiAsumsi.toFixed(4),
+    divisi: h.divisi.map(d => ({nama: d.nama, jumlah: d.jumlah, baris: d.baris.map(b => ({kode: b.kode, uraian: b.uraian, satuan: b.satuan, vol: b.vol, harga: Math.round(b.harga), jumlah: b.jumlah, status: b.status, ...(b.status === 'asumsi' || b.status === 'survei' ? {sumber: b.sumber} : {})}))}))};
+  return JSON.stringify(r).length > 30000 ? {...r, divisi: r.divisi.map(d => ({nama: d.nama, jumlah: d.jumlah, baris: d.baris.length})), catatan: 'Rincian terlalu besar; minta per grup atau per ids.'} : r;
+}
+const RAB_UI = {ids: null};
+function idsRAB() { return RAB_UI.ids && RAB_UI.ids.length ? RAB_UI.ids.filter(id => S.elems.has(id)) : [...S.elems.keys()]; }
+/** Buka panel Hitung RAB (Rp). ids kosong = seluruh model. @param {string[] | null} [ids] */
+function bukaRAB(ids = null) {
+  if (!S.elems.size) return toast('Model masih kosong; belum ada volume untuk dihitung.');
+  RAB_UI.ids = ids && ids.length ? ids : null;
+  $('#mr-judul').textContent = RAB_UI.ids ? `Hitung RAB (Rp) — ${RAB_UI.ids.length} objek terpilih` : 'Hitung RAB (Rp) — seluruh model';
+  /** @type {HTMLInputElement} */ ($('#mr-ppn')).value = String(Number.isFinite(S.setel.ppnRAB) ? S.setel.ppnRAB : 11);
+  $('#mr-reset').textContent = 'Kembalikan harga bawaan'; delete $('#mr-reset').dataset.yakin;
+  $('#modalRab').hidden = false;
+  gambarRAB();
+}
+function tutupRAB() { $('#modalRab').hidden = true; }
+function ringkasRAB(h) {
+  const persen = v => h.jumlah ? ` (${fmt(v / h.jumlah * 100, 0)} %)` : '';
+  $('#mr-ringkas').innerHTML = `
+    <div><span class="meta">Jumlah</span><b>Rp ${fmtRp(h.jumlah)}</b></div>
+    <div><span class="meta">PPN ${fmt(h.ppn, h.ppn % 1 ? 1 : 0)} %</span><b>Rp ${fmtRp(h.nilaiPpn)}</b></div>
+    <div><span class="meta">Total dibulatkan</span><b>Rp ${fmtRp(h.dibulatkan)}</b></div>
+    <div class="st-asumsi" style="padding:2px 8px"><span class="meta">Masih asumsi</span><b>Rp ${fmtRp(h.nilaiStatus.asumsi)}${persen(h.nilaiStatus.asumsi)}</b><span class="meta">${h.nStatus.asumsi} butir perlu survei atau dasar harga</span></div>
+    <div class="${h.nStatus.kosong ? 'st-kosong' : ''}" style="padding:2px 8px"><span class="meta">Belum ada harga</span><b>${h.nStatus.kosong} butir</b><span class="meta">${h.nStatus.kosong ? 'dihitung Rp 0; total belum lengkap' : 'semua butir sudah berharga'}</span></div>
+    <div><span class="meta">Berdasar Perwali / survei</span><b>Rp ${fmtRp(h.nilaiStatus.perwali + h.nilaiStatus.survei)}${persen(h.nilaiStatus.perwali + h.nilaiStatus.survei)}</b></div>`;
+}
+function gambarRAB() {
+  const h = hitungRAB(idsRAB()), romawi = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+  ringkasRAB(h);
+  const pilihan = st => Object.entries(STATUS_HARGA).filter(([k]) => k !== 'kosong').map(([k, v]) => `<option value="${k}"${k === st ? ' selected' : ''}>${v}</option>`).join('');
+  let isi = '';
+  h.divisi.forEach((d, i) => {
+    isi += `<tr class="div"><td>${romawi[i] || i + 1}</td><td colspan="8">${esc(d.nama)}</td></tr>`;
+    d.baris.forEach((b, j) => {
+      const k = esc(kunciHarga(b)), ket = b.ket && b.status !== 'termasuk' ? `<div class="meta">${esc(b.ket)}</div>` : '';
+      isi += `<tr class="st-${b.status}" data-kunci="${k}" data-vol="${b.vol}"><td>${j + 1}</td><td>${esc(b.uraian)}${ket}</td><td>${esc(b.kode || '—')}</td><td>${esc(b.satuan)}</td><td class="n">${fmt(b.vol, 3)}</td>
+        <td class="n">${b.status === 'termasuk' ? '—' : `<input class="h" type="text" inputmode="decimal" data-f="harga" value="${b.harga ? fmtRp(b.harga) : ''}" placeholder="isi harga" aria-label="Harga satuan ${esc(b.uraian)}">`}</td>
+        <td class="n" data-jumlah>${b.status === 'termasuk' ? '—' : fmtRp(b.jumlah)}</td>
+        <td><select data-f="status" aria-label="Status harga">${b.status === 'kosong' ? '<option value="kosong" selected>Kosong</option>' : ''}${pilihan(b.status)}</select></td>
+        <td><input type="text" data-f="sumber" value="${esc(b.sumber)}" title="${esc(b.sumber)}" placeholder="${b.status === 'kosong' ? 'mis. survei toko X, 20/10/2026' : ''}" aria-label="Sumber harga"></td></tr>`;
+    });
+    isi += `<tr class="sub"><td></td><td colspan="5">Jumlah ${romawi[i] || i + 1}</td><td class="n">${fmtRp(d.jumlah)}</td><td colspan="2"></td></tr>`;
+  });
+  $('#mr-tabel').innerHTML = `<table><thead><tr><th style="width:34px">No</th><th>Uraian pekerjaan</th><th style="width:78px">Kode HSP</th><th style="width:44px">Sat</th><th style="width:96px">Volume</th><th style="width:128px">Harga satuan (Rp)</th><th style="width:128px">Jumlah (Rp)</th><th style="width:104px">Status</th><th style="width:22%">Sumber / keterangan harga</th></tr></thead><tbody>${isi}</tbody></table>`;
+}
+/** Ubah harga, status, atau sumber satu kode (dipakai panel dan rancangAPI). */
+function ubahHargaRAB(kunci, ubah) {
+  const lama = (S.setel.hargaRAB || {})[kunci];
+  const contoh = hitungRAB(idsRAB()).divisi.flatMap(d => d.baris).find(b => kunciHarga(b) === kunci);
+  const kini = lama || (contoh ? {harga: contoh.harga, status: contoh.status, sumber: contoh.sumber} : {harga: 0, status: 'asumsi', sumber: ''});
+  const baru = {harga: +kini.harga || 0, status: kini.status, sumber: kini.sumber || '', ...ubah};
+  // harga yang diketik tanpa dasar: status kosong/bawaan berubah menjadi asumsi, kecuali pengguna memilih status sendiri
+  if ('harga' in ubah && !('status' in ubah) && (kini.status === 'kosong' || (!lama && kini.harga !== baru.harga))) baru.status = 'asumsi';
+  if ('harga' in ubah && !('sumber' in ubah) && !lama && kini.harga !== baru.harga) baru.sumber = '';
+  if (baru.status === 'kosong') baru.status = 'asumsi';
+  const peta = {...(S.setel.hargaRAB || {})};
+  if (!(baru.harga > 0) && baru.status !== 'termasuk') delete peta[kunci]; else peta[kunci] = baru;
+  S.setel.hargaRAB = peta; simpanSetelan();
+}
+const angkaRp = t => { const v = parseFloat(String(t).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')); return Number.isFinite(v) && v > 0 ? v : 0; };
+$('#mr-tabel').addEventListener('change', e => {
+  const t = /** @type {HTMLInputElement} */ (e.target), tr = t.closest('tr[data-kunci]');
+  if (!tr) return;
+  const f = t.dataset.f, k = /** @type {HTMLElement} */ (tr).dataset.kunci;
+  ubahHargaRAB(k, f === 'harga' ? {harga: angkaRp(t.value)} : {[f]: f === 'sumber' ? t.value.trim() : t.value});
+  gambarRAB();
+});
+$('#mr-tabel').addEventListener('keydown', e => { const t = /** @type {HTMLElement} */ (e.target); if (e.key === 'Enter' && t.matches('input')) { e.preventDefault(); /** @type {HTMLInputElement} */ (t).blur(); } });
+$('#mr-ppn').addEventListener('change', e => {
+  const v = parseFloat(/** @type {HTMLInputElement} */ (e.target).value.replace(',', '.'));
+  S.setel.ppnRAB = Number.isFinite(v) && v >= 0 && v <= 20 ? v : 11; simpanSetelan(); gambarRAB();
+});
+$('#mr-reset').addEventListener('click', () => {
+  const b = $('#mr-reset');
+  if (!b.dataset.yakin) { b.dataset.yakin = '1'; b.textContent = 'Klik lagi: hapus semua harga yang Anda isi'; return; }
+  delete b.dataset.yakin; b.textContent = 'Kembalikan harga bawaan';
+  delete S.setel.hargaRAB; simpanSetelan(); gambarRAB(); toast('Harga dikembalikan ke bawaan.');
+});
+$('#mr-tutup').addEventListener('click', tutupRAB);
+$('#mr-ekspor').addEventListener('click', () => eksporRAB(idsRAB(), {harga: true}));
 
 /* ============ Zoom dan geser pratinjau 2D (v0.25) ============ */
 // Zoom mengubah viewBox SVG pratinjau saja; berkas unduhan tidak terpengaruh.
@@ -18244,6 +18433,8 @@ window.rancangAPI = Object.freeze({
   dae: () => { const r = buatDAE(); return {dae: r.dae, elemen: r.elemen, segitiga: r.segitiga}; },
   pdfSet: async (o = {}) => { const r = await buatPDFSet({...opsi2D(), ...o}); return {jumlah: r.jumlah, raster: r.raster, pdf: await keDataURL(r.blob)}; },
   rab: ids => { const r = dataRAB(ids && ids.length ? ids : semuaId()); return r.divisi; },
+  hitungRAB: ids => ringkasHitungRAB(hitungRAB(ids && ids.length ? ids : semuaId())),
+  panelRAB: () => { bukaRAB(); return {tampil: !$('#modalRab').hidden, ringkas: $('#mr-ringkas').textContent.replace(/\s+/g, ' ').trim(), baris: $('#mr-tabel').querySelectorAll('tr[data-kunci]').length, asumsi: $('#mr-tabel').querySelectorAll('tr.st-asumsi').length}; },
   ringkasan: ids => total(ids && ids.length ? ids : semuaId()),
   ukurElemen: id => { const d = S.elems.get(id); return d ? ukur(d) : null; },
   // Pilihan pengguna saat ini (v0.33): acuan kata "ini/itu/yang dipilih" bagi Claude lewat MCP maupun Panel Claude
@@ -18437,7 +18628,10 @@ const ALAT_CLAUDE = [
       const r = dataRAB(Array.isArray(inp.ids) && inp.ids.length ? inp.ids.map(String) : semuaId()).divisi;
       // hasil alat paling besar 32 KB: bila terlalu besar, kirim ringkasan per divisi
       return JSON.stringify(r).length > 30000 ? {catatan: 'Hasil terlalu besar; minta per grup atau per ids.', divisi: r.map(d => ({nama: d.nama, baris: (d.baris || []).length}))} : r;
-    }}
+    }},
+  {name: 'hitung_rab', description: 'RAB berharga (Rp): volume × harga satuan per divisi, total dengan PPN, dan status dasar tiap harga (perwali, survei, asumsi, kosong, termasuk). Asumsi = belum ada dasar Perwali atau survei.',
+    inputSchema: {type: 'object', properties: {ids: {type: 'array', items: {type: 'string'}}}},
+    execute(inp) { langkahClaude('Menghitung RAB berharga…'); return ringkasHitungRAB(hitungRAB(Array.isArray(inp.ids) && inp.ids.length ? inp.ids.map(String) : semuaId())); }}
 ];
 function gelembung(peran, teks) {
   const el = document.createElement('div');

@@ -1,3 +1,16 @@
+## Yang baru di 0.46.0
+
+RAB sampai nilai rupiah, dengan tanda pada harga yang belum pasti (21 Oktober 2026).
+
+- **Menu baru "Hitung RAB (Rp)"** di palet perintah (cari "harga") dan panel proyek, grup, atau pilihan. Volume diambil dari hitungan yang sama dengan ekspor volume RAB; harga satuan bisa diketik langsung di tabel; jumlah per divisi, PPN (bawaan 11 %, bisa diubah), total, dan angka dibulatkan langsung keluar.
+- **Status dasar harga per butir**, ditandai warna: *Perwali* (ada dasar Perwali Kota Sorong 14/2025), *Survei* (hijau muda, sumber diisi sendiri), **Asumsi** (kuning, belum ada dasar peraturan maupun survei), *Kosong* (merah, belum ada harga, dihitung Rp 0), dan *Termasuk* (biaya sudah di baris lain). Harga yang Anda ketik tanpa memilih status otomatis berstatus asumsi.
+- **Ringkasan kesiapan HPS** di atas tabel: berapa rupiah dan berapa persen nilai yang masih asumsi, dan berapa butir belum berharga.
+- **Harga bawaan** dari AHSP RAB Dermaga BBP v1 (upah dan bahan Perwali 14/2025, overhead 10 % di dalam harga satuan) untuk beton fc′ 35, besi, bekisting, tiang pipa baja, bolder, fender, PJU, dan tangga monyet. Kode lain sengaja dibiarkan kosong untuk Anda isi.
+- **Ekspor RAB berharga (.xlsx)** dari panel: harga terisi, kolom Status dan Sumber harga, catatan nilai asumsi; rumus tetap VLOOKUP ke HSP MASTER.
+- Alat MCP baru **`hitung_rab`** agar Claude bisa membaca RAB berharga beserta status tiap harga.
+- Harga, status, dan sumber yang Anda ubah tersimpan di berkas proyek.
+- Pasang **RANCANG-Setup-0.46.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.46.0 dari rilis yang sama.
+
 ## Yang baru di 0.45.0
 
 Potongan dan detail setingkat gambar kerja konsultan, dari kajian gambar Dermaga KP Sorong (21 Oktober 2026).
