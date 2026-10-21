@@ -1,3 +1,11 @@
+## Yang baru di 0.45.1
+
+Perbaikan volume RAB tiang pipa baja (21 Oktober 2026), dari RAB Marina Utara BBP.
+
+- **Coating hanya di zona tertentu**: panel Properti tiang → *Coating: elevasi atas / bawah*. Bila diisi, luas coating dihitung hanya pada zona itu (mis. zona pasang surut −1,00 s.d. kepala tiang), bukan seluruh panjang tiang. Keterangan RAB menyebut "Luas selimut zona coating saja". Kosongkan untuk perilaku lama (seluruh panjang).
+- **Isian beton tanpa spiral**: panel Properti tiang → *Spiral Ø10-150 isian* = *Tidak* untuk pipa kecil yang hanya diisi beton pengisi; baris besi Ø10 isian tidak lagi muncul di RAB. Bawaan tetap *Ya*.
+- Pasang **RANCANG-Setup-0.45.1.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.45.1 dari rilis yang sama.
+
 ## Yang baru di 0.45.0
 
 Jeti kayu di atas tiang pipa baja (21 Oktober 2026), untuk jeti speedboat Marina BBP.

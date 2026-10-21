@@ -651,7 +651,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | M | level | nama, z (elevasi dalam meter). Opsional datum 'hwl'/'msl'/'lwl'/'dasar' = datum pasang surut (digambar sebagai garis air/dasar laut di potongan dan tampak, tidak ikut daftar level lantai). Pindah dan Push/Pull menempel ke elevasinya; tidak masuk RAB. Datum 'dasar' boleh profil {awal{x,y}, akhir{x,y}, titik [[jarak, z]…]} = dasar laut miring sepanjang garis awal→akhir (jarak dari awal; di luar rentang = titik ujung) | `{"jenis":"level","nama":"Lantai 2","z":3.2}` |
 | Y | tangga | Tangga beton lurus: awal{x,y} (sudut kiri bawah anak tangga pertama dilihat dari arah naik), arah (° dari sumbu X), lebar, tinggi (naik total), jumlahAnak (optrede), antrede (lebar injakan), tebalPlat, z0, railing ('tanpa'/'kiri'/'kanan'/'dua'). Panjang denah = antrede × (jumlahAnak − 1). Masuk RAB beton, besi, bekisting | `{"jenis":"tangga","awal":{"x":30,"y":9},"arah":180,"lebar":1.2,"tinggi":4,"jumlahAnak":22,"antrede":0.28,"tebalPlat":0.12,"z0":0,"railing":"kanan"}` |
 | W | plat | Plat lantai beton: alas [{x,y}…], z0 (permukaan BAWAH), tebal, opsional lubang, tul {d, s}, fc. Permukaan atas = z0 + tebal. Masuk RAB beton, besi dua lapis dua arah, bekisting | `{"jenis":"plat","alas":[{"x":0,"y":0},{"x":37,"y":0},{"x":37,"y":8.75},{"x":0,"y":8.75}],"z0":3.88,"tebal":0.12}` |
-| Z | tiang | Tiang pancang dermaga: bahan 'baja' (pipa) / 'spun' / 'beton' (persegi precast) / 'kayu'; x, y (pusat), zKepala (elevasi kepala), panjang (m, ujung bawah = zKepala − panjang). Bulat (baja, spun): dLuar dan tebal dalam MILIMETER. Persegi (beton, kayu): b (m). Opsional: panjangSegmen (m, bawaan 12; sambungan las = segmen − 1), coating (true/false, baja), isian {panjang (m dari kepala), fc, tul{n,d}}. RAB: divisi Pekerjaan Dermaga (pengadaan kg/m'/m³, pemancangan m', sambungan, perataan kepala, coating); beton dan besi isian ke divisi beton. Tiang miring (v0.41): miring {n (1:n, tegak:mendatar, 1–50), arah (derajat arah condong ujung bawah di denah; 0 = +x, 90 = +y)}; panjang = panjang miring. Selimut beton anti karat (v0.41): selimut {atas, bawah (elevasi), tebal (m, ≤ 0,5), fc} | `{"jenis":"tiang","bahan":"baja","x":0,"y":0,"dLuar":508,"tebal":12,"panjang":40,"zKepala":3.5,"panjangSegmen":12,"coating":true,"isian":{"panjang":4,"fc":24.9,"tul":{"n":10,"d":19}}}` |
+| Z | tiang | Tiang pancang dermaga: bahan 'baja' (pipa) / 'spun' / 'beton' (persegi precast) / 'kayu'; x, y (pusat), zKepala (elevasi kepala), panjang (m, ujung bawah = zKepala − panjang). Bulat (baja, spun): dLuar dan tebal dalam MILIMETER. Persegi (beton, kayu): b (m). Opsional: panjangSegmen (m, bawaan 12; sambungan las = segmen − 1), coating (true/false, baja), coatingZona {atas, bawah} (elevasi; coating hanya di zona ini, mis. pasang surut — v0.45.1), isian {panjang (m dari kepala), fc, tul{n,d}, spiral (false = tanpa spiral Ø10-150 — v0.45.1)}. RAB: divisi Pekerjaan Dermaga (pengadaan kg/m'/m³, pemancangan m', sambungan, perataan kepala, coating); beton dan besi isian ke divisi beton. Tiang miring (v0.41): miring {n (1:n, tegak:mendatar, 1–50), arah (derajat arah condong ujung bawah di denah; 0 = +x, 90 = +y)}; panjang = panjang miring. Selimut beton anti karat (v0.41): selimut {atas, bawah (elevasi), tebal (m, ≤ 0,5), fc} | `{"jenis":"tiang","bahan":"baja","x":0,"y":0,"dLuar":508,"tebal":12,"panjang":40,"zKepala":3.5,"panjangSegmen":12,"coating":true,"isian":{"panjang":4,"fc":24.9,"tul":{"n":10,"d":19}}}` |
 | O | perlengkapan | Perlengkapan dermaga: tipe 'bolder' (kapasitas ton) / 'fender' (panjang m, model) / 'pju' (tinggi m) / 'tanggaMonyet' (tinggi m); x, y, z0 (dudukan; fender dan tangga monyet: z0 = puncak, menggantung ke bawah), rotasi (°; +Y lokal = arah ke laut). RAB per buah | `{"jenis":"perlengkapan","tipe":"bolder","kapasitas":15,"x":0,"y":0,"z0":4.2,"rotasi":0}` |
 | J | jetiKayu | Dermaga kayu satu ruas lurus (v0.40): awal{x,y}, akhir{x,y} (as jeti), lebar, zLantai (elevasi atas papan), jarakPortal (jarak maks. portal tiang; dibagi rata), kayu (nama jenis), tiang{b (sisi m), panjang, n (tiang per portal), bahan ('kayu' bawaan / 'baja' = tiang dari elemen Tiang pancang Z terpisah; jeti hanya rangka atas, b = diameter pipa)}, balokKepala{b, h, ganda (true = dua balok menjepit tiang)}, gelagar{b, h, jarak}, papan{tebal, lebar, celah}, skor{pasang, b, h} (silang 45° tiap portal). Opsional portalAwal/portalAkhir false bila ujung menumpu ruas lain (jeti L = dua ruas). Awalan J dipakai bersama batang. RAB: DM-201…208 (kayu m³ per komponen, pemancangan m', baut set, pengawetan m²) | `{"jenis":"jetiKayu","awal":{"x":0,"y":0},"akhir":{"x":52,"y":0},"lebar":2.5,"zLantai":3,"jarakPortal":2.5,"kayu":"Besi","tiang":{"b":0.2,"panjang":8,"n":2},"balokKepala":{"b":0.08,"h":0.2,"ganda":true},"gelagar":{"b":0.08,"h":0.15,"jarak":0.6},"papan":{"tebal":0.04,"lebar":0.2,"celah":0.01},"skor":{"pasang":true,"b":0.06,"h":0.15}}` |
 | L | gambar2d | Benda gambar 2D di Ruang Lembar: bentuk ('garis','polyline','persegi','lingkaran','busur','teks','arsir'; v0.41: 'dimensi' titik [≥2 titik dunia, >2 = berantai], arah 'datar'/'tegak'/'sejajar', geser (mm kertas dari titik pertama), bidang 'denah'/'tegak', satuan 'm'/'cm' opsional, teks opsional; 'sudut' titik [puncak, kaki1, kaki2]; 'kemiringan' titik [2 pada garis miring]; 'label' titik [ujung panah, letak teks], sumber (id elemen), isi (pola {nama}, {tulangan}, …) atau teks), lembar (mis. 'denah', 'potongan:X3', 'sampul'), tempel ('gambar' = titik dunia {x,y,z} meter; 'kertas' = titik {x,y} mm kertas), titik (garis 2 titik; persegi 2 sudut; lingkaran pusat + titik tepi; busur awal, akhir, titik pada busur), gaya {tebal mm, garis 'penuh'/'putus'/'as'/'titik', warna 'hitam'/'abu'/'merah'/'biru'}. Teks: teks, ukuran (mm). Arsir: pola ('beton','bata','tanah','pasir','kayu','keramik'). Polyline: tutup. Simbol perabot (`bentuk:'simbol'`, hanya denah/denah atap/denah pondasi, tempel 'gambar', titik = pusat): simbol ('kasur1','kasur2','lemari','mejaMakan','mejaKerja','sofa','klosetDuduk','klosetJongkok','wastafel','shower','bakMandi','kitchenSet','pohon'), rotasi (0/90/180/270). Legenda otomatis: `bentuk:'legenda'`, tempel 'kertas', titik = sudut kiri atas (mm). Di lembar detail, benda di dalam petak Detail bebas memakai `tempel:'petak'`, `petak` = id detail (E…), titik mm dari pojok kiri atas petak Detail perbesaran (`bentuk:'perbesar'`, tempel 'gambar'): titik [pusat, titik tepi lingkaran sumber] (dunia), letak {x, y} mm kertas, skala (penyebut), nomor; opsional v0.44: judul, bingkai 'lingkaran'/'persegi', rasio (lebar:tinggi bingkai persegi, 1–3), penghubung (true = garis dari lingkaran sumber ke detail), rinci {arsir, tulangan, ukuran, label, bahan} (false = dimatikan; kosong = menyala; isi rinci berlaku di lembar potongan). Viewport bebas (`bentuk:'viewport'`, tempel 'kertas', titik = dua sudut kotak mm): sumber (jenis gambar yang ditampilkan, mis. 'denah:0', 'depan', 'potongan:X3', 'pondasi'), skala (penyebut), pusat {x,y,z} = titik dunia di tengah kotak, judul (opsional; bawaan nama gambar). Isinya dirender ulang dari model | `{"jenis":"gambar2d","bentuk":"teks","lembar":"denah","tempel":"kertas","titik":[{"x":30,"y":180}],"teks":"Catatan: semua ukuran dalam meter","ukuran":2.5,"gaya":{"warna":"hitam"}}` |
@@ -980,7 +980,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
 /**
  * Z — tiang pancang (v0.39). Bulat (baja, spun): dLuar dan tebal dalam mm. Persegi (beton, kayu): sisi b (m).
  * @typedef {DasarElemen & {jenis: 'tiang', bahan: 'baja' | 'spun' | 'beton' | 'kayu', x: number, y: number, zKepala: number, panjang: number, dLuar?: number, tebal?: number, b?: number,
- *   panjangSegmen?: number, coating?: boolean, isian?: {panjang: number, fc?: number, tul?: {n: number, d: number}}}} Tiang
+ *   panjangSegmen?: number, coating?: boolean, coatingZona?: {atas: number, bawah: number}, isian?: {panjang: number, fc?: number, tul?: {n: number, d: number}, spiral?: boolean}}} Tiang
  */
 /**
  * J — dermaga kayu satu ruas (v0.40); awalan J dipakai bersama batang.
@@ -1315,6 +1315,8 @@ function sah(d) {
     if (d.panjangSegmen !== undefined && !(d.panjangSegmen >= 1)) return false;
     if (d.isian && d.isian.panjang > 0 && !(B.bulat && d.isian.fc > 0 && (!d.isian.tul || (d.isian.tul.n >= 0 && d.isian.tul.d > 0)))) return false;
     if (d.miring != null && !(d.miring.n === 0 || (d.miring.n >= 1 && d.miring.n <= 50 && Number.isFinite(d.miring.arah ?? 0)))) return false;
+    if (d.isian && d.isian.spiral != null && typeof d.isian.spiral !== 'boolean') return false;
+    if (d.coatingZona != null) { const cz = d.coatingZona, ok = v => v == null || Number.isFinite(v); if (!ok(cz.atas) || !ok(cz.bawah) || (cz.atas != null && cz.bawah != null && !(cz.atas > cz.bawah))) return false; }
     if (d.selimut != null && d.selimut.tebal > 0 && !(Number.isFinite(d.selimut.atas) && Number.isFinite(d.selimut.bawah) && d.selimut.atas > d.selimut.bawah && d.selimut.tebal <= 0.5 && (d.selimut.fc ?? 24.9) > 0)) return false;
     return true;
   }
@@ -2376,16 +2378,25 @@ function strukturGeom(d) {
     const seg = d.panjangSegmen || 12, nSeg = Math.max(1, Math.ceil(L / seg - 1e-9));
     const selimut = B.bulat ? Math.PI * D * L : 4 * d.b * L;
     Object.assign(u, {panjang: L, zKepala: zk, zUjung: z0, segmen: nSeg, sambungan: nSeg - 1, luasSelimut: selimut, ...(gm.miring ? {kemiringan: `1 : ${d.miring.n}`, geserUjung: gm.datar} : {})});
-    if (d.bahan === 'baja') { u.kgPerM = kgPipa(d.dLuar, d.tebal); u.berat = u.kgPerM * L; if (d.coating !== false) u.luasCoating = selimut; }
+    if (d.bahan === 'baja') {
+      u.kgPerM = kgPipa(d.dLuar, d.tebal); u.berat = u.kgPerM * L;
+      // coating (v0.45.1): seluruh panjang tiang, atau hanya zona coatingZona {atas, bawah} (elevasi, mis. zona pasang surut)
+      if (d.coating !== false) {
+        const cz = d.coatingZona;
+        if (cz && (cz.atas != null || cz.bawah != null)) { const hz = Math.max(0, Math.min(cz.atas ?? zk, zk) - Math.max(cz.bawah ?? z0, z0)) * gm.faktor; u.luasCoating = Math.PI * D * hz; u.panjangCoating = hz; }
+        else u.luasCoating = selimut;
+      }
+    }
     if (!B.bulat) u.volumeTiang = d.b * d.b * L;
     if (B.bulat && d.isian && d.isian.panjang > 0) {
       const Li = Math.min(d.isian.panjang, L), Dd = (d.dLuar - 2 * d.tebal) / 1000, v = Math.PI / 4 * Dd * Dd * Li, fc = d.isian.fc || 24.9;
       tambahBeton(r, fc, v);
       // tulangan memanjang isian + stek 0,5 m ke pile cap; spiral Ø10-150 di keliling bersih
       const tul = d.isian.tul, kgU = tul && tul.n > 0 ? tul.n * (Li + 0.5) * beratBesi(tul.d) : 0;
-      const kgS = (Math.floor(Li / 0.15) + 1) * Math.PI * Math.max(0.1, Dd - 0.1) * beratBesi(10);
+      // spiral Ø10-150 (v0.45.1): isian.spiral = false untuk isian beton tanpa tulangan (pipa kecil, beton pengisi saja)
+      const kgS = d.isian.spiral === false ? 0 : (Math.floor(Li / 0.15) + 1) * Math.PI * Math.max(0.1, Dd - 0.1) * beratBesi(10);
       if (kgU) tambahBesi(r, tul.d, true, kgU);
-      tambahBesi(r, 10, false, kgS);
+      if (kgS) tambahBesi(r, 10, false, kgS);
       Object.assign(u, {volumeIsian: v, besiIsian: kgU + kgS, panjangIsian: Li});
     }
   } else if (d.jenis === 'perlengkapan') {
@@ -11273,7 +11284,8 @@ const SPEC = {
   tiangBulat: [['bahan', 'Bahan tiang', 'pilih', Object.entries(BAHAN_TIANG).map(([k, v]) => [k, v.nama])], ['dLuar', 'Diameter luar (mm)', 'bulat'], ['tebal', 'Tebal dinding (mm)', 'bulat'],
     ['panjang', 'Panjang tiang (m)', 'angka'], ['zKepala', 'Elevasi kepala tiang (m)', 'angka0'], ['panjangSegmen', 'Panjang per segmen / sambungan (m)', 'angka'],
     ['coating', 'Coating epoxy', 'pilih', [[true, 'Ya'], [false, 'Tidak']]], ['isian.panjang', 'Isian beton dari kepala (m, 0 = tanpa)', 'angka0'], ['isian.fc', 'Mutu beton isian', 'mutu'],
-    ['isian.tul.n', 'Jumlah tulangan isian', 'bulat'], ['isian.tul.d', 'Diameter tulangan isian', 'dia'],
+    ['isian.tul.n', 'Jumlah tulangan isian', 'bulat'], ['isian.tul.d', 'Diameter tulangan isian', 'dia'], ['isian.spiral', 'Spiral Ø10-150 isian', 'pilih', [[true, 'Ya'], [false, 'Tidak']]],
+    ['coatingZona.atas', 'Coating: elevasi atas (m, kosong = seluruh tiang)', 'angka0'], ['coatingZona.bawah', 'Coating: elevasi bawah (m)', 'angka0'],
     ['miring.n', 'Kemiringan 1 : n (0 = tegak)', 'angka0'], ['miring.arah', 'Arah condong (° dari timur)', 'angka0'],
     ['selimut.tebal', 'Selimut beton: tebal (m, 0 = tanpa)', 'angka0'], ['selimut.atas', 'Selimut: elevasi atas (m)', 'angka0'], ['selimut.bawah', 'Selimut: elevasi bawah (m)', 'angka0'], ['selimut.fc', 'Selimut: mutu beton', 'mutu'],
     ['x', 'Posisi X (m)', 'angka0'], ['y', 'Posisi Y (m)', 'angka0']],
@@ -15880,8 +15892,8 @@ function dataRAB(ids) {
       }
       if (g.jenis !== 'tiang') continue;
       const B = BAHAN_TIANG[g.bahan], k = g.bahan + '|' + (B.bulat ? g.dLuar + '|' + g.tebal : g.b);
-      const u = ukur(g), x = tiang.get(k) || {g, n: 0, L: 0, kg: 0, sambung: 0, coating: 0, volume: 0};
-      x.n++; x.L += u.panjang; x.kg += u.berat || 0; x.sambung += u.sambungan; x.coating += u.luasCoating || 0; x.volume += u.volumeTiang || 0;
+      const u = ukur(g), x = tiang.get(k) || {g, n: 0, L: 0, kg: 0, sambung: 0, coating: 0, volume: 0, zona: 0};
+      x.n++; x.L += u.panjang; x.kg += u.berat || 0; x.sambung += u.sambungan; x.coating += u.luasCoating || 0; x.volume += u.volumeTiang || 0; if (u.panjangCoating != null) x.zona++;
       tiang.set(k, x);
     }
     if (tiang.size || perl.size || nPC || jeti.size || vTimb) {
@@ -15897,7 +15909,7 @@ function dataRAB(ids) {
         tambah(dD, `DM-${no}2`, `Pemancangan ${nama} di laut (dari ponton)`, "m'", x.L, `${x.n} titik`);
         tambah(dD, `DM-${no}3`, `Sambungan las tiang ${nama}`, 'titik', x.sambung, `Segmen ${fmt(g.panjangSegmen || 12)} m`);
         tambah(dD, `DM-${no}4`, `Pemotongan dan perataan kepala tiang ${nama}`, 'titik', x.n);
-        if (x.coating) tambah(dD, `DM-${no}5`, `Proteksi korosi tiang ${nama} (coating epoxy)`, 'm²', x.coating, 'Luas selimut seluruh panjang tiang');
+        if (x.coating) tambah(dD, `DM-${no}5`, `Proteksi korosi tiang ${nama} (coating epoxy)`, 'm²', x.coating, x.zona === x.n ? 'Luas selimut zona coating saja' : x.zona ? `Zona coating ${x.zona} titik, seluruh panjang ${x.n - x.zona} titik` : 'Luas selimut seluruh panjang tiang');
       }
       tambah(dD, 'DM-091', 'Tambahan pemancangan tiang miring (posisi dan penyetelan kemiringan)', 'titik', nMiring, 'Termasuk dalam jumlah titik pemancangan di atas');
       tambah(dD, 'DM-301', 'Timbunan batu causeway (dari dasar laut s.d. puncak)', 'm³', vTimb, 'Volume padat mengikuti profil dasar laut');
