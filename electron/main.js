@@ -357,6 +357,18 @@ async function ujiAsap() {
     const dbs = await metode.daftarBesi({}), rabB = (await metode.rab({})).flatMap(dv => dv.baris).filter(b => /^Pembesian/.test(b.uraian));
     const cocokB = rabB.length > 0 && rabB.length === dbs.perDiameter.length && rabB.every(b => { const x = dbs.perDiameter.find(p => p.besi === b.uraian.split(' ')[1]); return x && Math.abs(x.beratDenganSisaKg - b.vol) < 0.01; });
     catat('daftar potong besi sama dengan RAB', cocokB && dbs.baris.length > 5 && dbs.tipe.some(t => /^K\d/.test(t.kode)), {baris: dbs.baris.length, tipe: dbs.tipe.map(t => t.kode).join(' ')});
+    // v0.48: pustaka tipe tulangan, panel Pilih, dan penerapan ke elemen bertipe sama (satu langkah Undo)
+    const kolomIds = Object.entries((await halaman('window.rancangAPI.model()')).elemen).filter(([, x]) => x.jenis === 'kolom' && x.tipe === 'struktur').map(([i]) => i).slice(0, 2);
+    await halaman(`window.rancangUji.pilih(${JSON.stringify([kolomIds[0]])})`);
+    const pt1 = await halaman(`window.rancangUji.aksiPanel('tt-terapkan', 'bawaan-k-30-30-8d16')`);
+    await halaman(`window.rancangUji.pilih(${JSON.stringify([kolomIds[1]])})`);
+    const pt2 = await halaman(`window.rancangUji.aksiPanel('tt-terapkan', 'bawaan-k-30-30-8d16')`);
+    catat('terapkan tipe tulangan dari pustaka', pt1.data && pt1.data.tipeTul === 'bawaan-k-30-30-8d16' && pt1.data.b === 0.3 && pt1.data.tul.n === 8 && pt1.data.sengkang.sTumpuan === 0.1 && pt2.data.tipeTul === pt1.data.tipeTul && pt1.opsi > 3, {opsi: pt1.opsi, b: pt1.data && pt1.data.b});
+    const pt3 = await halaman(`window.rancangUji.isiMedan('z-sengkang.s', '0,125')`);
+    const kolomLain = (await halaman('window.rancangAPI.model()')).elemen[kolomIds[0]];
+    catat('isian tipe ikut ke elemen bertipe sama', pt3.data && pt3.data.sengkang.s === 0.125 && kolomLain.sengkang.s === 0.125, {s1: pt3.data && pt3.data.sengkang.s, s0: kolomLain.sengkang.s});
+    const pt4 = await halaman(`window.rancangUji.aksiPanel('tt-simpan')`);
+    catat('simpan tipe ke pustaka saya', pt4.data && /^pribadi-/.test(pt4.data.tipeTul), {tipeTul: pt4.data && pt4.data.tipeTul});
     const lb = await metode.gambar2D({jenis: 'besi', kertas: 'A3'});
     catat('lembar daftar potong besi', lb.svg.length > 5000 && /DAFTAR POTONG BESI/.test(lb.svg) && /RINGKASAN PER DIAMETER/.test(lb.svg), {panjang: lb.svg.length, info: lb.info});
     const ex = await halaman('window.rancangUji.eksporRAB([])');
