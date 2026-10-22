@@ -1,3 +1,12 @@
+## Yang baru di 0.48.0
+
+As otomatis gedung (22 Oktober 2026), menyamakan gambar gedung dengan gambar jeti dan contoh denah kosen.
+
+- **As otomatis gedung**: bila belum ada as manual, as diambil dari pusat kolom struktur (kolom segaris ±15 cm jadi satu as; bila tidak ada kolom struktur, semua kolom), atau bila tidak ada kolom dari as dinding lurus sejajar sumbu yang panjangnya ≥ 1,2 m. As tegak berangka 1, 2, … dari barat, as mendatar berhuruf A, B, … dari utara — sama dengan alat As manual.
+- As yang sama dipakai di **denah, denah pondasi, tampak, dan potongan**: rantai ukuran denah (tepi–as, antar-as, total) melewati as ini; tampak dan potongan gedung kini memuat gelembung as, rantai antar-as, dan ukuran total. Ukuran as dinding di bawah potongan tidak lagi digambar dobel bila rantai as sudah ada di atas.
+- Ruang Lembar → **As otomatis** (nyala/mati; mati = denah hanya memakai as tepi bangunan seperti sebelumnya) dan tombol **Jadikan as manual** untuk menyalin as otomatis menjadi garis as manual yang label dan letaknya bisa diubah.
+- Pasang **RANCANG-Setup-0.48.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.48.0 dari rilis yang sama.
+
 ## Yang baru di 0.47.0
 
 Daftar potong besi di dalam RANCANG (21 Oktober 2026), tahap 1 dari fitur pembesian (pilih, sarankan, periksa).

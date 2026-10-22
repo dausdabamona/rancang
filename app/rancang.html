@@ -350,6 +350,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .lembar-kaki{border-top:1px solid var(--line);padding:10px 14px;display:grid;gap:6px}
 .lembar-kaki .meta{font-size:11.5px}
 /* Unduh set (v0.45.1): tombol ringkas di ujung kanan baris kontrol */
+.kontrol > .tombol.kecil{align-self:center;padding:4px 9px;font-size:12px}
 .kontrol .unduh-set{margin-left:auto;display:flex;align-items:center;gap:6px;align-self:center}
 .unduh-set .tombol.kecil{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;font-size:12px;line-height:1.2;min-height:0}
 .unduh-set .ik{width:13px;height:13px;flex:none}
@@ -799,7 +800,9 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
       <label class="cek" for="m-dimdinding"><input type="checkbox" id="m-dimdinding"> Ukuran tiap dinding</label>
       <label class="cek" for="m-terhalang"><input type="checkbox" id="m-terhalang" checked> Sembunyikan anotasi terhalang</label>
       <label class="cek" for="m-skala-grafis" title="Batang skala di pojok kanan bawah setiap lembar berskala; tetap benar walau dicetak diperkecil"><input type="checkbox" id="m-skala-grafis" checked> Skala grafis</label>
-      <label for="m-satuan" title="Satuan angka ukuran di semua lembar. Otomatis: denah dan tampak dalam meter, potongan dan detail dalam cm">Satuan ukuran
+      <label class="cek" for="m-as-oto" title="Nyala: as gedung dari kolom struktur (atau semua dinding lurus ≥ 1,2 m), bernomor dan tampil di denah, tampak, dan potongan. Mati: denah hanya memakai as tepi bangunan. As manual selalu didahulukan."><input type="checkbox" id="m-as-oto" checked> As otomatis</label>
+      <button class="tombol kecil" type="button" id="m-as-manual" title="Salin as otomatis gedung menjadi garis as manual agar label dan letaknya bisa diubah">Jadikan as manual</button>
+      <label for="m-satuan" title=""Satuan angka ukuran di semua lembar. Otomatis: denah dan tampak dalam meter, potongan dan detail dalam cm">Satuan ukuran
         <select id="m-satuan"><option value="">Otomatis</option><option value="mm">mm</option><option value="cm">cm</option><option value="m">m</option></select></label>
       <label for="m-satuan-luas" title="Satuan label luas di lembar">Luas
         <select id="m-satuan-luas"><option value="m2">m²</option><option value="ha">ha</option></select></label>
@@ -7010,6 +7013,52 @@ function asManual() {
     else miring.push({p: {x: d.awal.x, y: d.awal.y}, u: {x: dx / L, y: dy / L}, label: d.as.label, id});
   }
   return garis.length || miring.length ? {manual: true, datar: true, garis, miring} : null;
+}
+/**
+ * As otomatis gedung (v0.48.0): dari pusat kolom struktur (bila tidak ada: semua kolom; segaris ±15 cm menjadi satu as); bila tidak ada kolom, dari as dinding
+ * lurus sejajar sumbu yang panjangnya ≥ 1,2 m. As tegak (x tetap) berangka 1, 2, … dari barat; as mendatar (y tetap) berhuruf
+ * A, B, … dari utara — sama dengan alat As manual. Dipakai bila tidak ada as manual, bukan zona dermaga, model tidak berisi
+ * jeti kayu, dan setelan Ruang Lembar "As otomatis" tidak dimatikan. Hasil berbentuk sama dengan asManual() (manual: true)
+ * agar rantai ukuran gedung melewati as yang sama; otomatis: true menandainya.
+ */
+function asOtomatisGedung() {
+  if (ZONA_AKTIF || ((S.setel && S.setel.lembar) || {}).asOtomatis === false) return null;
+  const kolom = [], dinding = [];
+  for (const [id, d] of S.elems) {
+    if (S.sembunyi.has(id) || (LINGKUP && d.grup && !LINGKUP.has(id))) continue;
+    if (d.jenis === 'jetiKayu') return null;
+    if (d.jenis === 'kolom' && Number.isFinite(d.x) && Number.isFinite(d.y) && sah(d)) kolom.push(d);
+    else if (d.jenis === 'dinding' && d.awal && d.akhir && sah(d)) dinding.push(d);
+  }
+  const xs = [], ys = [];
+  // kolom struktur didahulukan; kolom praktis dipakai hanya bila tidak ada kolom struktur
+  const kolomAs = kolom.some(k => k.tipe === 'struktur') ? kolom.filter(k => k.tipe === 'struktur') : kolom;
+  if (kolomAs.length) for (const k of kolomAs) { xs.push(k.x); ys.push(k.y); }
+  else for (const w of dinding) {
+    const dx = w.akhir.x - w.awal.x, dy = w.akhir.y - w.awal.y, L = Math.hypot(dx, dy);
+    if (L < 1.2) continue;
+    if (Math.abs(dx) / L < 1e-3) xs.push((w.awal.x + w.akhir.x) / 2);
+    else if (Math.abs(dy) / L < 1e-3) ys.push((w.awal.y + w.akhir.y) / 2);
+  }
+  const kelompok = vals => {
+    const a = [...vals].sort((p, q) => p - q), r = [];
+    for (const v of a) { const k = r[r.length - 1]; if (k && v - k.awal <= 0.15) { k.n++; k.jml += v; } else r.push({awal: v, n: 1, jml: v}); }
+    return r.map(k => Math.round(k.jml / k.n * 1000) / 1000);
+  };
+  const gx = kelompok(xs), gy = kelompok(ys);
+  if (gx.length < 2 && gy.length < 2) return null;
+  const garis = [...gx.map((v, i) => ({sumbu: /** @type {'x'} */ ('x'), v, label: String(i + 1)})),
+    ...[...gy].sort((a, b) => b - a).map((v, i) => ({sumbu: /** @type {'y'} */ ('y'), v, label: nomorKeHuruf(i + 1)}))];
+  return {manual: true, otomatis: true, datar: true, garis, miring: []};
+}
+// As otomatis gedung → garis bantu as manual (label dan letaknya bisa diubah sesudahnya)
+function jadikanAsManual() {
+  const a = asOtomatisGedung();
+  if (!a) return toast('Tidak ada as otomatis gedung di model ini.');
+  const nid = pemberiId(), tulis = a.garis.map(g => ({id: nid('Q'), sesudah: {jenis: 'bantu', nama: 'As ' + g.label,
+    awal: g.sumbu === 'x' ? {x: g.v, y: 0} : {x: 0, y: g.v}, akhir: g.sumbu === 'x' ? {x: g.v, y: 1} : {x: 1, y: g.v}, as: {label: g.label}, catatan: ''}}));
+  terapkan(tulis);
+  toast(`${tulis.length} as otomatis dijadikan garis as manual (${a.garis.map(g => g.label).join(', ')}).`);
 }
 // "6x5" = 6 as berjarak 5; "5;5;4,5" = jarak berturut-turut (4 as); satu angka = satu as sejauh itu. Hasil: jarak dari titik awal (m)
 function uraiJarakAs(v) {
@@ -13899,7 +13948,7 @@ function buatSVGInti(o) {
   const mmV = (L, sk) => Math.max(0, L - putusSkala.lv) * 1000 / sk + putusSkala.nv * CELAH_PUTUS + tambahMmV;
   // ===== Grid as dermaga (v0.41) =====
   // as manual (garis bantu ber-label, v0.42) didahulukan; bila tidak ada, as otomatis zona dermaga
-  const asAktif = () => asManual() || (ZONA_AKTIF ? asZona(ZONA_AKTIF) : null);
+  const asAktif = () => asManual() || (ZONA_AKTIF ? asZona(ZONA_AKTIF) : asOtomatisGedung());
   // as miring (tidak sejajar sumbu): garis dipotong kotak gambar, gelembung di ujung atas/kiri
   const asMiringSvg = (as, X, Y, x0, y0, x1, y1) => {
     const out = [];
@@ -15144,7 +15193,7 @@ function buatSVGInti(o) {
         const tiangT = geosP.filter(g => g.jenis === 'tiang' && Dp(g.x, g.y) >= -0.05).map(g => ({g, u: Hh(g.x, g.y), d: Dp(g.x, g.y), z: g.zKepala - geoMiring(g).tegak}));
         const pendek = zPotongT !== null && !o.tanpaPerbesar && !((S.setel.lembar || {}).tiangPenuh || []).includes(kunciL) && tiangT.some(t => t.z < zPotongT - 1);
         const pp = kumpulPutus(p => Hh(p.x, p.y), p => zDari(p), bu0, bu1, bz0, bz1, pendek ? {v: [{id: '', a: bz0, b: zPotongT}]} : null);
-        const asZ = asAktif(), tbD = profilSejajar(Hh), ketOto = !!asZ && ketAktif() && !o.tanpaPerbesar;
+        const asZ = asAktif(), tbD = profilSejajar(Hh), ketOto = !!asZ && !asZ.otomatis && ketAktif() && !o.tanpaPerbesar;
         // penanda garis potong lain yang memotong bidang gambar ini (v0.45): ruang 10 mm di atas gelembung as
         const penandaP = [];
         for (const [qid, q] of S.elems) {
@@ -15155,7 +15204,7 @@ function buatSVGInti(o) {
           if (uq >= h0 - 0.3 && uq <= h1 + 0.3) penandaP.push({u: uq, nama: q.nama, arah: aq.vx * vy - aq.vy * vx >= 0 ? 1 : -1});
         }
         const asJ = !asZ && o.dimensi && !o.fokus ? asJetiTegak(geosP) : null;   // as jeti kayu (v0.45.1), sama dengan denah
-        ruangAtas = (asZ ? 15 : asJ ? 29 : 0) + (ketOto ? 14 : 0) + (penandaP.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (pendek ? 6 : 0);
+        ruangAtas = (asZ ? (ketOto ? 15 : 29) : asJ ? 29 : 0) + (ketOto ? 14 : 0) + (penandaP.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (pendek ? 6 : 0);
         if (ketOto) { tambahMmU = 78 + (psT ? 24 : 0); ruangKiri = psT ? 44 : 20; }
         skala = pilihSkala(bu1 - bu0, bz1 - bz0);
         const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
@@ -15183,7 +15232,7 @@ function buatSVGInti(o) {
         if (!o.fokus) isi.push(...labelUjungTiang(o, {Hh, Dp, X, Y, h0, h1, dalam: pt.dalam, yCatatan: Y(bz0) + (tbD ? 19 : 4) + (pendek ? 5 : 0), xCatatan: X(h0 - 0.8), hanyaCatatan: pendek}));
         if (asJ) isi.push(...asTegak(asJ, Hh, X, Y, zmax, zmin, h0, h1, 0, pp.u, true));
         const zAtasAs = ketOto ? Math.max(zmax, ...geosP.filter(g => g.jenis === 'plat').map(g => g.z0 + g.tebal)) : zmax;
-        if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, zAtasAs, zmin, h0, h1, ketOto ? 14 : 0, pp.u));
+        if (asZ) isi.push(...asTegak(asZ, Hh, X, Y, zAtasAs, zmin, h0, h1, ketOto ? 14 : 0, pp.u, !ketOto));
         // penanda potongan: garis putus-putus pendek, panah arah pandang, dan huruf potongan dalam lingkaran
         const yPen = Y(zAtasAs) - 8 - (ketOto ? 14 : 0) - (asZ ? 9 : asJ ? 23 : 0) - 3;
         isi.push(...svgPenanda(penandaP, X, yPen, pp.u));
@@ -15369,10 +15418,11 @@ function buatSVGInti(o) {
           for (const z of level) isi.push(garis(xd - 1, Y(z), X(h0) - 0.6, Y(z), 0.13));
           // jarak as dinding terpotong di bawah
           const as = [...asDinding].sort((a, b) => a - b).filter((h, i, a) => i === 0 || h - a[i - 1] > 0.05);
-          if (as.length >= 2) {
+          // dilewati bila gelembung as + rantai antar-as sudah tampil di atas gambar (tidak dobel)
+          if (as.length >= 2 && !(asZ && !ketOto)) {
             const yd = Y(zmin) + 0.9 * s;
             for (const h of as) isi.push(garis(X(h), Y(zmin) + 1, X(h), yd + 1.5, 0.13));
-            for (let i = 0; i + 1 < as.length; i++) isi.push(ukuranGaris(X(as[i]), yd, X(as[i + 1]), yd, fmt(as[i + 1] - as[i]), -1));
+            for (let i = 0; i + 1 < as.length; i++) isi.push(ukuranGaris(X(as[i]), yd, X(as[i + 1]), yd, fmtUkur(as[i + 1] - as[i], satuanUkur('m')), -1));
           }
         }
         const tertutup = q => { const h = Hh(q.x, q.y), z = zDari(q), dq = Dp(q.x, q.y); return muka.some(m => m.penghalang && m.d < dq - 0.05 && dalamPoli(h, z, m.q) && !(m.lb || []).some(l => dalamPoli(h, z, l))); };
@@ -15473,7 +15523,7 @@ function buatSVGInti(o) {
       }
       const tiangTp = geos.filter(t => t.jenis === 'tiang').map(t => ({u: pr.u(t.x, t.y), z: t.zKepala - geoMiring(t).tegak, panjang: t.panjang}));
       const asJ = !asZ && o.dimensi ? asJetiTegak(geos) : null;   // as jeti kayu (v0.45.1), sama dengan denah
-      ruangAtas = (asZ ? 15 : asJ ? 29 : 0) + (penandaT.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (tiangTp.length ? 5 : 0);
+      ruangAtas = (asZ || asJ ? 29 : 0) + (penandaT.length ? 10 : 0); tambahMmV = ruangAtas + (tbD ? 15 : 0) + (tiangTp.length ? 5 : 0);
       skala = pilihSkala(bu1 - bu0, bz1 - bz0);
       const s = 1000 / skala, su = sumbuPutus(pp.u, CELAH_PUTUS / s), sv = sumbuPutus(pp.v, CELAH_PUTUS / s);
       const lebarK = (su.f(bu1) - su.f(bu0)) * s, tinggiK = (sv.f(bz1) - sv.f(bz0)) * s;
@@ -15527,7 +15577,7 @@ function buatSVGInti(o) {
       // peil tampak (v0.45.1): tanpa lisplang dan perlengkapan; dijarangkan di peilKanan (yang penting tetap tampil)
       const level = [...new Set([0, ...daftar.filter(d => d.jenis !== 'lisplang' && !d.tanpaPeil).map(d => n2(d.z1))])].sort((a, b) => a - b);
       isi.push(...peilKanan(level, X(u1), X(u1) + 4, Y));
-      if (asZ || asJ) isi.push(...asTegak(asZ || asJ, (x, y) => pr.u(x, y), X, Y, z1, z0, u0, u1, 0, pp.u, !asZ));
+      if (asZ || asJ) isi.push(...asTegak(asZ || asJ, (x, y) => pr.u(x, y), X, Y, z1, z0, u0, u1, 0, pp.u, true));
       isi.push(...svgPenanda(penandaT, X, Y(z1) - 8 - (asZ ? 9 : asJ ? 23 : 0) - 3, pp.u));
       if (tiangTp.length) isi.push(...svgUjungTiang(tiangTp.filter(t => !dalamPutus(pp.u, t.u)), X, t => Y(t.z) + 3.4));
       if (tbD) isi.push(...tabelDasar(tbD, X, Y(bz0) + 3 + (tiangTp.length ? 5 : 0), u0, u1, pp.u));
@@ -15711,6 +15761,8 @@ function renderLembar() {
   renderKop();
   /** @type {HTMLInputElement} */ ($('#m-skala-grafis')).checked = (S.setel.lembar || {}).skalaGrafis !== false;
   /** @type {HTMLSelectElement} */ ($('#m-satuan')).value = (S.setel.lembar || {}).satuan || '';
+  /** @type {HTMLInputElement} */ ($('#m-as-oto')).checked = (S.setel.lembar || {}).asOtomatis !== false;
+  $('#m-as-manual').hidden = !S.bisaUbah || !asOtomatisGedung() || !!asManual();
   /** @type {HTMLSelectElement} */ ($('#m-satuan-luas')).value = (S.setel.lembar || {}).satuanLuas || 'm2';
 }
 // pilihan model kop dan isian data kop (panel kiri)
@@ -17522,6 +17574,8 @@ $('#btn-2d').addEventListener('click', () => buka2D());
 $('#m-tutup').addEventListener('click', tutup2D);
 $('#modal2d').addEventListener('click', e => { if (e.target.id === 'modal2d') tutup2D(); });
 ['#m-jenis', '#m-skala', '#m-kertas', '#m-dimensi', '#m-dimdinding', '#m-terhalang', '#m-level'].forEach(s => $(s).addEventListener('change', segar2D));
+$('#m-as-oto').addEventListener('change', e => { if (S.bisaUbah) simpanLembar({asOtomatis: /** @type {HTMLInputElement} */ (e.target).checked ? undefined : false}); segar2D(); });
+$('#m-as-manual').addEventListener('click', () => { if (!S.bisaUbah) return; jadikanAsManual(); segar2D(); });
 $('#m-satuan').addEventListener('change', e => { if (S.bisaUbah) simpanLembar({satuan: /** @type {HTMLSelectElement} */ (e.target).value || undefined}); segar2D(); });
 $('#m-satuan-luas').addEventListener('change', e => { if (S.bisaUbah) simpanLembar({satuanLuas: /** @type {HTMLSelectElement} */ (e.target).value === 'ha' ? 'ha' : undefined}); segar2D(); });
 $('#m-skala-grafis').addEventListener('change', e => { if (S.bisaUbah) simpanLembar({skalaGrafis: /** @type {HTMLInputElement} */ (e.target).checked}); segar2D(); });
