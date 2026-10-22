@@ -1,3 +1,16 @@
+## Yang baru di 0.48.0
+
+Tulangan lengkap, pustaka tipe tulangan, dan panel Pilih (22 Oktober 2026), tahap 2 dari fitur pembesian.
+
+- **Sambungan lewatan otomatis**: batang lurus/berkait yang lebih panjang dari satu lonjor (12 m) kini dihitung dengan lewatan 40d per sambungan, di daftar potong besi maupun RAB (ditandai * dan "+ lewatan"). Bisa dimatikan per elemen (isian *Lewatan otomatis*).
+- **Akibatnya volume besi RAB naik** pada proyek yang punya batang > 12 m: Dermaga TUKS +812 kg D13, +108 kg D16, +419 kg D19 (± 1,34 t); Bengkel +40 kg; Prodi +30 kg; UPPM +10 kg. Proyek tanpa batang panjang tidak berubah. Label faktor kini "Sisa potong besi (%)" karena lewatan sudah dihitung terpisah.
+- **Isian tulangan baru** di panel elemen: sengkang ulir, sengkang rapat di tumpuan (jarak dan panjang zona, bawaan 2h); untuk balok/slof/ringbalk tulangan tumpuan tambahan (bawaan ¼ bentang) dan tulangan samping/badan; untuk kolom panjang stek. Sengkang dua zona ditulis "D10-100/150".
+- **Tumpuan dibaca otomatis dari model**: kolom/pilecap yang dilewati balok dan balok lain yang memotong dengan tinggi ≥ balok itu dianggap tumpuan; bisa diganti manual lewat data `tumpuan`.
+- **Pustaka tipe tulangan + panel Pilih**: 9 tipe bawaan dan 18 tipe yang diambil dari proyek RANCANG sebelumnya; tipe sendiri bisa disimpan ("Simpan ke pustaka saya", tersimpan di setelan). Elemen yang memakai tipe yang sama ikut berubah dalam satu langkah Urung saat isiannya disunting; "Lepas tipe" memutus kaitannya.
+- **Lembar Detail penulangan digambar ulang**: skala menyesuaikan (1:10/1:20/1:25), potongan TUMPUAN dan LAPANGAN untuk balok bertumpuan, tulangan atas/bawah dipisah, tulangan tumpuan dan samping digambar, keterangan stek.
+- Daftar potong besi yang terlalu panjang untuk satu lembar kini menyarankan kertas A3 atau lembar per grup (`besi@<grup>`).
+- Pasang **RANCANG-Setup-0.48.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.48.0 dari rilis yang sama.
+
 ## Yang baru di 0.47.1
 
 Perbaikan garis bantu dan Pindah + Salin (22 Oktober 2026).
