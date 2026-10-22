@@ -1384,9 +1384,14 @@ function sah(d) {
     const terhubung = d.tipe === 'label' && !!d.sumber && !!(d.isi && d.isi.trim());
     return d.tipe === 'ukuran' || d.tipe === 'peil' || terhubung || (typeof d.teks === 'string' && d.teks.length > 0);
   }
-  const tulSah = t => t && t.n >= 1 && t.d > 0, skSah = s => s && s.d > 0 && s.s > 0;
-  if (d.jenis === 'kolom') return Number.isFinite(d.x) && Number.isFinite(d.y) && d.b > 0 && d.h > 0 && d.tinggi > 0 && tulSah(d.tul) && skSah(d.sengkang) && d.fc > 0;
-  if (d.jenis === 'slof' || d.jenis === 'ringbalk') return titikSah(d.awal) && titikSah(d.akhir) && d.b > 0 && d.h > 0 && tulSah(d.tul) && skSah(d.sengkang) && d.fc > 0;
+  const tulSah = t => t && t.n >= 1 && t.d > 0, skSah = s => s && s.d > 0 && s.s > 0 && (s.sTumpuan == null || s.sTumpuan >= 0) && (s.lTumpuan == null || s.lTumpuan >= 0)
+    && (s.ulir == null || typeof s.ulir === 'boolean');
+  // isian tulangan lengkap (v0.48): opsional; tulangan tambahan boleh n = 0 (= tanpa)
+  const tambahanSah = t => t == null || (typeof t === 'object' && Number.isInteger(t.n ?? 0) && (t.n ?? 0) >= 0 && (!(t.n > 0) || t.d > 0) && (t.panjang == null || t.panjang >= 0));
+  const lengkapSah = /** @param {any} d */ d => tambahanSah(d.tulTumpuan) && tambahanSah(d.tulSamping) && (d.stek == null || d.stek >= 0) && (d.lewatan == null || typeof d.lewatan === 'boolean')
+    && (d.tumpuan == null || (Array.isArray(d.tumpuan) && d.tumpuan.every(Number.isFinite))) && (d.tipeTul == null || typeof d.tipeTul === 'string');
+  if (d.jenis === 'kolom') return Number.isFinite(d.x) && Number.isFinite(d.y) && d.b > 0 && d.h > 0 && d.tinggi > 0 && tulSah(d.tul) && skSah(d.sengkang) && d.fc > 0 && lengkapSah(d);
+  if (d.jenis === 'slof' || d.jenis === 'ringbalk') return titikSah(d.awal) && titikSah(d.akhir) && d.b > 0 && d.h > 0 && tulSah(d.tul) && skSah(d.sengkang) && d.fc > 0 && lengkapSah(d);
   if (d.jenis === 'pondasi') {
     if (d.tipe === 'batukali') return titikSah(d.awal) && titikSah(d.akhir) && d.lebarAtas > 0 && d.lebarBawah > 0 && d.tinggi > 0;
     if (d.tipe === 'footplat') return Number.isFinite(d.x) && Number.isFinite(d.y) && d.p > 0 && d.l > 0 && d.tebal > 0 && d.tulPlat && d.tulPlat.d > 0 && d.tulPlat.s > 0 && d.pedestal && tulSah(d.tul) && skSah(d.sengkang) && d.fc > 0;
@@ -2213,27 +2218,108 @@ const tambahBesi = (r, d, ulir, kg) => { const k = labelBesi(d, ulir); r.besi[k]
  * sehingga daftar potong dan RAB selalu sama. `bentuk` menentukan sketsa: 'lurus', 'kait' (kait 12d kedua ujung),
  * 'sengkang' (a × b bersih + kait 2 × 10d), 'u' (lurus a + tekuk b di kedua ujung), 'spiral' (cincin keliling a).
  * `ukuran` dalam meter untuk sketsa; `n` boleh pecahan untuk tulangan pelat (luas ÷ jarak).
- * @typedef {{mark: string, bagian: string, bentuk: 'lurus' | 'kait' | 'sengkang' | 'u' | 'spiral', ukuran: Record<string, number>, d: number, ulir: boolean, pjg: number, n: number}} BatangBesi
+ * Batang memanjang yang lebih panjang dari satu lonjor (12 m) diberi lewatan otomatis 40d per sambungan (v0.48): `ukuran.lewatan`
+ * = tambahan panjang, `sambung` = jumlah sambungan per batang.
+ * @typedef {{mark: string, bagian: string, bentuk: 'lurus' | 'kait' | 'sengkang' | 'u' | 'spiral', ukuran: Record<string, number>, d: number, ulir: boolean, pjg: number, n: number, sambung?: number}} BatangBesi
  */
+const LONJOR_BESI = 12, LEWATAN_D = 40;
 /**
  * Catat batang ke daftar dan tambahkan beratnya ke rekap besi.
  * @param {any} r rekap
  * @param {BatangBesi[]} daftar
  * @param {BatangBesi} b
  */
-function catatBatang(r, daftar, b) {
+function catatBatang(r, daftar, b, lewatan = true) {
+  // lewatan otomatis (v0.48, keputusan 22 Okt 2026): batang lurus/berkait > 12 m disambung 40d tiap sambungan
+  if (lewatan && (b.bentuk === 'lurus' || b.bentuk === 'kait') && b.pjg > LONJOR_BESI + 1e-9) {
+    const nS = Math.ceil(b.pjg / LONJOR_BESI - 1e-9) - 1, tambah = nS * LEWATAN_D * b.d / 1000;
+    b.ukuran = {...b.ukuran, lewatan: tambah}; b.sambung = nS; b.pjg += tambah;
+  }
   const kg = b.n * b.pjg * beratBesi(b.d);
   tambahBesi(r, b.d, !!b.ulir, kg);
   daftar.push(b);
   return kg;
 }
-// Tulangan elemen memanjang: utama = n × (L + 2×12d); sengkang = (L ÷ s + 1) × (keliling bersih + 2×10d)
-function besiBatang(r, L, b, h, tul, sk, c, daftar = [], awalan = '') {
-  const kaitU = 12 * tul.d / 1000, kaitS = 10 * sk.d / 1000;
-  const kgU = catatBatang(r, daftar, {mark: awalan + 'a', bagian: 'Tulangan pokok', bentuk: 'kait', ukuran: {a: L, kait: kaitU}, d: tul.d, ulir: !!tul.ulir, pjg: L + 2 * kaitU, n: tul.n});
-  const nS = Math.floor(L / sk.s + 1e-9) + 1, kel = 2 * ((b - 2 * c) + (h - 2 * c)) + 2 * kaitS;
-  const kgS = catatBatang(r, daftar, {mark: awalan + 'b', bagian: `Sengkang jarak ${Math.round(sk.s * 1000)}`, bentuk: 'sengkang', ukuran: {a: b - 2 * c, b: h - 2 * c, kait: kaitS}, d: sk.d, ulir: !!sk.ulir, pjg: kel, n: nS});
-  return {kgU, kgS, nS};
+/**
+ * Tulangan elemen memanjang: pokok = n × (L + stek + 2×12d); sengkang = (L ÷ s + 1) × (keliling bersih + 2×10d).
+ * v0.48 (semua opsional): o.tumpuan = jarak tumpuan dari awal (m) untuk sengkang rapat `sk.sTumpuan` sepanjang `sk.lTumpuan`
+ * dari tiap tumpuan dan tulangan tumpuan atas `o.tulTumpuan`; `o.tulSamping` n batang per sisi; `o.stek` perpanjangan pokok;
+ * `o.lewatan` false mematikan lewatan otomatis; `o.lTumpuanBawaan` panjang daerah tumpuan bila sk.lTumpuan kosong.
+ * @param {any} r @param {number} L @param {number} b @param {number} h @param {any} tul @param {any} sk @param {number} c
+ * @param {BatangBesi[]} [daftar] @param {string} [awalan]
+ * @param {{tumpuan?: number[], tulTumpuan?: any, tulSamping?: any, stek?: number, lewatan?: boolean, lTumpuanBawaan?: number}} [o]
+ */
+function besiBatang(r, L, b, h, tul, sk, c, daftar = [], awalan = '', o = {}) {
+  const kaitU = 12 * tul.d / 1000, kaitS = 10 * sk.d / 1000, lw = o.lewatan !== false, stek = o.stek > 0 ? o.stek : 0;
+  const kgU = catatBatang(r, daftar, {mark: awalan + 'a', bagian: stek ? `Tulangan pokok + stek ${fmt(stek)} m` : 'Tulangan pokok', bentuk: 'kait', ukuran: {a: L + stek, kait: kaitU}, d: tul.d, ulir: !!tul.ulir, pjg: L + stek + 2 * kaitU, n: tul.n}, lw);
+  const kel = 2 * ((b - 2 * c) + (h - 2 * c)) + 2 * kaitS, ukS = {a: b - 2 * c, b: h - 2 * c, kait: kaitS};
+  const tp = (o.tumpuan || []).filter(u => u >= -1e-6 && u <= L + 1e-6).sort((x, y) => x - y);
+  let kgS = 0, nS = 0;
+  if (sk.sTumpuan > 0 && tp.length) {
+    // daerah tumpuan: [u − lT, u + lT] tiap tumpuan dipangkas ke [0, L] lalu digabung; sisanya daerah lapangan
+    const lT = sk.lTumpuan > 0 ? sk.lTumpuan : (o.lTumpuanBawaan || 2 * h), zona = [];
+    for (const u of tp) { const a = Math.max(0, u - lT), z = Math.min(L, u + lT); if (zona.length && a <= zona[zona.length - 1][1] + 1e-6) zona[zona.length - 1][1] = Math.max(zona[zona.length - 1][1], z); else zona.push([a, z]); }
+    let nT = 0, nL = 0, x = 0;
+    for (const [a, z] of zona) { if (a > x + 1e-6) nL += Math.max(0, Math.ceil((a - x) / sk.s - 1e-9) - 1); nT += Math.floor((z - a) / sk.sTumpuan + 1e-9) + 1; x = z; }
+    if (L > x + 1e-6) nL += Math.max(0, Math.ceil((L - x) / sk.s - 1e-9) - 1);
+    kgS += catatBatang(r, daftar, {mark: awalan + 'bt', bagian: `Sengkang tumpuan jarak ${Math.round(sk.sTumpuan * 1000)}`, bentuk: 'sengkang', ukuran: ukS, d: sk.d, ulir: !!sk.ulir, pjg: kel, n: nT});
+    if (nL) kgS += catatBatang(r, daftar, {mark: awalan + 'b', bagian: `Sengkang lapangan jarak ${Math.round(sk.s * 1000)}`, bentuk: 'sengkang', ukuran: ukS, d: sk.d, ulir: !!sk.ulir, pjg: kel, n: nL});
+    nS = nT + nL;
+  } else {
+    nS = Math.floor(L / sk.s + 1e-9) + 1;
+    kgS = catatBatang(r, daftar, {mark: awalan + 'b', bagian: `Sengkang jarak ${Math.round(sk.s * 1000)}`, bentuk: 'sengkang', ukuran: ukS, d: sk.d, ulir: !!sk.ulir, pjg: kel, n: nS});
+  }
+  let kgL = 0;
+  const tt = o.tulTumpuan;
+  if (tt && tt.n > 0 && tt.d > 0 && tp.length) {
+    // tulangan tumpuan atas: tiap sisi tumpuan sepanjang tt.panjang atau ¼ bentang di sebelahnya; di ujung elemen ditambah kait 12d
+    const kaitT = 12 * tt.d / 1000;
+    tp.forEach((u, i) => {
+      const kiri = u > 0.05 ? (tt.panjang > 0 ? tt.panjang : (u - (i ? tp[i - 1] : 0)) / 4) : 0;
+      const kanan = u < L - 0.05 ? (tt.panjang > 0 ? tt.panjang : ((i < tp.length - 1 ? tp[i + 1] : L) - u) / 4) : 0;
+      const a = Math.min(u, kiri) + Math.min(L - u, kanan), ujung = (u <= 0.05 ? 1 : 0) + (u >= L - 0.05 ? 1 : 0);
+      if (a > 0.05) kgL += catatBatang(r, daftar, {mark: awalan + 'c', bagian: 'Tulangan tumpuan atas', bentuk: ujung ? 'kait' : 'lurus', ukuran: ujung ? {a, kait: kaitT} : {a}, d: tt.d, ulir: !!tt.ulir, pjg: a + ujung * kaitT, n: tt.n}, lw);
+    });
+  }
+  const ts = o.tulSamping;
+  if (ts && ts.n > 0 && ts.d > 0) {
+    const kaitP = 12 * ts.d / 1000;
+    kgL += catatBatang(r, daftar, {mark: awalan + 'd', bagian: `Tulangan samping ${ts.n} per sisi`, bentuk: 'kait', ukuran: {a: L, kait: kaitP}, d: ts.d, ulir: !!ts.ulir, pjg: L + 2 * kaitP, n: 2 * ts.n}, lw);
+  }
+  return {kgU: kgU + kgL, kgS, nS};
+}
+/**
+ * Tumpuan balok/sloof/ring balk (v0.48, keputusan 22 Okt 2026): jarak dari titik awal (m). Dari isian `tumpuan` bila ada;
+ * selain itu otomatis: kolom dan pile cap yang dilalui as, balok lain (peran balok) yang memotong dengan tinggi ≥ tinggi
+ * balok ini; ujung tanpa tumpuan dalam jarak maks(h, 0,5 m) dianggap tumpuan.
+ * @param {any} d
+ * @returns {number[]}
+ */
+function tumpuanJalur(d) {
+  const {L, ux, uy} = infoDinding(d), ax = d.awal.x, ay = d.awal.y;
+  if (Array.isArray(d.tumpuan)) return d.tumpuan.filter(u => Number.isFinite(u) && u >= 0 && u <= L + 1e-6).sort((a, b) => a - b);
+  const hasil = [], balok = d.jenis === 'ringbalk' && d.peran === 'balok';
+  for (const e of S.elems.values()) {
+    if (e === d || !e) continue;
+    const ee = /** @type {any} */ (e);
+    if (ee.jenis === 'kolom' || (ee.jenis === 'pondasi' && ee.tipe === 'pilecap')) {
+      const rx = ee.x - ax, ry = ee.y - ay, u = rx * ux + ry * uy, v = Math.abs(-rx * uy + ry * ux);
+      const setengah = Math.max(ee.b ?? ee.p ?? 0, ee.h ?? ee.l ?? 0) / 2;
+      if (v <= setengah + 0.02 && u > -setengah && u < L + setengah) hasil.push(Math.max(0, Math.min(L, u)));
+    } else if (balok && ee.jenis === 'ringbalk' && ee.peran === 'balok' && ee.h >= d.h - 1e-6 && ee.awal && ee.akhir) {
+      const bx = ee.akhir.x - ee.awal.x, by = ee.akhir.y - ee.awal.y, det = ux * by - uy * bx;
+      if (Math.abs(det) < 1e-9) continue;
+      const wx = ee.awal.x - ax, wy = ee.awal.y - ay, u = (wx * by - wy * bx) / det, t = (wx * uy - wy * ux) / det, tol = (ee.b || 0) / 2 / (Math.hypot(bx, by) || 1);
+      if (u > -0.05 && u < L + 0.05 && t > -tol && t < 1 + tol) hasil.push(Math.max(0, Math.min(L, u)));
+    }
+  }
+  hasil.sort((a, b) => a - b);
+  const unik = [];
+  for (const u of hasil) if (!unik.length || u - unik[unik.length - 1] > 0.3) unik.push(u);
+  const jarakUjung = Math.max(d.h || 0, 0.5);
+  if (!unik.length || unik[0] > jarakUjung) unik.unshift(0);
+  if (unik[unik.length - 1] < L - jarakUjung) unik.push(L);
+  return unik;
 }
 // Bidang-bidang prisma miring (untuk pondasi batu kali dan umpak)
 function mukaPrisma(bawah, atas) {
@@ -2386,8 +2472,8 @@ function strukturGeom(d) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
     const daftar = /** @type {BatangBesi[]} */ ([]), Lx = Math.max(x1 - x0, 1e-6), Ly = Math.max(y1 - y0, 1e-6);
-    let kg = catatBatang(r, daftar, {mark: 'a', bagian: 'Arah X, atas & bawah', bentuk: 'lurus', ukuran: {a: Lx}, d: tul.d, ulir: !!tul.ulir, pjg: Lx, n: 2 * luas / tul.s / Lx});   // tul.ulir (v0.42.1): besi ulir D
-    kg += catatBatang(r, daftar, {mark: 'b', bagian: 'Arah Y, atas & bawah', bentuk: 'lurus', ukuran: {a: Ly}, d: tul.d, ulir: !!tul.ulir, pjg: Ly, n: 2 * luas / tul.s / Ly});
+    let kg = catatBatang(r, daftar, {mark: 'a', bagian: 'Arah X, atas & bawah', bentuk: 'lurus', ukuran: {a: Lx}, d: tul.d, ulir: !!tul.ulir, pjg: Lx, n: 2 * luas / tul.s / Lx}, d.lewatan !== false);   // tul.ulir (v0.42.1): besi ulir D
+    kg += catatBatang(r, daftar, {mark: 'b', bagian: 'Arah Y, atas & bawah', bentuk: 'lurus', ukuran: {a: Ly}, d: tul.d, ulir: !!tul.ulir, pjg: Ly, n: 2 * luas / tul.s / Ly}, d.lewatan !== false);
     u.batang = daftar;
     Object.assign(u, {luasAlas: luas, keliling: K, volume: v, bekisting: bk, besi: kg, zAtas: z0 + d.tebal});
     return {rekap: r, benda, ukur: u};
@@ -2399,7 +2485,8 @@ function strukturGeom(d) {
     benda.push({p: rectPusat(d.x, d.y, d.b + 0.004, d.h + 0.004), z0, h: atasKolom(d) - z0, bahan: 'beton'});
     const v = d.b * d.h * H, bk = 2 * (d.b + d.h) * H;
     tambahBeton(r, d.fc, v); r.bekisting += bk;
-    const daftar = /** @type {BatangBesi[]} */ ([]), bs = besiBatang(r, H, d.b, d.h, d.tul, d.sengkang, c, daftar);
+    const daftar = /** @type {BatangBesi[]} */ ([]), bs = besiBatang(r, H, d.b, d.h, d.tul, d.sengkang, c, daftar, '',
+      {stek: d.stek, lewatan: d.lewatan !== false, tumpuan: d.sengkang.sTumpuan > 0 ? [0, H] : undefined, lTumpuanBawaan: Math.max(d.b, d.h, H / 6, 0.45)});
     Object.assign(u, {volume: v, bekisting: bk, besiUtama: bs.kgU, besiSengkang: bs.kgS, jmlSengkang: bs.nS, batang: daftar});
   } else if (d.jenis === 'slof' || d.jenis === 'ringbalk') {
     const {L} = infoDinding(d), c = d.selimut ?? 0.025, z0 = d.z0 ?? -d.h;
@@ -2409,7 +2496,9 @@ function strukturGeom(d) {
     benda.push(bendaJalur(alas, z0, alas, z0 + d.h + (d.jenis === 'ringbalk' ? 0.002 : 0), 'beton'));
     const v = d.b * d.h * L, bk = 2 * d.h * L;
     tambahBeton(r, d.fc, v); r.bekisting += bk;
-    const daftar = /** @type {BatangBesi[]} */ ([]), bs = besiBatang(r, L, d.b, d.h, d.tul, d.sengkang, c, daftar);
+    const perluTumpuan = d.sengkang.sTumpuan > 0 || (d.tulTumpuan && d.tulTumpuan.n > 0);
+    const daftar = /** @type {BatangBesi[]} */ ([]), bs = besiBatang(r, L, d.b, d.h, d.tul, d.sengkang, c, daftar, '',
+      {lewatan: d.lewatan !== false, tulTumpuan: d.tulTumpuan, tulSamping: d.tulSamping, tumpuan: perluTumpuan ? tumpuanJalur(d) : undefined});
     Object.assign(u, {panjang: L, volume: v, bekisting: bk, besiUtama: bs.kgU, besiSengkang: bs.kgS, jmlSengkang: bs.nS, batang: daftar});
   } else if (d.jenis === 'pondasi' && d.tipe === 'batukali') {
     const {L, ux, uy} = infoDinding(d), nx = -uy, ny = ux, la = d.lebarAtas, lb = d.lebarBawah;
