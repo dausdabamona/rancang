@@ -97,6 +97,17 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
     await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'Q950', data: null}]}});
     const rab = json(await c.callTool({name: 'volume_rab', arguments: {}}));
     const dermaga = rab.find(d => d.nama === 'PEKERJAAN DERMAGA');
+    // v0.47: daftar potong besi bersumber sama dengan pembesian RAB (pile cap 2 lapis U, pelat, balok, isian tiang)
+    const db = json(await c.callTool({name: 'daftar_besi', arguments: {}}));
+    const besiRAB = rab.flatMap(d => d.baris).filter(b => /^Pembesian/.test(b.uraian));
+    assert.equal(db.perDiameter.length, besiRAB.length, 'jumlah diameter daftar besi = RAB');
+    for (const b of besiRAB) {
+      const x = db.perDiameter.find(p => p.besi === b.uraian.split(' ')[1]);
+      assert.ok(x && Math.abs(x.beratDenganSisaKg - b.vol) < 0.01, `berat ${b.uraian}: daftar ${x && x.beratDenganSisaKg} ≠ RAB ${b.vol}`);
+    }
+    assert.ok(db.baris.some(b => b.tipe.startsWith('PC') && b.bentuk === 'u') && db.baris.some(b => b.tipe.startsWith('TP') && b.bentuk === 'spiral'), 'pile cap bentuk U dan spiral isian tiang');
+    const lbBesi = await c.callTool({name: 'gambar_2d', arguments: {jenis: 'besi', format: 'svg', kertas: 'A3'}});
+    assert.ok(/DAFTAR POTONG BESI/.test(lbBesi.content[0].text), 'lembar daftar potong besi');
     assert.ok(dermaga, 'divisi Pekerjaan Dermaga ada');
     const baris = k => dermaga.baris.find(b => b.kode === k);
     // pipa Ø508 × 12: 0,02466 × 12 × 496 = 146,78 kg/m; 72 tiang × 40 m
