@@ -87,6 +87,14 @@ test('dermaga: aplikasi menerima model, menggambar, dan menghitung RAB dermaga',
       const t = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [salah]}}));
       assert.equal(t.ok, false, salah.id);
     }
+    // v0.46.1: garis bantu tegak (sejajar sumbu Z) sah; tegak dengan label as ditolak
+    const tg = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'Q950', data: {jenis: 'bantu', nama: 'Bantu tegak', awal: {x: 3, y: 1.5, z: 0}, akhir: {x: 3, y: 1.5, z: 5}}}]}}));
+    assert.equal(tg.ok, true, JSON.stringify(tg));
+    const tgAs = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'Q951', data: {jenis: 'bantu', nama: 'As', awal: {x: 3, y: 1.5, z: 0}, akhir: {x: 3, y: 1.5, z: 5}, as: {label: 'Z'}}}]}}));
+    assert.equal(tgAs.ok, false);
+    const tgDatar = json(await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'Q952', data: {jenis: 'bantu', nama: 'Titik', awal: {x: 3, y: 1.5}, akhir: {x: 3, y: 1.5}}}]}}));
+    assert.equal(tgDatar.ok, false);
+    await c.callTool({name: 'terapkan_perubahan', arguments: {perubahan: [{id: 'Q950', data: null}]}});
     const rab = json(await c.callTool({name: 'volume_rab', arguments: {}}));
     const dermaga = rab.find(d => d.nama === 'PEKERJAAN DERMAGA');
     // v0.47: daftar potong besi bersumber sama dengan pembesian RAB (pile cap 2 lapis U, pelat, balok, isian tiang)

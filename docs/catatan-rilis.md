@@ -1,3 +1,12 @@
+## Yang baru di 0.47.1
+
+Perbaikan garis bantu dan Pindah + Salin (22 Oktober 2026).
+
+- **Garis bantu bergaya SketchUp**: titik pertama boleh di mana saja (ujung, titik tengah, tepi, atau muka benda) dan tingginya ikut, sehingga garis bantu bisa dibuat menempel di atas benda yang tebal (mis. di permukaan pelat +3,46), tidak lagi selalu di elevasi 0. Arah ditentukan di bidang setinggi titik itu; menyentuh ujung/titik tengah benda lain membuat garis melalui kedua titik (datar, miring, atau tegak). Garis sejajar tepi dibuat setinggi tepinya. Titik di lantai (±0) tetap menghasilkan garis datar untuk semua ketinggian seperti sebelumnya.
+- **Garis bantu tegak (sejajar sumbu Z)**: tekan panah ↑ sesudah klik titik pertama, atau klik titik tepat di atas/bawahnya. Meteran + Ctrl pada ukuran tegak juga membuat garis bantu tegak.
+- **Pindah/Putar + Ctrl (salin)**: benda asal tetap tampak pudar di tempatnya selama salinan digerakkan, sehingga jelas sedang menyalin.
+- Pasang **RANCANG-Setup-0.47.1.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.47.1 dari rilis yang sama.
+
 ## Yang baru di 0.47.0
 
 Daftar potong besi di dalam RANCANG (21 Oktober 2026), tahap 1 dari fitur pembesian (pilih, sarankan, periksa).
