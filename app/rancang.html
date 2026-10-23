@@ -596,6 +596,39 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
 .banner .jalur-k button:hover{text-decoration:underline}
 .banner .jalur-k b{padding:1px 4px}
 .banner .jalur-k i{font-style:normal;color:var(--rc-muted)}
+
+/* Kerangka proyek (v0.50) */
+.kerangka-isi{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;padding:14px 18px;overflow:auto}
+.kerangka-isi .kr-kiri{display:grid;gap:10px;align-content:start;min-width:0}
+.kerangka-isi .kr-kanan{display:grid;gap:10px;align-content:start;min-width:0}
+#kr-jenis{display:flex;gap:6px;flex-wrap:wrap}
+#kr-jenis label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:2px;padding:6px 12px;cursor:pointer;font-size:13px}
+#kr-jenis label:has(input:checked){border-color:var(--rc-select);background:var(--rc-select-face);font-weight:600}
+#kr-jenis input{margin:0}
+#kr-svg{width:100%;height:auto;background:var(--paper,#fff);border:1px solid var(--line);border-radius:2px;touch-action:none;user-select:none}
+#kr-svg text{font:11px var(--font);fill:#333}
+#kr-svg .kr-garis line{stroke:#0088b0;stroke-width:1;stroke-dasharray:6 4}
+#kr-svg .kr-garis.kr-datum line{stroke:#2a7fd4}
+#kr-svg .kr-garis line.kr-pegang{stroke:transparent;stroke-width:12;stroke-dasharray:none;cursor:ns-resize}
+#kr-svg .kr-garis:hover line:not(.kr-pegang){stroke-width:2;stroke-dasharray:none}
+#kr-svg .kr-badan{fill:#ece9e4;stroke:#555;stroke-width:1}
+#kr-svg .kr-lantai{stroke:#777;stroke-width:1}
+#kr-svg .kr-atap{fill:#d9cfc2;stroke:#555}
+#kr-svg .kr-pondasi{fill:#bbb;stroke:#555}
+#kr-svg .kr-tanah{stroke:#6b5a45;stroke-width:2}
+#kr-svg .kr-air{fill:#cfe6f7;stroke:none}
+#kr-svg .kr-dasar{fill:#d8c9a8;stroke:#8b7652}
+#kr-svg .kr-tiang{fill:#9aa3a8;stroke:#555}
+.kr-tabel{display:grid;gap:4px;max-height:260px;overflow:auto}
+.kr-baris{display:grid;grid-template-columns:minmax(0,1fr) 92px 28px;gap:6px;align-items:center}
+.kr-baris input{background:var(--bg);border:1px solid var(--line);border-radius:2px;padding:5px 7px;color:var(--fg);font-size:13px;min-width:0}
+.kr-baris input[data-kr="z"]{text-align:right;font-variant-numeric:tabular-nums}
+.kr-hapus{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;border-radius:2px}
+.kr-hapus:hover{background:var(--hover);color:var(--fg)}
+.kr-medan{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:6px 10px;align-items:center;font-size:13px}
+.kr-medan input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:2px;padding:5px 7px;color:var(--fg);font-size:13px;min-width:0}
+.kr-medan[hidden]{display:none}
+@media (max-width:760px){.kerangka-isi{grid-template-columns:1fr}}
 </style>
 
 <header class="atas">
@@ -700,6 +733,8 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
       <li><kbd>P</kbd> Push/Pull untuk menaikkan bidang menjadi volume</li>
       <li>Atau minta Claude di chat: "gambar ruang kelas 8 × 9 m"</li>
     </ol>
+    <p style="margin:12px 0 0"><button class="tombol utama" type="button" id="kosong-kerangka" style="pointer-events:auto">Mulai dari kerangka proyek</button></p>
+    <p class="meta" style="margin:6px 0 0">Jenis proyek, elevasi dan jumlah tingkat, lalu grid as.</p>
   </div>
   <div class="kompas" aria-hidden="true"><i class="x">X timur</i><i class="y">Y utara</i><i class="z">Z atas</i></div>
 </main>
@@ -975,6 +1010,43 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
         <button class="tombol" type="button" id="mp-batal">Batal</button>
         <button class="tombol" type="button" id="mp-tambah">Tambahkan ke model</button>
         <button class="tombol utama" type="button" id="mp-ganti">Ganti model sekarang</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal" id="modalKerangka" hidden role="dialog" aria-modal="true" aria-labelledby="kr-judul">
+  <div class="modal-isi" style="width:min(1000px,100%)">
+    <div class="modal-kepala"><h2 id="kr-judul">Kerangka proyek</h2><button type="button" id="kr-tutup" aria-label="Tutup">×</button></div>
+    <div class="kerangka-isi">
+      <div class="kr-kiri">
+        <div id="kr-jenis" role="radiogroup" aria-label="Jenis proyek">
+          <label><input type="radio" name="kr-jenis" value="gedung"> Gedung</label>
+          <label><input type="radio" name="kr-jenis" value="dermaga"> Dermaga</label>
+          <label><input type="radio" name="kr-jenis" value="jembatan"> Jembatan</label>
+        </div>
+        <p class="meta" id="kr-ket" style="margin:0"></p>
+        <svg id="kr-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tampak samping kerangka: seret garis elevasi naik atau turun"></svg>
+        <p class="meta" style="margin:0">Seret garis elevasi naik/turun (langkah 5 cm, Shift = 1 cm), atau ketik angkanya di daftar.</p>
+      </div>
+      <div class="kr-kanan">
+        <div class="kr-medan" id="kr-tingkat-baris">
+          <label for="kr-tingkat">Jumlah tingkat</label><input type="text" id="kr-tingkat" inputmode="numeric">
+          <label for="kr-tinggi">Tinggi per tingkat (m)</label><input type="text" id="kr-tinggi" inputmode="decimal">
+        </div>
+        <div><b style="font-size:13px">Elevasi (m)</b></div>
+        <div class="kr-tabel" id="kr-tabel"></div>
+        <div class="aksi-panel"><button class="tombol kecil" type="button" id="kr-tambah">Tambah elevasi</button></div>
+        <div><b style="font-size:13px">Grid as</b></div>
+        <div class="kr-medan">
+          <label for="kr-asx">As angka 1, 2, 3… (arah X)</label><input type="text" id="kr-asx" placeholder="4x4 atau 3;4;3" autocomplete="off">
+          <label for="kr-asy">As huruf A, B, C… (arah Y)</label><input type="text" id="kr-asy" placeholder="3x4, atau kosong" autocomplete="off">
+        </div>
+        <label class="cek" for="kr-ganti" style="font-size:13px"><input type="checkbox" id="kr-ganti" checked> Ganti as dari kerangka sebelumnya</label>
+        <p class="meta" style="margin:0">As pertama di titik 0,0. <b>4x4</b> = 4 as berjarak 4 m; <b>3;4;3</b> = jarak berturut-turut.</p>
+        <div class="aksi-panel" style="justify-content:flex-end">
+          <button class="tombol" type="button" id="kr-batal">Batal</button>
+          <button class="tombol utama" type="button" id="kr-terapkan">Terapkan kerangka</button>
+        </div>
       </div>
     </div>
   </div>
@@ -11566,7 +11638,7 @@ function butirPalet(teks) {
       ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
       ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Hitung RAB (Rp)', 'harga', () => bukaRAB()], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
       ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Jadikan komponen', 'G', () => jadikanKomponen()], ['Komponen proyek', '', () => { S.sel.clear(); segarPilihan(); if (!TATA.sisi) $('#btn-sisi').click(); setTimeout(() => { const h = [...panel.querySelectorAll('h2')].find(x => x.textContent === 'Komponen proyek'); if (h) h.scrollIntoView({block: 'start'}); else toast('Belum ada komponen di proyek ini. Pilih benda lalu tekan G.'); }, 60); }], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
-      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Objek (outliner): daftar grup, komponen, elemen', 'objek', () => aturOutliner()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
+      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Objek (outliner): daftar grup, komponen, elemen', 'objek', () => aturOutliner()], ['Kerangka proyek: jenis, elevasi, tingkat, grid as', 'kerangka', () => bukaKerangka()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
     ];
     for (const [teks, ket, f] of P) if ((alias === 'zoom' && teks === 'Zoom semua') || cocok(teks)) hasil.push({jenis: 'Perintah', teks, ket, skor: 2, jalankan: f});
     for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && cocok('potongan ' + d.nama, id)) hasil.push({jenis: 'Potongan', teks: `Potongan ${d.nama}–${d.nama}`, ket: 'irisan 3D', skor: 2, jalankan: () => lihatPotongan(id)});
@@ -11807,6 +11879,7 @@ window.addEventListener('keyup', e => {
 window.addEventListener('keydown', e => {
   if (!$('#modalProyek').hidden) { if (e.key === 'Escape') $('#mp-batal').click(); return; }
   if (!$('#modalRab').hidden) { if (e.key === 'Escape') tutupRAB(); return; }
+  if (!$('#modalKerangka').hidden) { if (e.key === 'Escape') tutupKerangka(); return; }
   if (!$('#modalKomp').hidden) { if (e.key === 'Escape') $('#mk-batal').click(); else if (e.key === 'Enter') { e.preventDefault(); $('#mk-buat').click(); } return; }
   if (!$('#modal2d').hidden) {
     if (e.target && e.target.matches && e.target.matches('input, textarea, select')) return;
@@ -12608,7 +12681,7 @@ function htmlLevel() {
   const baris = lv.map(l => `<div class="baris-level"><input id="lv-nama-${l.id}" type="text" value="${esc(l.nama)}" ${dis()} aria-label="Nama level ${esc(l.id)}"><input id="lv-z-${l.id}" type="text" inputmode="decimal" value="${fmt(l.z)}" ${dis()} aria-label="Elevasi level ${esc(l.id)} (m)">${S.bisaUbah ? `<button class="tombol" type="button" data-aksi="hapus-level" data-id="${l.id}" title="Hapus level ${esc(l.id)}">Hapus</button>` : ''}</div>`).join('');
   return `<section><h2>Garis bantu dan level</h2>
   ${lv.length ? `<p class="meta">Nama dan elevasi (m) tiap level. Pindah dan Push/Pull menempel ke elevasi level.</p>${baris}` : '<p class="meta">Belum ada level. Level = elevasi bernama (Lantai 1, Lantai 2, puncak dinding…) sebagai acuan tinggi.</p>'}
-  <div class="aksi-panel">${tombol('tambah-level', 'Tambah level')}${nBantu && S.bisaUbah ? tombol('hapus-bantu-semua', `Hapus ${nBantu} garis bantu`, 'bahaya') : ''}</div>
+  <div class="aksi-panel">${tombol('kerangka', 'Kerangka proyek…')}${tombol('tambah-level', 'Tambah level')}${nBantu && S.bisaUbah ? tombol('hapus-bantu-semua', `Hapus ${nBantu} garis bantu`, 'bahaya') : ''}</div>
   <p class="meta">${nBantu} garis bantu. Gambar dengan alat Garis bantu (T).</p></section>
   ${htmlPasut()}`;
 }
@@ -12619,6 +12692,233 @@ function htmlPasut() {
     ${Object.entries(DATUM_PASUT).map(([k, nama]) => `<label for="pa-${k}">${esc(nama)} (m)</label><input id="pa-${k}" type="text" inputmode="decimal" value="${Number.isFinite(ps[k]) ? fmt(ps[k]) : ''}" placeholder="kosong = tidak dipakai" ${dis()}>`).join('')}
   </div><p class="meta">Untuk dermaga: ±0,00 model = LWS. Garis HWL/MSL/LWL (putus-putus) dan dasar laut digambar di potongan dan tampak, menggantikan garis tanah ±0,00.</p></section>`;
 }
+/* ============ Kerangka proyek (v0.50): jenis proyek, elevasi dan tingkat di tampak samping, grid as ============ */
+// Langkah pertama proyek: tentukan elevasi bernama (nama menyesuaikan gedung/dermaga/jembatan) dan grid as.
+// Hasilnya level (M, bertanda `kerangka`) dan garis as (Q, bertanda `kerangka`) yang dipakai semua alat.
+const JENIS_KERANGKA = {
+  gedung: {nama: 'Gedung', ket: 'Tingkat dan elevasi lantai; dinding mengambil tinggi dari lantai sampai ring balk.'},
+  dermaga: {nama: 'Dermaga', ket: '±0,00 = LWS. Muka air dan dasar laut digambar di potongan dan tampak.'},
+  jembatan: {nama: 'Jembatan', ket: 'Dasar sungai, muka air banjir, tumpuan, gelagar, dan lantai jembatan.'}
+};
+/** @typedef {{peran: string, nama: string, z: number, datum?: string}} BarisKerangka */
+function templatKerangka(jenis, n = 2, h = 4) {
+  /** @type {BarisKerangka[]} */
+  const r = [];
+  if (jenis === 'dermaga') {
+    r.push({peran: 'dasarLaut', nama: 'Dasar laut', z: -3, datum: 'dasar'}, {peran: 'lws', nama: 'LWS', z: 0, datum: 'lwl'},
+      {peran: 'msl', nama: 'MSL', z: 1, datum: 'msl'}, {peran: 'hwl', nama: 'HWL', z: 2, datum: 'hwl'},
+      {peran: 'pilecap', nama: 'Dasar pile cap', z: 2.6}, {peran: 'lantaiDermaga', nama: 'Lantai dermaga', z: 3.5});
+  } else if (jenis === 'jembatan') {
+    r.push({peran: 'dasarSungai', nama: 'Dasar sungai', z: -2}, {peran: 'mab', nama: 'Muka air banjir', z: 1.5},
+      {peran: 'tumpuan', nama: 'Kepala tumpuan', z: 2.5}, {peran: 'gelagar', nama: 'Bawah gelagar', z: 2.6},
+      {peran: 'lantaiJembatan', nama: 'Lantai jembatan', z: 3.4});
+  } else {
+    n = Math.max(1, Math.min(10, Math.round(n))); h = Math.max(2.4, Math.min(8, h));
+    r.push({peran: 'pondasi', nama: 'Dasar pondasi', z: -1});
+    for (let k = 1; k <= n; k++) r.push({peran: 'lantai' + k, nama: 'Lantai ' + k, z: r2((k - 1) * h)});
+    const rb = r2((n - 1) * h + Math.min(h - 0.3, 3.5));
+    r.push({peran: 'ringbalk', nama: 'Ring balk', z: rb}, {peran: 'nok', nama: 'Nok', z: r2(rb + 2.5)});
+  }
+  return r;
+}
+/** @type {{jenis: string, baris: BarisKerangka[], tingkat: number, tinggi: number, asX: string, asY: string, ganti: boolean, seret: any, skala: any}} */
+const KR = {jenis: 'gedung', baris: [], tingkat: 2, tinggi: 4, asX: '4x4', asY: '3x4', ganti: true, seret: null, skala: null};
+// isi kotak dari proyek: kerangka tersimpan, level yang ada, atau templat
+function muatKerangka() {
+  const sk = /** @type {any} */ (S.setel).kerangka || {};
+  KR.jenis = JENIS_KERANGKA[sk.jenis] ? sk.jenis : pasutAktif() ? 'dermaga' : 'gedung';
+  KR.tingkat = sk.tingkat || 2; KR.tinggi = sk.tinggi || 4;
+  KR.asX = sk.asX ?? (KR.jenis === 'dermaga' ? '10x5' : '4x4'); KR.asY = sk.asY ?? (KR.jenis === 'dermaga' ? '2x6' : '3x4');
+  const ada = [...S.elems.values()].filter(d => d.jenis === 'level' && sah(d) && /** @type {any} */ (d).kerangka);
+  KR.baris = ada.length ? ada.map(d => { const l = /** @type {any} */ (d); return {peran: l.kerangka, nama: l.nama, z: l.z, ...(l.datum ? {datum: l.datum} : {})}; }).sort((a, b) => a.z - b.z)
+    : templatKerangka(KR.jenis, KR.tingkat, KR.tinggi);
+}
+function bukaKerangka() {
+  if (!S.bisaUbah) return toast('Akun ini hanya bisa melihat.');
+  batalAlat();
+  muatKerangka();
+  $('#modalKerangka').hidden = false;
+  gambarKerangka();
+  const p = /** @type {HTMLElement | null} */ ($(`#kr-jenis input[value="${KR.jenis}"]`)); if (p) p.focus();
+}
+function tutupKerangka() { $('#modalKerangka').hidden = true; KR.seret = null; canvas.focus({preventScroll: true}); }
+// tabel elevasi + gambar tampak samping + isian tingkat dan as
+function gambarKerangka() {
+  for (const r of /** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('#kr-jenis input'))) r.checked = r.value === KR.jenis;
+  $('#kr-ket').textContent = JENIS_KERANGKA[KR.jenis].ket;
+  $('#kr-tingkat-baris').hidden = KR.jenis !== 'gedung';
+  /** @type {HTMLInputElement} */ ($('#kr-tingkat')).value = String(KR.tingkat);
+  /** @type {HTMLInputElement} */ ($('#kr-tinggi')).value = fmtIsi(KR.tinggi);
+  /** @type {HTMLInputElement} */ ($('#kr-asx')).value = KR.asX;
+  /** @type {HTMLInputElement} */ ($('#kr-asy')).value = KR.asY;
+  /** @type {HTMLInputElement} */ ($('#kr-ganti')).checked = KR.ganti;
+  const urut = KR.baris.map((b, i) => ({b, i})).sort((p, q) => q.b.z - p.b.z);
+  $('#kr-tabel').innerHTML = urut.map(({b, i}) => `<div class="kr-baris" data-i="${i}">
+    <input type="text" data-kr="nama" value="${esc(b.nama)}" aria-label="Nama elevasi">
+    <input type="text" data-kr="z" inputmode="decimal" value="${esc(fmtElevasi(b.z))}" aria-label="Elevasi ${esc(b.nama)} (m)">
+    <button type="button" class="kr-hapus" data-kr="hapus" aria-label="Buang ${esc(b.nama)}" title="Buang elevasi ini">×</button></div>`).join('');
+  gambarTampakKerangka();
+}
+// tampak samping skematis: garis elevasi berlabel (bisa diseret) di atas siluet sesuai jenis
+function gambarTampakKerangka() {
+  const W = 520, H = 360, kiri = 112, kanan = W - 70, atas = 16, bawah = H - 16;
+  const zs = KR.baris.map(b => b.z);
+  // selama garis diseret skala tetap, supaya garis tetap di bawah kursor
+  const z0 = KR.seret ? KR.seret.skala.z0 : Math.min(...zs, 0) - 0.8, z1 = KR.seret ? KR.seret.skala.z1 : Math.max(...zs, 0) + 0.8;
+  const Y = z => r2(bawah - (z - z0) / (z1 - z0) * (bawah - atas));
+  const cari = p => KR.baris.find(b => b.peran === p);
+  const zp = p => { const b = cari(p); return b ? b.z : null; };
+  let s = '';
+  const kotak = (x0, za, x1, zb, kls) => `<rect class="${kls}" x="${x0}" y="${Math.min(Y(za), Y(zb))}" width="${x1 - x0}" height="${Math.abs(Y(za) - Y(zb))}"/>`;
+  if (KR.jenis === 'gedung') {
+    const lantai = KR.baris.filter(b => /^lantai\d+$/.test(b.peran)).sort((a, b) => a.z - b.z), rb = zp('ringbalk'), nok = zp('nok'), pd = zp('pondasi');
+    const x0 = 170, x1 = 400;
+    s += `<line class="kr-tanah" x1="${kiri - 20}" y1="${Y(0)}" x2="${kanan}" y2="${Y(0)}"/>`;
+    if (pd != null && lantai.length) s += `<path class="kr-pondasi" d="M${x0 - 14} ${Y(pd)} H${x0 + 14} L${x0 + 6} ${Y(lantai[0].z)} H${x0 - 6} Z M${x1 - 14} ${Y(pd)} H${x1 + 14} L${x1 + 6} ${Y(lantai[0].z)} H${x1 - 6} Z"/>`;
+    if (lantai.length && rb != null) s += kotak(x0, lantai[0].z, x1, rb, 'kr-badan');
+    for (const l of lantai.slice(1)) s += `<line class="kr-lantai" x1="${x0}" y1="${Y(l.z)}" x2="${x1}" y2="${Y(l.z)}"/>`;
+    if (rb != null && nok != null && nok > rb) s += `<path class="kr-atap" d="M${x0 - 24} ${Y(rb)} L${(x0 + x1) / 2} ${Y(nok)} L${x1 + 24} ${Y(rb)} Z"/>`;
+  } else if (KR.jenis === 'dermaga') {
+    const dl = zp('dasarLaut'), hwl = zp('hwl'), lws = zp('lws'), pc = zp('pilecap'), lt = zp('lantaiDermaga');
+    if (lws != null && hwl != null) s += kotak(kiri - 20, Math.min(lws, dl ?? lws), kanan, hwl, 'kr-air');
+    if (dl != null) s += kotak(kiri - 20, dl - 0.6, kanan, dl, 'kr-dasar');
+    if (pc != null && dl != null) for (const x of [190, 290, 390]) s += kotak(x - 4, dl - 0.5, x + 4, pc, 'kr-tiang');
+    if (pc != null && lt != null) s += kotak(170, pc, 410, lt, 'kr-badan');
+  } else {
+    const ds = zp('dasarSungai'), mab = zp('mab'), tp = zp('tumpuan'), gl = zp('gelagar'), lt = zp('lantaiJembatan');
+    if (ds != null && mab != null) s += kotak(200, ds, 370, mab, 'kr-air');
+    if (ds != null) s += `<path class="kr-dasar" d="M${kiri - 20} ${Y(tp ?? 0)} L200 ${Y(ds)} H370 L${kanan} ${Y(tp ?? 0)} V${bawah} H${kiri - 20} Z"/>`;
+    if (tp != null && ds != null) { s += kotak(150, ds, 196, tp, 'kr-tiang'); s += kotak(374, ds, 420, tp, 'kr-tiang'); }
+    if (gl != null && lt != null) s += kotak(140, gl, 430, lt, 'kr-badan');
+  }
+  for (const [i, b] of KR.baris.entries()) {
+    const y = Y(b.z), ut = b.datum ? ' kr-datum' : '';
+    s += `<g class="kr-garis${ut}" data-i="${i}"><line x1="${kiri - 20}" y1="${y}" x2="${kanan}" y2="${y}"/>
+      <line class="kr-pegang" x1="${kiri - 20}" y1="${y}" x2="${kanan}" y2="${y}"/>
+      <text x="${kiri - 24}" y="${y + 4}" text-anchor="end">${esc(b.nama)}</text>
+      <text x="${kanan + 6}" y="${y + 4}">${esc(fmtElevasi(b.z))}</text></g>`;
+  }
+  const svg = $('#kr-svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = s;
+  KR.skala = {z0, z1, atas, bawah};
+}
+// seret garis elevasi di tampak samping (langkah 5 cm; Shift = 1 cm)
+function zDariLayar(e, k) {
+  const r = $('#kr-svg').getBoundingClientRect();
+  const yv = (e.clientY - r.top) / r.height * 360;
+  const z = k.z0 + (k.bawah - yv) / (k.bawah - k.atas) * (k.z1 - k.z0), l = e.shiftKey ? 0.01 : 0.05;
+  return r2(Math.round(z / l) * l);
+}
+$('#kr-svg').addEventListener('pointerdown', e => {
+  const g = /** @type {HTMLElement} */ (e.target).closest('.kr-garis');
+  if (!g) return;
+  e.preventDefault();
+  // skala dibekukan selama diseret agar garis tidak "lari" ketika rentang elevasi ikut berubah
+  KR.seret = {i: +(/** @type {HTMLElement} */ (g).dataset.i), skala: {...KR.skala}};
+  $('#kr-svg').setPointerCapture(e.pointerId);
+});
+$('#kr-svg').addEventListener('pointermove', e => {
+  if (!KR.seret) return;
+  KR.baris[KR.seret.i].z = zDariLayar(e, KR.seret.skala);
+  gambarKerangka();
+});
+$('#kr-svg').addEventListener('pointerup', () => { if (KR.seret) { KR.seret = null; gambarKerangka(); } });
+$('#kr-jenis').addEventListener('change', e => {
+  const v = /** @type {HTMLInputElement} */ (e.target).value;
+  if (!JENIS_KERANGKA[v] || v === KR.jenis) return;
+  KR.jenis = v; KR.baris = templatKerangka(v, KR.tingkat, KR.tinggi);
+  if (v === 'dermaga' && KR.asX === '4x4') { KR.asX = '10x5'; KR.asY = '2x6'; } else if (v !== 'dermaga' && KR.asX === '10x5') { KR.asX = '4x4'; KR.asY = '3x4'; }
+  gambarKerangka();
+});
+// jumlah tingkat / tinggi per tingkat menyusun ulang lantai, ring balk, dan nok (dasar pondasi dan elevasi tambahan dipertahankan)
+function susunTingkat() {
+  const n = parseInt(/** @type {HTMLInputElement} */ ($('#kr-tingkat')).value, 10), h = angka(/** @type {HTMLInputElement} */ ($('#kr-tinggi')).value);
+  if (!(n >= 1 && n <= 10)) return toast('Jumlah tingkat 1 sampai 10.');
+  if (!(h >= 2.4 && h <= 8)) return toast('Tinggi per tingkat 2,40 sampai 8,00 m.');
+  KR.tingkat = n; KR.tinggi = r2(h);
+  const baru = templatKerangka('gedung', n, KR.tinggi), pd = KR.baris.find(b => b.peran === 'pondasi');
+  const lain = KR.baris.filter(b => !/^(pondasi|lantai\d+|ringbalk|nok)$/.test(b.peran));
+  KR.baris = [...baru.map(b => (b.peran === 'pondasi' && pd ? {...b, z: pd.z, nama: pd.nama} : b)), ...lain];
+  gambarKerangka();
+}
+$('#kr-tingkat').addEventListener('change', susunTingkat);
+$('#kr-tinggi').addEventListener('change', susunTingkat);
+$('#kr-tabel').addEventListener('change', e => {
+  const t = /** @type {HTMLInputElement} */ (e.target), bar = t.closest('.kr-baris'); if (!bar) return;
+  const b = KR.baris[+(/** @type {HTMLElement} */ (bar).dataset.i)];
+  if (t.dataset.kr === 'nama') b.nama = t.value.trim() || b.nama;
+  else if (t.dataset.kr === 'z') {
+    const v = angka(t.value.replace('±', ''));
+    if (!Number.isFinite(v)) { toast('Isi elevasi dalam meter, mis. 3,20 atau -1.'); gambarKerangka(); return; }
+    b.z = r2(v);
+  }
+  gambarKerangka();
+});
+$('#kr-tabel').addEventListener('click', e => {
+  const t = /** @type {HTMLElement} */ (e.target);
+  if (t.dataset.kr !== 'hapus') return;
+  const i = +(/** @type {HTMLElement} */ (t.closest('.kr-baris')).dataset.i);
+  if (KR.baris.length <= 1) return toast('Kerangka perlu sedikitnya satu elevasi.');
+  KR.baris.splice(i, 1); gambarKerangka();
+});
+$('#kr-tambah').addEventListener('click', () => {
+  const zMax = Math.max(...KR.baris.map(b => b.z), 0), n = KR.baris.filter(b => b.peran.startsWith('tambah')).length + 1;
+  KR.baris.push({peran: 'tambah' + Date.now().toString(36), nama: 'Elevasi ' + n, z: r2(zMax + 1)});
+  gambarKerangka();
+  const inp = /** @type {HTMLInputElement | null} */ ($('#kr-tabel .kr-baris input'));
+  if (inp) { inp.focus(); inp.select(); }
+});
+for (const [id, k] of [['#kr-asx', 'asX'], ['#kr-asy', 'asY']]) $(id).addEventListener('input', e => { KR[k] = /** @type {HTMLInputElement} */ (e.target).value.trim(); });
+$('#kr-ganti').addEventListener('change', e => { KR.ganti = /** @type {HTMLInputElement} */ (e.target).checked; });
+$('#kr-batal').addEventListener('click', tutupKerangka);
+$('#kr-tutup').addEventListener('click', tutupKerangka);
+$('#kr-terapkan').addEventListener('click', () => { if (terapkanKerangka()) tutupKerangka(); });
+/**
+ * Terapkan kerangka: level bertanda kerangka diperbarui/dibuat/dibuang menurut peran; datum dermaga memakai level ber-datum;
+ * garis as kerangka dibuat ulang. Satu langkah Undo.
+ * @returns {boolean}
+ */
+function terapkanKerangka() {
+  const asX = KR.asX ? uraiJarakAs(KR.asX) : [], asY = KR.asY ? uraiJarakAs(KR.asY) : [];
+  if (asX === null) { toast('As angka: tulis 4x4 (4 as berjarak 4 m) atau jarak berturut-turut 3;4;3.'); return false; }
+  if (asY === null) { toast('As huruf: tulis 3x4 atau 3;4;3, atau kosongkan.'); return false; }
+  const peran = new Set(KR.baris.map(b => b.peran));
+  if (peran.size !== KR.baris.length) { toast('Ada dua elevasi dengan peran sama. Buang salah satunya.'); return false; }
+  const nid = pemberiId(), tulis = [];
+  const level = [...S.elems].filter(([, d]) => d.jenis === 'level');
+  for (const b of KR.baris) {
+    const lama = level.find(([, d]) => /** @type {any} */ (d).kerangka === b.peran) || (b.datum ? level.find(([, d]) => /** @type {any} */ (d).datum === b.datum) : null);
+    const isi = {...(lama ? salin(lama[1]) : {catatan: ''}), jenis: 'level', nama: b.nama, z: r2(b.z), kerangka: b.peran};
+    if (b.datum) isi.datum = b.datum; else delete isi.datum;
+    tulis.push({id: lama ? lama[0] : nid('M'), sesudah: isi});
+  }
+  const dipakai = new Set(tulis.map(t => t.id));
+  for (const [id, d] of level) if (/** @type {any} */ (d).kerangka && !dipakai.has(id)) tulis.push({id, sesudah: null});
+  // garis as: as kerangka lama dibuang bila diminta; angka (tegak) dari barat, huruf (mendatar) dari utara
+  let nAs = 0;
+  if (asX.length || asY.length) {
+    if (KR.ganti) for (const [id, d] of S.elems) if (d.jenis === 'bantu' && /** @type {any} */ (d).kerangka) tulis.push({id, sesudah: null});
+    const sisa = KR.ganti ? null : 'lanjut';
+    let mulaiAngka = sisa ? labelAsBerikut('angka') : 0, mulaiHuruf = sisa ? labelAsBerikut('huruf') : 0;
+    for (const x of asX) { const label = String(++mulaiAngka); tulis.push({id: nid('Q'), sesudah: {jenis: 'bantu', nama: 'As ' + label, awal: {x: r2(x), y: 0}, akhir: {x: r2(x), y: 1}, as: {label}, kerangka: true, catatan: ''}}); nAs++; }
+    for (const y of [...asY].sort((a, b) => b - a)) { const label = nomorKeHuruf(++mulaiHuruf); tulis.push({id: nid('Q'), sesudah: {jenis: 'bantu', nama: 'As ' + label, awal: {x: 0, y: r2(y)}, akhir: {x: 1, y: r2(y)}, as: {label}, kerangka: true, catatan: ''}}); nAs++; }
+  }
+  terapkan(tulis);
+  // pengaturan bawaan dinding mengikuti kerangka gedung: tinggi dinding = lantai teratas → ring balk
+  const st = /** @type {any} */ (S.setel);
+  st.kerangka = {jenis: KR.jenis, tingkat: KR.tingkat, tinggi: KR.tinggi, asX: KR.asX, asY: KR.asY};
+  if (KR.jenis === 'gedung') {
+    const lantai = KR.baris.filter(b => /^lantai\d+$/.test(b.peran)).sort((a, b) => a.z - b.z), rb = KR.baris.find(b => b.peran === 'ringbalk');
+    if (lantai.length && rb && rb.z > lantai[lantai.length - 1].z) st.tinggiDinding = r2(rb.z - lantai[lantai.length - 1].z);
+  }
+  simpanSetelan();
+  S.panelKunci = ''; renderPanel(true); zoomSemua();
+  toast(`Kerangka ${JENIS_KERANGKA[KR.jenis].nama.toLowerCase()}: ${KR.baris.length} elevasi${nAs ? `, ${nAs} garis as` : ''}. Ctrl+Z untuk mengembalikan.`);
+  return true;
+}
+$('#kosong-kerangka').addEventListener('click', () => bukaKerangka());
+
 // Daftar garis potong di panel ringkasan: penandanya tipis di lantai dan sulit diklik, jadi bisa dipilih dari sini
 function htmlDaftarPotong() {
   const daftar = [...S.elems].filter(([, d]) => d.jenis === 'potong' && sah(d)).sort(([, x], [, y]) => String(x.nama).localeCompare(String(y.nama), 'id'));
@@ -13183,6 +13483,7 @@ panel.addEventListener('click', e => {
   if (aksi === 'sorot-rangka') { e.preventDefault(); if (id) { sorotRangka(id, e.target.dataset.kunci, e.target.dataset.idx === undefined ? null : Number(e.target.dataset.idx)); renderPanel(true); } return; }
   if (aksi === 'hapus-sel') hapusPilihan();
   else if (aksi === 'tambah-level') tambahLevel();
+  else if (aksi === 'kerangka') bukaKerangka();
   else if (aksi === 'hapus-level') { const lid = e.target.dataset.id; if (lid && S.elems.has(lid)) terapkan([{id: lid, sesudah: null}]); }
   else if (aksi === 'hapus-bantu-semua') { const ids = [...S.elems].filter(([, d]) => d.jenis === 'bantu').map(([i]) => i); if (ids.length) terapkan(ids.map(i => ({id: i, sesudah: null}))); }
   else if (aksi === 'buat-grup') buatGrup();
