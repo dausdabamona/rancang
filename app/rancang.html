@@ -557,6 +557,45 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
   .tampilan{padding:var(--space-1) var(--space-2)}
   .bawah{flex-wrap:wrap}
 }
+
+/* ============ Outliner (v0.48): pohon grup → komponen → elemen, mengambang di kiri kanvas ============ */
+.outliner{position:absolute;left:10px;top:10px;bottom:46px;width:min(300px,calc(100% - 20px));z-index:4;display:flex;flex-direction:column;background:var(--color-bg);border-radius:var(--radius-md);box-shadow:0 6px 22px rgba(0,0,0,.18);font-size:13px;overflow:hidden}
+.outliner[hidden]{display:none}
+.ol-kepala{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 10px;border-bottom:1px solid var(--color-divider)}
+.ol-kepala b{font-weight:600}
+.ol-kepala .ol-jumlah{color:var(--rc-muted);font-size:11.5px;flex:1}
+.ol-kepala button{border:0;background:transparent;color:var(--rc-muted);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:var(--radius-md)}
+.ol-kepala button:hover{background:var(--color-surface);color:var(--color-text)}
+.ol-cari{margin:6px 8px 4px;padding:4px 8px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-bg);color:inherit;font:inherit;font-size:12.5px}
+.ol-konteks{margin:0 8px 4px;font-size:11.5px;color:var(--rc-muted)}
+.ol-pohon{flex:1;overflow:auto;padding:2px 0 8px;min-height:0}
+.ol-baris{display:flex;align-items:center;gap:2px;padding-left:calc(4px + var(--t,0) * 14px);padding-right:4px;min-height:24px;white-space:nowrap}
+.ol-baris:hover{background:var(--color-surface)}
+.ol-baris.pilih{background:var(--rc-select-face);box-shadow:inset 2px 0 0 var(--rc-select)}
+.ol-baris.jalur>.ol-nama{color:var(--rc-accent-text)}
+.ol-baris.konteks>.ol-nama{font-weight:600}
+.ol-baris.redup{opacity:.45}
+.ol-caret,.ol-mata{flex:none;width:20px;height:20px;border:0;background:transparent;color:var(--rc-muted);cursor:pointer;padding:0;display:grid;place-items:center;border-radius:3px}
+.ol-caret:hover,.ol-mata:hover{background:color-mix(in srgb,var(--color-text) 8%,transparent);color:var(--color-text)}
+.ol-caret svg{width:12px;height:12px;transition:transform .1s}
+.ol-caret[aria-expanded="true"] svg{transform:rotate(90deg)}
+.ol-caret.kosong{visibility:hidden}
+.ol-mata svg{width:14px;height:14px}
+.ol-baris:not(:hover)>.ol-mata:not(.mati){visibility:hidden}
+.ol-nama{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:2px 4px;border-radius:3px}
+.ol-nama:focus-visible{outline:2px solid var(--rc-select);outline-offset:-2px}
+.ol-nama small{color:var(--rc-muted);font-size:11px;margin-left:4px}
+.ol-ikon{display:inline-block;width:14px;margin-right:4px;text-align:center;color:var(--rc-muted);font-size:11px}
+.ol-folder .ol-nama{color:var(--rc-muted)}
+.ol-lagi{padding:4px 10px 4px calc(28px + var(--t,0) * 14px);color:var(--rc-muted);font-size:11.5px}
+.ol-ganti{flex:1;min-width:0;font:inherit;font-size:12.5px;padding:1px 4px;border:1px solid var(--rc-select);border-radius:3px}
+.ol-kosong{padding:12px 10px;color:var(--rc-muted)}
+/* Jalur konteks (v0.48): Model › Grup › Grup, tiap bagian bisa diklik */
+.banner .jalur-k{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px}
+.banner .jalur-k button{border:0;background:transparent;padding:1px 4px;color:var(--rc-accent-text);font-size:13px;font-weight:500}
+.banner .jalur-k button:hover{text-decoration:underline}
+.banner .jalur-k b{padding:1px 4px}
+.banner .jalur-k i{font-style:normal;color:var(--rc-muted)}
 </style>
 
 <header class="atas">
@@ -570,6 +609,7 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
   <div class="spasi"></div>
   <div class="kelompok" role="toolbar" aria-label="Tata letak">
     <button class="alat" id="btn-rail" aria-pressed="true" title="Tampilkan atau sembunyikan menu alat (Ctrl+B)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M9 4v16"/></svg><span class="teks">Menu</span></button>
+    <button class="alat" id="btn-objek" aria-pressed="false" title="Daftar objek (outliner): grup, komponen, dan elemen bertingkat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5h6M8 10h8M8 15h8M12 20h8M6 5v10h2M10 15v5h2"/></svg><span class="teks">Objek</span></button>
     <button class="alat" id="btn-sisi" aria-pressed="true" title="Tampilkan atau sembunyikan panel properti (Ctrl+J)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M15 4v16"/></svg><span class="teks">Properti</span></button>
     <button class="alat" id="btn-fokus" aria-pressed="false" title="Mode fokus: menu ringkas dan panel jadi rel (Ctrl+Shift+F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span class="teks">Fokus</span></button>
     <button class="alat" id="btn-palet" title="Palet perintah: cari alat, elemen, lembar, perintah (Ctrl+K)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg><span class="teks">Cari</span></button>
@@ -643,6 +683,12 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
   <canvas id="c" tabindex="0" aria-label="Kanvas gambar 3D"></canvas>
   <div id="ovl"></div>
   <div class="kursor-info" id="kursor-info" aria-live="polite"></div>
+  <section class="outliner" id="outliner" hidden aria-label="Objek (outliner)">
+    <div class="ol-kepala"><b>Objek</b><span class="ol-jumlah" id="ol-jumlah"></span><button type="button" id="ol-lipat" title="Lipat semua">⊟</button><button type="button" id="ol-tutup" aria-label="Tutup daftar objek" title="Tutup">×</button></div>
+    <input class="ol-cari" id="ol-cari" type="search" placeholder="Cari nama, id, atau jenis…" aria-label="Cari objek" autocomplete="off" spellcheck="false">
+    <div class="ol-konteks" id="ol-konteks"></div>
+    <div class="ol-pohon" id="ol-pohon" role="tree" aria-label="Pohon objek"></div>
+  </section>
   <div class="banner" id="banner" hidden><span id="banner-teks"></span><button type="button" data-aksi="selesai-konteks">Selesai</button></div>
   <div class="kosong" id="kosong" hidden>
     <h2>Mulai gambar bangunan</h2>
@@ -5554,14 +5600,42 @@ function segarKonteks() {
   if (S.edit) {
     const def = S.komp.get(S.edit.kid);
     const n = [...S.elems.values()].filter(d => d.jenis === 'instance' && d.definisi === S.edit.kid).length;
-    $('#banner-teks').innerHTML = `Mengedit komponen <b>${esc(def ? def.nama : S.edit.kid)}</b>, berlaku untuk ${n} salinan`;
+    const inst = S.elems.get(S.edit.iid), atas = inst ? jalurKonteksHtml(indukDari(S.edit.iid), true) : '';
+    $('#banner-teks').innerHTML = `<span class="jalur-k">${atas}<i>›</i><b>Komponen ${esc(def ? def.nama : S.edit.kid)}</b></span> <small>berlaku untuk ${n} salinan</small>`;
     b.hidden = false;
   } else if (S.konteks && S.grup.has(S.konteks)) {
-    $('#banner-teks').innerHTML = `Membuka grup <b>${esc(S.grup.get(S.konteks).nama)}</b>`;
+    $('#banner-teks').innerHTML = `<span class="jalur-k">${jalurKonteksHtml(S.konteks, false)}</span>`;
     b.hidden = false;
   } else b.hidden = true;
+  jadwalOutliner();
 }
-$('#banner').addEventListener('click', e => { if (e.target.dataset.aksi === 'selesai-konteks') tutupKonteks(); });
+// Jalur dari model sampai grup gid: "Model › Grup A › Grup B"; semua bagian bisa diklik kecuali yang terakhir (bila akhir=false)
+function jalurKonteksHtml(gid, semuaKlik) {
+  const rantai = gid && S.grup.has(gid) ? [gid, ...leluhur(gid)].reverse() : [];
+  const tombol = (g, teks) => `<button type="button" data-ke-konteks="${g || ''}" title="${g ? 'Naik ke grup ini' : 'Keluar dari semua grup'}">${teks}</button>`;
+  const bagian = [tombol(null, 'Model')];
+  rantai.forEach((g, i) => {
+    const nm = esc((S.grup.get(g) || {}).nama || g);
+    bagian.push(!semuaKlik && i === rantai.length - 1 ? `<b>${nm}</b>` : tombol(g, nm));
+  });
+  return bagian.join('<i>›</i>');
+}
+// Naik ke grup tertentu (null = model); grup yang ditinggalkan menjadi pilihan, seperti Esc di SketchUp
+function keKonteks(gid) {
+  if (S.edit) keluarKomponen();
+  const dari = S.konteks;
+  S.konteks = gid && S.grup.has(gid) ? gid : null;
+  let pilih = null;
+  if (dari) { const r = [dari, ...leluhur(dari)]; const i = r.indexOf(S.konteks); pilih = i > 0 ? r[i - 1] : i < 0 ? r[r.length - 1] : null; }
+  S.sel = new Set(pilih ? [pilih] : []);
+  segarKonteks(); segarPilihan();
+}
+$('#banner').addEventListener('click', e => {
+  const t = /** @type {HTMLElement} */ (e.target);
+  if (t.dataset.aksi === 'selesai-konteks') { tutupKonteks(); return; }
+  const k = t.closest('[data-ke-konteks]');
+  if (k) keKonteks(/** @type {HTMLElement} */ (k).dataset.keKonteks || null);
+});
 function tutupKonteks() {
   if (S.edit) keluarKomponen();
   else if (S.konteks) { const g = S.konteks; S.konteks = indukDari(g); S.sel = new Set([g]); segarKonteks(); segarPilihan(); }
@@ -5684,8 +5758,8 @@ const menuKonteksEl = document.createElement('div');
 menuKonteksEl.className = 'menu-konteks'; menuKonteksEl.hidden = true; menuKonteksEl.setAttribute('role', 'menu');
 document.body.appendChild(menuKonteksEl);
 function tutupMenuKonteks() { menuKonteksEl.hidden = true; }
-function bukaMenuKonteks(e) {
-  const hits = hitObjek(e, null, true);
+function bukaMenuKonteks(e, tanpaHit = false) {
+  const hits = tanpaHit ? [] : hitObjek(e, null, true);
   if (hits.length) {
     const t = targetDariKlik(hits[0]);
     if (t && !S.sel.has(t)) { S.sel = new Set([t]); segarPilihan(); }
@@ -10803,7 +10877,7 @@ function butirPalet(teks) {
       ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
       ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Hitung RAB (Rp)', 'harga', () => bukaRAB()], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
       ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Jadikan komponen', 'G', () => jadikanKomponen()], ['Komponen proyek', '', () => { S.sel.clear(); segarPilihan(); if (!TATA.sisi) $('#btn-sisi').click(); setTimeout(() => { const h = [...panel.querySelectorAll('h2')].find(x => x.textContent === 'Komponen proyek'); if (h) h.scrollIntoView({block: 'start'}); else toast('Belum ada komponen di proyek ini. Pilih benda lalu tekan G.'); }, 60); }], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
-      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
+      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Objek (outliner): daftar grup, komponen, elemen', 'objek', () => aturOutliner()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
     ];
     for (const [teks, ket, f] of P) if ((alias === 'zoom' && teks === 'Zoom semua') || cocok(teks)) hasil.push({jenis: 'Perintah', teks, ket, skor: 2, jalankan: f});
     for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && cocok('potongan ' + d.nama, id)) hasil.push({jenis: 'Potongan', teks: `Potongan ${d.nama}–${d.nama}`, ket: 'irisan 3D', skor: 2, jalankan: () => lihatPotongan(id)});
@@ -12093,6 +12167,300 @@ document.querySelectorAll('.rail-grup > .kicker').forEach(k => k.addEventListene
   terapkanTata(true);
 }));
 terapkanTata(false);
+/* ============ Outliner (v0.48): daftar objek bertingkat ala SketchUp ============ */
+// Pohon: grup → grup anak → komponen (salinan) → elemen; elemen sejenis yang banyak dikumpulkan dalam map semu
+// ("Dinding (24)"). Pintu/jendela tampil di bawah dindingnya. Klik memilih dan membuka grup induknya, klik 2× masuk
+// grup/komponen (atau zoom untuk elemen), mata = sembunyikan di 3D (sama dengan klik kanan → Sembunyikan), F2 = ganti nama.
+const OL = {
+  buka: new Set(),        // kunci simpul yang terbentang: id grup, id dinding, 'f:<induk>:<jenis>'
+  cari: '',
+  jadwal: 0,
+  selLama: '',            // pilihan terakhir yang sudah dibentangkan otomatis
+  ganti: null,            // id yang sedang diganti namanya
+  sorot: null,            // kotak sorot 3D saat kursor di atas baris
+  isi: ""                 // HTML pohon terakhir; render dilewati bila sama (klik 2× tidak terputus)
+};
+const OL_MAKS_BARIS = 300;   // per map semu; sisanya lewat kotak Cari
+const OL_MIN_MAP = 4;        // elemen sejenis ≥ 4 dalam satu induk → dikumpulkan dalam map semu
+const OL_IKON = {G: '▣', I: '◇', D: '▭', B: '▯', C: '■', V: '▱', P: '▤', A: '⌂', J: '╱', H: '◩', W: '▦', Y: '≡', X: '✂', N: 'T', Q: '┄', M: '⊥', F: '▼', S: '━', R: '━', U: '⌒', Z: '●', O: '◆'};
+function olTerbuka() { const el = document.getElementById('outliner'); return !!el && !el.hidden; }
+function jadwalOutliner() {
+  if (!olTerbuka() || OL.jadwal) return;
+  // dibatch di akhir tugas yang sama (bukan menunggu frame): pilihan + konteks + panel cukup satu render
+  OL.jadwal = 1; queueMicrotask(() => { OL.jadwal = 0; renderOutliner(); });
+}
+// Indeks satu kali per render: induk → {grup[], el[]}, dinding → bukaan[]
+function indeksOutliner() {
+  const anak = new Map(), bukaan = new Map();
+  const ke = k => anak.get(k) || anak.set(k, {grup: [], el: []}).get(k);
+  for (const [gid, g] of S.grup) ke(g.induk && S.grup.has(g.induk) ? g.induk : '').grup.push(gid);
+  for (const [id, d] of S.elems) {
+    if (!d || HANYA2D.has(d.jenis)) continue;
+    if (S.edit ? id[0] !== '_' : id[0] === '_') continue;
+    if (S.edit && id === S.edit.iid) continue;
+    if (d.jenis === 'bukaan' && S.elems.has(d.dinding)) { (bukaan.get(d.dinding) || bukaan.set(d.dinding, []).get(d.dinding)).push(id); continue; }
+    ke(!S.edit && d.grup && S.grup.has(d.grup) ? d.grup : '').el.push(id);
+  }
+  return {anak, bukaan};
+}
+const urutId = (a, b) => a.localeCompare(b, 'id', {numeric: true});
+const namaGrupOl = gid => (S.grup.get(gid) || {}).nama || gid;
+function teksElemenOl(id) {
+  const d = /** @type {any} */ (S.elems.get(id) || {});
+  if (d.jenis === 'instance') { const k = S.komp.get(d.definisi); return {judul: `Komponen ${k ? k.nama : d.definisi}`, kecil: idTampil(id)}; }
+  if (d.jenis === 'bukaan' && d.kode) return {judul: `${namaJenis(d)} ${d.kode}`, kecil: idTampil(id) + (d.nama ? ' · ' + d.nama : '')};
+  return {judul: d.nama || namaJenis(d), kecil: d.nama ? `${namaJenis(d)} ${idTampil(id)}` : idTampil(id)};
+}
+// Semua elemen yang tergambar di 3D untuk sebuah id (grup diuraikan; dinding membawa bukaannya)
+function elemenOl(ids) {
+  const {el} = ekspansi(ids.filter(i => kodeOf(i) === 'G' || S.elems.has(i)));
+  for (const i of ids) if (S.elems.has(i)) el.add(i);
+  return [...el];
+}
+const tersembunyiOl = ids => { const el = elemenOl(ids).filter(i => objek.has(i) || SEMBUNYI_TAMPIL.has(i)); return el.length > 0 && el.every(i => SEMBUNYI_TAMPIL.has(i)); };
+const SVG_CARET = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 2.5L8 6l-3.5 3.5"/></svg>';
+const SVG_MATA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const SVG_MATA_MATI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l18 18M10.6 5.1A9.9 9.9 0 0112 5c6.4 0 10 7 10 7a17 17 0 01-3.2 4M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 004.3-1"/></svg>';
+function renderOutliner() {
+  const pohon = $('#ol-pohon');
+  if (!pohon || !olTerbuka()) return;
+  const {anak, bukaan} = indeksOutliner();
+  const pilihan = new Set(S.sel), jalur = new Set();
+  for (const id of pilihan) { for (const g of leluhur(id)) jalur.add(g); const d = S.elems.get(id); if (d && d.jenis === 'bukaan') jalur.add(d.dinding); }
+  // bentangkan otomatis induk dari pilihan baru (sekali per pilihan, supaya pengguna tetap bisa melipat)
+  const kunciSel = [...pilihan].sort().join(',') + '|' + (S.konteks || '');
+  let gulir = false;
+  if (kunciSel !== OL.selLama) {
+    OL.selLama = kunciSel; gulir = pilihan.size > 0;
+    for (const id of pilihan) {
+      for (const g of leluhur(id)) OL.buka.add(g);
+      const d = S.elems.get(id);
+      if (d && d.jenis === 'bukaan') { OL.buka.add(d.dinding); for (const g of leluhur(d.dinding)) OL.buka.add(g); }
+      const ind = d && d.jenis === 'bukaan' ? d.dinding : id;
+      const p = S.elems.has(ind) ? (S.edit ? '' : (S.elems.get(ind).grup && S.grup.has(S.elems.get(ind).grup) ? S.elems.get(ind).grup : '')) : null;
+      if (p !== null) { const dd = S.elems.get(ind); OL.buka.add(`f:${p}:${namaJenis(dd)}`); }
+    }
+    if (S.konteks) { OL.buka.add(S.konteks); for (const g of leluhur(S.konteks)) OL.buka.add(g); }
+  }
+  const html = [];
+  const baris = (o) => {
+    const kls = ['ol-baris'];
+    if (o.folder) kls.push('ol-folder');
+    if (o.ids.length === 1 && pilihan.has(o.ids[0])) kls.push('pilih');
+    else if (o.folder && o.ids.length && o.ids.every(i => pilihan.has(i))) kls.push('pilih');
+    if (o.ids.length === 1 && jalur.has(o.ids[0])) kls.push('jalur');
+    if (o.ids.length === 1 && o.ids[0] === S.konteks) kls.push('konteks');
+    const mati = tersembunyiOl(o.ids);
+    if (mati) kls.push('redup');
+    const caret = o.punyaAnak ? `<button type="button" class="ol-caret" data-ol="lipat" aria-expanded="${o.terbuka}" aria-label="${o.terbuka ? 'Lipat' : 'Bentangkan'}">${SVG_CARET}</button>` : '<span class="ol-caret kosong"></span>';
+    const nama = OL.ganti && o.ids.length === 1 && OL.ganti === o.ids[0]
+      ? `<input class="ol-ganti" data-ol="ganti" value="${esc(o.judul)}" aria-label="Nama baru">`
+      : `<button type="button" class="ol-nama" data-ol="nama" title="${esc(o.tip || '')}"><span class="ol-ikon" aria-hidden="true">${o.ikon}</span>${esc(o.judul)}${o.kecil ? `<small>${esc(o.kecil)}</small>` : ''}</button>`;
+    const mata = o.ids.length ? `<button type="button" class="ol-mata${mati ? ' mati' : ''}" data-ol="mata" aria-label="${mati ? 'Tampilkan' : 'Sembunyikan'}" title="${mati ? 'Tampilkan di 3D' : 'Sembunyikan di 3D (tetap dihitung di RAB dan gambar)'}">${mati ? SVG_MATA_MATI : SVG_MATA}</button>` : '';
+    html.push(`<div class="${kls.join(' ')}" role="treeitem" style="--t:${o.t}" data-kunci="${esc(o.kunci)}" data-ids="${esc(o.ids.join(','))}"${o.punyaAnak ? ` aria-expanded="${o.terbuka}"` : ''}>${caret}${nama}${mata}</div>`);
+  };
+  const tulisElemen = (id, t) => {
+    const d = S.elems.get(id), tx = teksElemenOl(id), bk = (bukaan.get(id) || []).sort(urutId);
+    const terbuka = bk.length > 0 && OL.buka.has(id);
+    baris({kunci: id, ids: [id], t, ikon: OL_IKON[kodeOf(id)] || '·', judul: tx.judul, kecil: tx.kecil, punyaAnak: bk.length > 0, terbuka, tip: `${namaJenis(d)} ${idTampil(id)}`});
+    if (terbuka) for (const b of bk) { const tb = teksElemenOl(b); baris({kunci: b, ids: [b], t: t + 1, ikon: OL_IKON.B, judul: tb.judul, kecil: tb.kecil, tip: `${namaJenis(S.elems.get(b))} ${b} di ${id}`}); }
+  };
+  const tulisIsi = (induk, t) => {
+    const isi = anak.get(induk) || {grup: [], el: []};
+    for (const gid of [...isi.grup].sort((a, b) => namaGrupOl(a).localeCompare(namaGrupOl(b), 'id', {numeric: true}))) {
+      const sub = anak.get(gid), punya = !!sub && (sub.grup.length + sub.el.length) > 0, terbuka = punya && OL.buka.has(gid);
+      const n = sub ? sub.grup.length + sub.el.length : 0;
+      baris({kunci: gid, ids: [gid], t, ikon: OL_IKON.G, judul: namaGrupOl(gid), kecil: `${idTampil(gid)} · ${n} isi`, punyaAnak: punya, terbuka, tip: `Grup ${namaGrupOl(gid)}`});
+      if (terbuka) tulisIsi(gid, t + 1);
+    }
+    // komponen dulu, lalu elemen per jenis (urut nama jenis)
+    const perJenis = new Map();
+    for (const id of isi.el) { const j = namaJenis(S.elems.get(id)); (perJenis.get(j) || perJenis.set(j, []).get(j)).push(id); }
+    const jenisUrut = [...perJenis.keys()].sort((a, b) => (a.startsWith('Komponen') ? -1 : b.startsWith('Komponen') ? 1 : a.localeCompare(b, 'id')));
+    for (const j of jenisUrut) {
+      const ids = perJenis.get(j).sort(urutId);
+      if (ids.length < OL_MIN_MAP) { for (const id of ids) tulisElemen(id, t); continue; }
+      const kunci = `f:${induk}:${j}`, terbuka = OL.buka.has(kunci);
+      baris({kunci, ids, t, ikon: OL_IKON[kodeOf(ids[0])] || '·', judul: `${j}`, kecil: `${ids.length}`, punyaAnak: true, terbuka, folder: true, tip: `Klik: pilih semua ${j.toLowerCase()} di sini`});
+      if (terbuka) {
+        for (const id of ids.slice(0, OL_MAKS_BARIS)) tulisElemen(id, t + 1);
+        if (ids.length > OL_MAKS_BARIS) html.push(`<div class="ol-lagi" style="--t:${t + 1}">… ${ids.length - OL_MAKS_BARIS} lagi. Pakai kotak Cari.</div>`);
+      }
+    }
+  };
+  const q = OL.cari.trim().toLowerCase();
+  let nTotal = 0;
+  if (q) {
+    // hasil cari: daftar datar beserta jalurnya
+    const cocok = [];
+    for (const [gid, g] of S.grup) if (!S.edit && `${gid} ${g.nama || ''} grup`.toLowerCase().includes(q)) cocok.push(gid);
+    for (const [id, d] of S.elems) {
+      if (!d || HANYA2D.has(d.jenis) || (S.edit ? id[0] !== '_' : id[0] === '_')) continue;
+      const tx = teksElemenOl(id);
+      if (`${idTampil(id)} ${tx.judul} ${tx.kecil} ${namaJenis(d)}`.toLowerCase().includes(q)) cocok.push(id);
+    }
+    nTotal = cocok.length;
+    cocok.sort(urutId);
+    for (const id of cocok.slice(0, OL_MAKS_BARIS)) {
+      const grup = kodeOf(id) === 'G', tx = grup ? {judul: namaGrupOl(id), kecil: idTampil(id)} : teksElemenOl(id);
+      const jl = leluhur(id).reverse().map(namaGrupOl).join(' › ');
+      baris({kunci: id, ids: [id], t: 0, ikon: OL_IKON[kodeOf(id)] || '·', judul: tx.judul, kecil: jl ? `${tx.kecil} · di ${jl}` : tx.kecil, tip: jl ? `di ${jl}` : 'di Model'});
+    }
+    if (!cocok.length) html.push('<div class="ol-kosong">Tidak ada objek yang cocok.</div>');
+    else if (cocok.length > OL_MAKS_BARIS) html.push(`<div class="ol-lagi">… ${cocok.length - OL_MAKS_BARIS} lagi. Persempit pencarian.</div>`);
+  } else {
+    tulisIsi('', 0);
+    for (const v of anak.values()) nTotal += v.el.length;
+    if (!html.length) html.push(`<div class="ol-kosong">${S.edit ? 'Komponen ini masih kosong.' : 'Model masih kosong.'}</div>`);
+  }
+  $('#ol-jumlah').textContent = S.edit ? 'isi komponen' : `${S.grup.size} grup · ${nTotal} elemen`;
+  $('#ol-konteks').innerHTML = S.edit ? `Mengedit <b>komponen ${esc((S.komp.get(S.edit.kid) || {}).nama || S.edit.kid)}</b>. Esc untuk selesai.`
+    : S.konteks ? `Grup terbuka: <b>${esc(namaGrupOl(S.konteks))}</b>` : 'Klik untuk memilih · klik 2× untuk masuk · F2 ganti nama';
+  // pertahankan posisi gulir dan fokus baris
+  const fokus = document.activeElement && pohon.contains(document.activeElement) ? /** @type {HTMLElement} */ (document.activeElement.closest('.ol-baris'))?.dataset.kunci : null;
+  const gulirY = pohon.scrollTop, isi = html.join('');
+  if (OL.isi !== isi) { pohon.innerHTML = isi; OL.isi = isi; pohon.scrollTop = gulirY; }
+  if (fokus) { const b = pohon.querySelector(`.ol-baris[data-kunci="${CSS.escape(fokus)}"] .ol-nama`); if (b) /** @type {HTMLElement} */ (b).focus({preventScroll: true}); }
+  const inp = /** @type {HTMLInputElement | null} */ (pohon.querySelector('.ol-ganti'));
+  if (inp) { inp.focus(); inp.select(); }
+  if (gulir) { const b = pohon.querySelector('.ol-baris.pilih'); if (b) b.scrollIntoView({block: 'nearest'}); }
+}
+// Pilih dari outliner: grup induknya dibuka dulu (konteks), lalu benda dipilih — sama dengan klik di kanvas
+function pilihDariOutliner(ids, e) {
+  ids = ids.filter(i => ambil(i));
+  if (!ids.length) return;
+  const induk = id => { if (S.edit) return null; const d = S.elems.get(id); if (d && d.jenis === 'bukaan') return indukDari(d.dinding); return indukDari(id); };
+  const p = induk(ids[0]);
+  const tambah = e && (e.ctrlKey || e.metaKey || e.shiftKey);
+  if (!S.edit && (S.konteks || null) !== (p || null)) {
+    S.konteks = p || null; segarKonteks();
+    S.sel = new Set(ids);
+  } else if (tambah) {
+    const semua = ids.every(i => S.sel.has(i));
+    for (const i of ids) { if (semua) S.sel.delete(i); else S.sel.add(i); }
+  } else S.sel = new Set(ids);
+  S.muka = null;
+  segarPilihan();
+}
+// Mata: sembunyikan/tampilkan di 3D saja (RAB dan gambar 2D tidak berubah)
+function mataOutliner(ids) {
+  const el = elemenOl(ids);
+  const mati = tersembunyiOl(ids);
+  for (const i of el) { if (mati) SEMBUNYI_TAMPIL.delete(i); else SEMBUNYI_TAMPIL.add(i); }
+  if (!mati) for (const i of el) S.sel.delete(i);
+  segarPilihan();
+}
+function gantiNamaOutliner(id, nama) {
+  OL.ganti = null;
+  const d = ambil(id);
+  nama = String(nama || '').trim();
+  if (!d || !S.bisaUbah || (d.nama || '') === nama) { renderOutliner(); return; }
+  const b = salin(d);
+  if (nama) b.nama = nama; else if (kodeOf(id) === 'G') { renderOutliner(); return toast('Nama grup tidak boleh kosong.'); } else delete b.nama;
+  terapkan([{id, sesudah: b}]);
+  segarKonteks(); renderPanel(true);
+  toast(`${idTampil(id)} sekarang bernama "${nama || namaJenis(d)}". Ctrl+Z untuk mengembalikan.`);
+}
+// Kotak sorot 3D saat kursor di atas baris: menunjukkan letak benda tanpa memilihnya
+function sorotOutliner(ids) {
+  if (OL.sorot) { scene.remove(OL.sorot); OL.sorot.geometry.dispose(); OL.sorot = null; }
+  if (ids && ids.length) {
+    const b = new THREE.Box3();
+    for (const id of elemenOl(ids)) {
+      const o = objek.get(id);
+      if (o && o.visible !== false) { b.expandByObject(o); continue; }
+      const d = S.elems.get(id), w = d && d.jenis === 'bukaan' ? objek.get(d.dinding) : null;
+      if (w) w.traverse(c => { if (c.userData && c.userData.elemId === id) b.expandByObject(c); });
+    }
+    if (!b.isEmpty()) {
+      const warna = getComputedStyle(document.documentElement).getPropertyValue('--color-accent-2').trim() || '#d6006c';
+      OL.sorot = new THREE.Box3Helper(b.expandByScalar(0.03), new THREE.Color(warna));
+      OL.sorot.material.depthTest = false; OL.sorot.renderOrder = 999;
+      scene.add(OL.sorot);
+    }
+  }
+  minta();
+}
+function aturOutliner(buka) {
+  const el = $('#outliner'), nyala = buka === undefined ? el.hidden : !!buka;
+  el.hidden = !nyala;
+  $('#btn-objek').setAttribute('aria-pressed', String(nyala));
+  TATA.objek = nyala; try { localStorage.setItem('rancang-tata', JSON.stringify(TATA)); } catch (_) {}
+  if (nyala) { OL.selLama = ''; renderOutliner(); } else sorotOutliner(null);
+}
+$('#btn-objek').addEventListener('click', () => aturOutliner());
+$('#ol-tutup').addEventListener('click', () => aturOutliner(false));
+$('#ol-lipat').addEventListener('click', () => { OL.buka.clear(); OL.selLama = '¦'; if (S.konteks) { OL.buka.add(S.konteks); for (const g of leluhur(S.konteks)) OL.buka.add(g); } renderOutliner(); });
+$('#ol-cari').addEventListener('input', e => { OL.cari = /** @type {HTMLInputElement} */ (e.target).value; renderOutliner(); });
+$('#ol-cari').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Escape') { /** @type {HTMLInputElement} */ (e.target).value = ''; OL.cari = ''; renderOutliner(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); const b = /** @type {HTMLElement | null} */ ($('#ol-pohon').querySelector('.ol-nama')); if (b) b.focus(); }
+});
+{
+  const pohon = $('#ol-pohon');
+  const barisDari = t => /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (t).closest('.ol-baris'));
+  const idsDari = b => (b.dataset.ids ? b.dataset.ids.split(',') : []);
+  pohon.addEventListener('click', e => {
+    const b = barisDari(e.target); if (!b) return;
+    const aksi = /** @type {HTMLElement} */ (e.target).closest('[data-ol]')?.getAttribute('data-ol');
+    if (aksi === 'ganti') return;
+    if (aksi === 'lipat') { const k = b.dataset.kunci; if (OL.buka.has(k)) OL.buka.delete(k); else OL.buka.add(k); renderOutliner(); return; }
+    if (aksi === 'mata') { mataOutliner(idsDari(b)); return; }
+    if (aksi === 'nama') {
+      const ids = idsDari(b);
+      // map semu: klik nama juga membentangkan
+      if (b.classList.contains('ol-folder') && !OL.buka.has(b.dataset.kunci)) OL.buka.add(b.dataset.kunci);
+      // klik kedua (detail 2) = klik 2×; dibaca dari hitungan klik karena baris bisa sudah dirender ulang
+      if (e.detail === 2) masukDariOutliner(ids); else pilihDariOutliner(ids, e);
+    }
+  });
+  function masukDariOutliner(ids) {
+    if (ids.length !== 1) return;
+    const id = ids[0], d = S.elems.get(id);
+    if (kodeOf(id) === 'G') { masukGrup(id); OL.buka.add(id); toast(`Grup ${namaGrupOl(id)} dibuka. Esc atau klik jalur di kanan atas untuk naik.`); }
+    else if (d && d.jenis === 'instance' && !S.edit) masukKomponen(id);
+    else zoomPilihan();
+  }
+  pohon.addEventListener('contextmenu', e => {
+    const b = barisDari(e.target); if (!b) return;
+    e.preventDefault();
+    const ids = idsDari(b);
+    if (!ids.every(i => S.sel.has(i))) pilihDariOutliner(ids, null);
+    bukaMenuKonteks(e, true);
+  });
+  pohon.addEventListener('keydown', e => {
+    const b = barisDari(e.target); if (!b) return;
+    if (/** @type {HTMLElement} */ (e.target).classList.contains('ol-ganti')) {
+      e.stopPropagation();
+      if (e.key === 'Enter') { e.preventDefault(); gantiNamaOutliner(OL.ganti, /** @type {HTMLInputElement} */ (e.target).value); }
+      else if (e.key === 'Escape') { e.preventDefault(); OL.ganti = null; renderOutliner(); }
+      return;
+    }
+    const semua = [...pohon.querySelectorAll('.ol-nama')], i = semua.indexOf(/** @type {Element} */ (e.target));
+    const k = b.dataset.kunci, ids = idsDari(b);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); const n = semua[i + (e.key === 'ArrowDown' ? 1 : -1)]; if (n) /** @type {HTMLElement} */ (n).focus(); }
+    else if (e.key === 'ArrowRight' && b.hasAttribute('aria-expanded') && !OL.buka.has(k)) { e.preventDefault(); e.stopPropagation(); OL.buka.add(k); renderOutliner(); }
+    else if (e.key === 'ArrowLeft' && OL.buka.has(k)) { e.preventDefault(); e.stopPropagation(); OL.buka.delete(k); renderOutliner(); }
+    else if (e.key === 'F2' && ids.length === 1 && !b.classList.contains('ol-folder') && S.bisaUbah) { e.preventDefault(); e.stopPropagation(); OL.ganti = ids[0]; renderOutliner(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); canvas.focus(); }
+  });
+  pohon.addEventListener('focusout', e => {
+    const t = /** @type {HTMLElement} */ (e.target);
+    if (t.classList && t.classList.contains('ol-ganti') && OL.ganti) gantiNamaOutliner(OL.ganti, /** @type {HTMLInputElement} */ (t).value);
+  });
+  pohon.addEventListener('mouseover', e => {
+    const b = barisDari(e.target);
+    const k = b ? b.dataset.kunci : null;
+    if (k === pohon.dataset.sorot) return;
+    pohon.dataset.sorot = k || '';
+    sorotOutliner(b ? idsDari(b) : null);
+  });
+  pohon.addEventListener('mouseleave', () => { pohon.dataset.sorot = ''; sorotOutliner(null); });
+  // jangan sampai roda/klik di outliner menggerakkan kamera atau memilih di kanvas
+  for (const ev of ['pointerdown', 'wheel', 'contextmenu']) $('#outliner').addEventListener(ev, e => e.stopPropagation());
+}
+if (/** @type {any} */ (TATA).objek) requestAnimationFrame(() => aturOutliner(true));
 function renderPanel(paksa) {
   for (const id of [...S.sel]) if (!ambil(id)) S.sel.delete(id);
   const kunci = [...S.sel].sort().join(',') + '|' + S.bisaUbah + '|' + !!S.edit;
@@ -12110,6 +12478,7 @@ function renderPanel(paksa) {
   else html = htmlRingkasan();
   panel.innerHTML = html;
   gayaPanel();
+  jadwalOutliner();
   if (S.sel.size > 1) tandaiBeragam();
   isiUkur();
 }
