@@ -143,7 +143,7 @@ kbd{font:500 11px var(--f-mono);color:var(--muted);border:1px solid var(--line);
 .menu-konteks button.bahaya{color:var(--danger)}
 .menu-konteks hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
 .lbl{position:absolute;left:0;top:0;font:500 12px var(--f-mono);font-variant-numeric:tabular-nums;background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:1px 6px;border-radius:2px;white-space:nowrap}
-.lbl.anot{background:transparent;border:0;padding:0 2px;font:500 12px system-ui,sans-serif;color:var(--fg);text-shadow:0 0 3px var(--panel),0 0 3px var(--panel)}
+.lbl.anot{background:transparent;border:0;padding:0 2px;font:500 11px system-ui,sans-serif;color:var(--fg);text-shadow:0 0 3px var(--panel),0 0 3px var(--panel)}
 .lbl.anot.ukur{background:var(--panel);border:1px solid var(--line)}
 .lbl.potong{background:var(--danger);color:#fff;border:0;border-radius:50%;min-width:20px;text-align:center;font-weight:700;padding:1px 5px}
 .lbl.pilih{color:var(--select)}.lbl.potong.pilih{background:var(--select);color:#fff}
@@ -709,6 +709,7 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
   <div class="seg">
     <button class="ikon" id="btn-paralel" aria-pressed="false" aria-label="Paralel" title="Paralel — Proyeksi paralel (tanpa perspektif)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 5h8M2.5 11h8M10.5 3.2 12.8 5l-2.3 1.8M10.5 9.2 12.8 11l-2.3 1.8"/></svg></button>
     <button class="ikon" id="btn-zoom" aria-label="Semua" title="Semua — Tampilkan semua (Shift+Z)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5V2h3.5M14 5.5V2h-3.5M2 10.5V14h3.5M14 10.5V14h-3.5"/><rect x="5.5" y="5.5" width="5" height="5"/></svg></button>
+    <button class="ikon" id="btn-keterangan" aria-pressed="true" aria-label="Keterangan" title="Keterangan 3D (nama ruang, teks, label, ukuran): tampil atau sembunyi. Yang tertutup benda atau saling menimpa disembunyikan otomatis"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h11M8 3.5v9M5.5 12.5h5"/></svg></button>
     <button class="ikon" id="btn-tembus" aria-pressed="false" aria-label="Tembus" title="Tembus — Tembus pandang: dinding dan atap transparan agar isi ruangan mudah dipilih (H)"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8"/><rect x="6" y="6" width="8" height="8" fill="currentColor" fill-opacity=".18" stroke-dasharray="1.6 1.2"/></svg></button>
     <button class="ikon" id="btn-iris-datar" aria-pressed="false" aria-label="Iris datar" title="Iris datar — Iris datar: potong model setinggi +1,20 m agar tampak seperti denah 3D"><svg class="ik" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 13.5 4.9v6.2L8 14.2 2.5 11.1V4.9z"/><path d="M1 9h14" stroke-width="1.8"/></svg></button>
   </div>
@@ -5153,6 +5154,9 @@ function wajahPratinjau(p, z) {
 }
 const kolam = [];
 let snapEl = null;
+// keterangan 3D: tampil/sembunyi diingat per komputer; cache uji tertutup per titik
+const KET = {tampil: true, cache: new Map()};
+try { KET.tampil = localStorage.getItem('rancang-keterangan') !== '0'; } catch (_) {}
 function posisiOverlay() {
   const w = canvas.clientWidth, h = canvas.clientHeight, v = V();
   const daftar = [...S.label, ...labelPenanda().filter(L => !IRIS.arr.length || !terbuangIris(L.x, L.y, L.z))];
@@ -5163,11 +5167,29 @@ function posisiOverlay() {
     if (d && d.jenis === 'dinding') daftar.push({x: (d.awal.x + d.akhir.x) / 2, y: (d.awal.y + d.akhir.y) / 2, z: (d.z0 || 0) + (d.tinggi || 0), t: fmt(ukur(d).panjang) + ' m'});
   }
   while (kolam.length < daftar.length) { const el = document.createElement('div'); el.className = 'lbl'; ovl.appendChild(el); kolam.push(el); }
+  // Keterangan 3D (v0.50): bisa dimatikan; yang tertutup benda (mis. nama ruang di bawah atap) atau menimpa keterangan
+  // lain disembunyikan. Ukurannya tetap dalam piksel, jadi tidak ikut membesar saat zoom.
+  const tampilKet = KET.tampil, rc = {width: w, height: h}, kotakDipakai = [], kini = performance.now();
   kolam.forEach((el, i) => {
     const L = daftar[i];
     if (!L) { el.hidden = true; return; }
     v.set(L.x, L.y, L.z || 0).project(camera);
     if (v.z > 1) { el.hidden = true; return; }
+    const ket = !!L.k && L.k.startsWith('anot') && !L.k.includes(' as') && !L.k.includes('pilih') && !L.k.includes('kilat');
+    if (ket) {
+      if (!tampilKet) { el.hidden = true; return; }
+      const px = (v.x + 1) / 2 * w, py = (1 - v.y) / 2 * h;
+      // uji tertutup: sinar dari kamera ke titik keterangan; hasil disimpan sebentar agar tidak dihitung tiap frame
+      const kk = `${r2(L.x)},${r2(L.y)},${r2(L.z || 0)}`, c = KET.cache.get(kk);
+      let lihat;
+      if (c && kini - c.t < 300 && Math.abs(c.px - px) < 2 && Math.abs(c.py - py) < 2) lihat = c.lihat;
+      else { lihat = terlihatSnap(L.x, L.y, L.z || 0, px, py, null, rc, null); KET.cache.set(kk, {lihat, t: kini, px, py}); }
+      if (!lihat) { el.hidden = true; return; }
+      // saling menimpa: keterangan yang lebih dulu menang, berikutnya disembunyikan
+      const lw = String(L.t).length * 6.2 + 6, lh = 15, kt = [px - lw / 2, py - lh / 2, px + lw / 2, py + lh / 2];
+      if (kotakDipakai.some(b => kt[0] < b[2] && kt[2] > b[0] && kt[1] < b[3] && kt[3] > b[1])) { el.hidden = true; return; }
+      kotakDipakai.push(kt);
+    }
     el.hidden = false;
     el.textContent = L.k ? L.t : labelSatuan(L.t);
     el.className = 'lbl' + (L.k ? ' ' + L.k : '');
@@ -11156,6 +11178,110 @@ const NODE_ADAPTER = {
     }
   }
 };
+
+// Atap utuh (v0.50): rusuk penutup dari atapGeom, diterjemahkan ke isian atap. Teritis/sopi-sopi = overstek sisi itu
+// (limas: overstek umum), nok naik/turun = kemiringan. Menarik sebagian sisi (node baru) = atap dipecah otomatis dulu.
+const cacheNodeAtap = new WeakMap();
+function nodeAtap(d) {
+  const c = cacheNodeAtap.get(d);
+  if (c && c.undo === S.undo.length) return c.val;
+  const muka = atapGeom(d).permukaan.filter(m => m.jenis === 'atap');
+  const N = [], kunci = new Map(), R = [], rk = new Set();
+  const idx = q => { const k = `${r2(q[0])},${r2(q[1])},${r2(q[2])}`; if (!kunci.has(k)) { kunci.set(k, N.length); N.push({x: r2(q[0]), y: r2(q[1]), z: r2(q[2])}); } return kunci.get(k); };
+  for (const m of muka) {
+    const ii = m.titik.map(idx);
+    ii.forEach((a, k) => { const b = ii[(k + 1) % ii.length]; if (a === b) return; const kk = a < b ? a + '-' + b : b + '-' + a; if (!rk.has(kk)) { rk.add(kk); R.push([a, b]); } });
+  }
+  const [kx0, ky0, kx1, ky1] = kotakOverstek(d), tol = 0.03;
+  const zMin = Math.min(...N.map(q => q.z)), zMax = Math.max(...N.map(q => q.z));
+  const sisi = N.map(q => new Set([...(Math.abs(q.x - kx0) < tol ? ['barat'] : []), ...(Math.abs(q.x - kx1) < tol ? ['timur'] : []), ...(Math.abs(q.y - ky0) < tol ? ['selatan'] : []), ...(Math.abs(q.y - ky1) < tol ? ['utara'] : [])]));
+  const val = {N, R, sisi, zMin, zMax};
+  cacheNodeAtap.set(d, {undo: S.undo.length, val});
+  return val;
+}
+const NORMAL_SISI = {barat: [-1, 0], timur: [1, 0], selatan: [0, -1], utara: [0, 1]};
+// sisi yang sama-sama dimiliki semua node terpilih
+function sisiBersama(A, idx) { let r = null; for (const i of idx) { const s2 = A.sisi[i]; r = r ? new Set([...r].filter(x => s2.has(x))) : new Set(s2); } return r || new Set(); }
+const nokKah = (A, idx) => [...idx].every(i => Math.abs(A.N[i].z - A.zMax) < 0.02);
+NODE_ADAPTER.atap = {
+  nama: 'Atap',
+  serentak: true,
+  nodes: d => nodeAtap(d).N,
+  rusuk: d => nodeAtap(d).R,
+  namaNode(d, N, i) {
+    const A = nodeAtap(d), s2 = [...A.sisi[i]];
+    if (Math.abs(N[i].z - A.zMax) < 0.02) return s2.length ? `Ujung nok (${s2.join('/')})` : 'Puncak';
+    return s2.length > 1 ? `Sudut teritis ${s2.join('-')}` : s2.length ? `Titik tepi ${s2[0]}` : 'Titik atap';
+  },
+  namaRusuk(d, N, r) {
+    const A = nodeAtap(d), [a, b] = A.R[r], idx = new Set([a, b]), sb = [...sisiBersama(A, idx)];
+    if (nokKah(A, idx)) return 'Nok';
+    if (sb.length) return (Math.abs(N[a].z - N[b].z) < 0.02 ? 'Teritis ' : 'Tepi sopi-sopi ') + sb[0];
+    return 'Jurai';
+  },
+  gerak(id, d, N, idx, dv) {
+    const A = nodeAtap(d), b = salin(d), datarDv = Math.hypot(dv[0], dv[1]);
+    // nok naik/turun = kemiringan berubah (lebar atap tetap)
+    if (nokKah(A, idx) && Math.abs(dv[2]) >= datarDv) {
+      const tinggi = A.zMax - A.zMin, k = batas(d.kemiringan ?? 30, 1, 75) * Math.PI / 180, lari = tinggi / Math.tan(k);
+      if (!(lari > 0.05)) return {galat: 'Atap ini tidak punya nok yang bisa dinaikkan.'};
+      const kb = Math.atan((tinggi + dv[2]) / lari) * 180 / Math.PI;
+      if (!(kb >= 1 && kb <= 75)) return {galat: 'Kemiringan atap harus antara 1° dan 75°.'};
+      b.kemiringan = Math.round(kb * 100) / 100;
+      return {tulis: [{id, sesudah: b}], pesan: `Kemiringan atap ${idTampil(id)}: ${fmt(d.kemiringan ?? 30, 1)}° → ${fmt(b.kemiringan, 2)}°.`};
+    }
+    const sisi = [...sisiBersama(A, idx)];
+    if (!sisi.length) return {galat: nokKah(A, idx) ? 'Geser nok ke atas/bawah (kunci Z dengan panah ↑) untuk mengubah kemiringan.' : 'Rusuk ini (jurai) mengikuti overstek dan kemiringan. Pegang teritis, tepi sopi-sopi, atau nok.'};
+    if (datarDv < 1e-4) return {galat: 'Teritis ditarik mendatar (keluar/masuk). Untuk menaikkan atap, ubah elevasi dudukan di Properti.'};
+    const os = ovSisi(d), baru = {};
+    for (const s2 of sisi) {
+      const n = NORMAL_SISI[s2], dl = dv[0] * n[0] + dv[1] * n[1], ov = r2(os[s2] + dl);
+      if (ov < -0.1) return {galat: `Overstek ${s2} tidak bisa kurang dari 0 (berhenti di muka dinding).`};
+      baru[s2] = Math.max(0, ov);
+    }
+    if (d.bentuk === 'limas') b.overstek = Object.values(baru)[0];
+    else b.overstekSisi = {...(d.overstekSisi || {}), ...baru};
+    if (!sah(b)) return {galat: 'Atap tidak sah sesudah diubah.'};
+    const teks = Object.entries(baru).map(([k, v]) => `${k} ${fmt(os[k])} → ${fmt(v)} m`).join(', ');
+    return {tulis: [{id, sesudah: b}], pesan: `Overstek ${d.bentuk === 'limas' ? 'semua sisi (limas)' : teks}${d.bentuk === 'limas' ? ': ' + fmt(os.utara) + ' → ' + fmt(b.overstek) + ' m' : ''}.`};
+  },
+  // node baru pada atap utuh = sebagian sisi; atap dipecah dulu lalu node dipasang pada bidang hasil pecahan
+  sisip: (id, d, N, r, t) => ({pecah: {r, t}}),
+  hapus: () => ({galat: 'Atap utuh tidak punya node yang bisa dibuang. Pecah atap dulu (klik kanan → Pecah atap).'}),
+  arah(d, N, i, idx) {
+    const A = nodeAtap(d), sb = [...sisiBersama(A, idx || new Set([i]))];
+    if (sb.length) { const n = NORMAL_SISI[sb[0]]; return {u: [n[0], n[1], 0], badan: 30}; }
+    if (nokKah(A, idx || new Set([i]))) return {u: [0, 0, 1], badan: 10};
+    return null;
+  }
+};
+// Pecah atap utuh, lalu cari bidang pecahan dan rusuknya yang berimpit dengan rusuk asal (r) agar pekerjaan berlanjut
+function pecahAtapLaluPegang(id, d, r) {
+  const A = nodeAtap(d), [a, b] = A.R[r], P = A.N[a], Q = A.N[b];
+  const nUndo = S.undo.length;
+  pecahAtap(id);
+  if (S.undo.length === nUndo) return null;
+  const baru = S.undo[S.undo.length - 1].filter(x => { const v = /** @type {any} */ (x.sesudah); return v && v.jenis === 'bidang' && v.peran === 'atap'; }).map(x => x.id);
+  /** @type {any} */
+  let terbaik = null;
+  for (const hid of baru) {
+    const h = /** @type {any} */ (S.elems.get(hid)); if (!h) continue;
+    const T = h.titik;
+    T.forEach((u, k) => {
+      const v = T[(k + 1) % T.length];
+      // jarak kedua ujung rusuk asal ke garis rusuk pecahan (harus segaris dan bertumpuk)
+      const dd = jarakTitikGaris(P, u, v) + jarakTitikGaris(Q, u, v);
+      const tumpuk = Math.min(Math.hypot(u.x - P.x, u.y - P.y, u.z - P.z) + Math.hypot(v.x - Q.x, v.y - Q.y, v.z - Q.z), Math.hypot(u.x - Q.x, u.y - Q.y, u.z - Q.z) + Math.hypot(v.x - P.x, v.y - P.y, v.z - P.z));
+      if (dd < 0.05 && (!terbaik || tumpuk < terbaik.tumpuk)) terbaik = {hid, r: k, tumpuk, P, Q, u, v};
+    });
+  }
+  return terbaik ? {...terbaik, entri: nUndo} : {hid: baru[0], r: null, entri: nUndo};
+}
+function jarakTitikGaris(p, u, v) {
+  const d = [v.x - u.x, v.y - u.y, v.z - u.z], w = [p.x - u.x, p.y - u.y, p.z - u.z], L2 = d[0] ** 2 + d[1] ** 2 + d[2] ** 2 || 1;
+  const t = (w[0] * d[0] + w[1] * d[1] + w[2] * d[2]) / L2, q = [u.x + d[0] * t - p.x, u.y + d[1] * t - p.y, u.z + d[2] * t - p.z];
+  return Math.hypot(q[0], q[1], q[2]);
+}
 function adapterNode(d) {
   if (!d || !sah(d)) return null;
   if (d.jenis === 'bidang') return NODE_ADAPTER.bidang;
@@ -11164,6 +11290,7 @@ function adapterNode(d) {
   if (d.jenis === 'batang') return NODE_ADAPTER.batang;
   if (d.jenis === 'slof' || d.jenis === 'ringbalk' || (d.jenis === 'pondasi' && d.tipe === 'batukali')) return NODE_ADAPTER.balok;
   if (d.jenis === 'sapuan') return NODE_ADAPTER.sapuan;
+  if (d.jenis === 'atap' && ['pelana', 'limas', 'sandar'].includes(d.bentuk)) return NODE_ADAPTER.atap;
   return null;
 }
 // Arah Shift+H untuk node i pada cincin (bidang, alas): meluncur sepanjang rusuk tetangga yang TIDAK ikut dipilih,
@@ -11315,7 +11442,7 @@ const alatNode = {
     this.sorot = this.cari(e, ids);
     if (this.batasMode) { const h = pilihObjek(e, this.pil ? new Set([this.pil.id]) : null, true); soroti(h ? h.object : null); }
     if (this.sorot) tulisInfoKursor(this.teksSorot(this.sorot));
-    else if (this.diBawah && S.elems.has(this.diBawah) && !this.dataAktif(this.diBawah)) tulisInfoKursor(`${namaBenda(this.diBawah)} <small>· node belum didukung untuk jenis ini${S.elems.get(this.diBawah).jenis === 'atap' ? ' (klik kanan → Pecah atap dulu)' : S.elems.get(this.diBawah).jenis === 'instance' ? ' (klik 2× komponen untuk mengedit isinya)' : ''}</small>`);
+    else if (this.diBawah && S.elems.has(this.diBawah) && !this.dataAktif(this.diBawah)) tulisInfoKursor(`${namaBenda(this.diBawah)} <small>· node belum didukung untuk jenis ini${S.elems.get(this.diBawah).jenis === 'atap' ? ' (atap datar/denah: klik kanan → Pecah atap dulu)' : S.elems.get(this.diBawah).jenis === 'instance' ? ' (klik 2× komponen untuk mengedit isinya)' : ''}</small>`);
     else tulisInfoKursor(this.pil ? this.teksPilihan() : '');
     this.gambar(ids);
     canvas.style.cursor = this.sorot ? 'pointer' : 'crosshair';
@@ -11426,6 +11553,7 @@ const alatNode = {
   // terapkan hasil adapter sebagai satu langkah Undo, lalu pertahankan pilihan node bila elemennya masih sama
   jalankan(h, ket) {
     if (h.galat) { toast(h.galat); this.gambar(); return false; }
+    if (h.pecah) return this.pecahLalu(h.pecah.r, h.pecah.t, null);
     if (!S.bisaUbah) { toast('Akun ini hanya bisa melihat.'); return false; }
     terapkan(h.tulis);
     if (h.ganti) { this.pil = null; this.rusukPil = null; this.aktif = h.ganti; S.sel = new Set([h.ganti]); }
@@ -11462,8 +11590,32 @@ const alatNode = {
     this.pil = {id: s.id, idx: new Set()};
     this.jalankan(ad.sisip(s.id, d, N, s.i, t), 'node ditambah');
   },
+  // atap utuh: pecah dulu, lalu node baru (t) atau bagi rusuk (n) pada rusuk bidang pecahan yang sama; satu langkah Undo
+  pecahLalu(r, t, n) {
+    if (!S.bisaUbah) { toast('Akun ini hanya bisa melihat.'); return false; }
+    const id = this.pil ? this.pil.id : this.aktif, d = S.elems.get(id);
+    const h = pecahAtapLaluPegang(id, d, r);
+    if (!h || h.r == null) { toast('Atap dipecah. Klik bidang spandeknya, lalu pegang rusuknya.'); this.pil = null; this.rusukPil = null; this.gambar(); return false; }
+    const bd = S.elems.get(h.hid), arahSama = Math.hypot(h.u.x - h.P.x, h.u.y - h.P.y, h.u.z - h.P.z) < Math.hypot(h.u.x - h.Q.x, h.u.y - h.Q.y, h.u.z - h.Q.z);
+    this.pil = {id: h.hid, idx: new Set()}; this.rusukPil = h.r; this.aktif = h.hid; S.sel = new Set([h.hid]);
+    if (n) { this.bagiRusuk(n); }
+    else {
+      const tt = arahSama ? t : 1 - t;
+      const hs = NODE_ADAPTER.bidang.sisip(h.hid, bd, NODE_ADAPTER.bidang.nodes(bd), h.r, tt);
+      if (hs.galat) { toast(hs.galat); return false; }
+      terapkan(hs.tulis);
+      this.pil.idx = hs.pilih; this.rusukPil = null;
+    }
+    // gabungkan pecah atap + node baru menjadi satu langkah Undo
+    const gabung = S.undo.splice(h.entri);
+    if (gabung.length) S.undo.push(gabung.flat());
+    segarPilihan(); this.gambar();
+    toast(`Atap dipecah agar bisa diubah sebagian; ${n ? `rusuk dibagi ${n}` : 'node baru'} dipasang pada ${namaJenis(bd).toLowerCase()} ${h.hid}. Ctrl+Z mengembalikan atap utuh.`);
+    return true;
+  },
   bagiRusuk(n) {
     if (!this.pil || this.rusukPil == null) return toast('Klik satu rusuk dulu, lalu ketik /4 dan Enter.');
+    { const d0 = S.elems.get(this.pil.id); if (adapterNode(d0) === NODE_ADAPTER.atap) { if (!(n >= 2 && n <= 50)) return toast('Bagi rusuk antara 2 dan 50.'); this.pecahLalu(this.rusukPil, 0, n); return; } }
     if (!(n >= 2 && n <= 50)) return toast('Bagi rusuk antara 2 dan 50.');
     if (!S.bisaUbah) return toast('Akun ini hanya bisa melihat.');
     const id = this.pil.id, r = this.rusukPil, d0 = S.elems.get(id), ad = adapterNode(d0);
@@ -11543,6 +11695,12 @@ const alatNode = {
       const sMin = Math.min(...kena);
       dv.set(i, ar.u.map(x => r2(x * sMin)));
     }
+    if (ad.serentak) {
+      // atap utuh: satu isian (overstek/kemiringan) untuk semua node terpilih → satu gerakan rata-rata
+      const v = [0, 1, 2].map(k => r2([...dv.values()].reduce((a, x) => a + x[k], 0) / dv.size));
+      this.jalankan(ad.gerak(this.pil.id, d, N, this.pil.idx, v), `sampai ${namaBenda(sasaranId).replace(/<[^>]+>/g, '')}`);
+      return;
+    }
     // tiap node digeser sendiri (rusuk miring tetap mengikuti bentuk benda batas)
     let kerja = d, tulisAkhir = null;
     for (const [i, v] of dv) {
@@ -11574,7 +11732,7 @@ const alatNode = {
       for (const k of ['x', 'y', 'z']) medan.push(`<label for="nd-${k}">${k.toUpperCase()} node (m)</label><input id="nd-${k}" type="text" inputmode="decimal" data-node="${i}" data-sumbu="${k}" value="${esc(fmtIsi(q[k]))}"${ubah}>`);
     }
     if (this.pil.idx.size && ad.arah) aksi.push(`<button type="button" class="tombol kecil" data-nd="batas"${ubah}>Sampai benda… (Shift+H)</button>`);
-    if (this.pil.idx.size && ad.hapus) aksi.push(`<button type="button" class="tombol bahaya kecil" data-nd="hapus"${ubah}>Buang node</button>`);
+    if (this.pil.idx.size && ad.hapus && ad !== NODE_ADAPTER.atap) aksi.push(`<button type="button" class="tombol bahaya kecil" data-nd="hapus"${ubah}>Buang node</button>`);
     if (medan.length) h += `<div class="medan">${medan.join('')}</div>`;
     if (aksi.length) h += `<div class="aksi-panel">${aksi.join('')}</div>`;
     h += '<p class="meta">Klik 2× rusuk = node baru · ketik /4 lalu Enter = bagi rusuk · Esc = lepas pilihan node.</p></section>';
@@ -11638,7 +11796,7 @@ function butirPalet(teks) {
       ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
       ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Hitung RAB (Rp)', 'harga', () => bukaRAB()], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
       ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Jadikan komponen', 'G', () => jadikanKomponen()], ['Komponen proyek', '', () => { S.sel.clear(); segarPilihan(); if (!TATA.sisi) $('#btn-sisi').click(); setTimeout(() => { const h = [...panel.querySelectorAll('h2')].find(x => x.textContent === 'Komponen proyek'); if (h) h.scrollIntoView({block: 'start'}); else toast('Belum ada komponen di proyek ini. Pilih benda lalu tekan G.'); }, 60); }], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
-      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Objek (outliner): daftar grup, komponen, elemen', 'objek', () => aturOutliner()], ['Kerangka proyek: jenis, elevasi, tingkat, grid as', 'kerangka', () => bukaKerangka()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
+      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Objek (outliner): daftar grup, komponen, elemen', 'objek', () => aturOutliner()], ['Kerangka proyek: jenis, elevasi, tingkat, grid as', 'kerangka', () => bukaKerangka()], ['Keterangan 3D: tampil/sembunyi', 'label', () => aturKeterangan()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
     ];
     for (const [teks, ket, f] of P) if ((alias === 'zoom' && teks === 'Zoom semua') || cocok(teks)) hasil.push({jenis: 'Perintah', teks, ket, skor: 2, jalankan: f});
     for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && cocok('potongan ' + d.nama, id)) hasil.push({jenis: 'Potongan', teks: `Potongan ${d.nama}–${d.nama}`, ket: 'irisan 3D', skor: 2, jalankan: () => lihatPotongan(id)});
@@ -11826,6 +11984,15 @@ function aturTembus(v) {
   toast(S.tembus ? 'Tembus pandang aktif: klik langsung kloset, pintu, atau benda lain walau di dalam grup, lalu geser dengan tombol panah.' : 'Tembus pandang mati.');
 }
 $('#btn-tembus').addEventListener('click', () => aturTembus());
+function aturKeterangan(v) {
+  KET.tampil = v === undefined ? !KET.tampil : !!v;
+  try { localStorage.setItem('rancang-keterangan', KET.tampil ? '1' : '0'); } catch (_) {}
+  $('#btn-keterangan').setAttribute('aria-pressed', String(KET.tampil));
+  KET.cache.clear(); minta();
+  toast(KET.tampil ? 'Keterangan 3D tampil (yang tertutup atau bertumpuk disembunyikan otomatis).' : 'Keterangan 3D disembunyikan. Klik tombol T lagi untuk menampilkan.');
+}
+$('#btn-keterangan').addEventListener('click', () => aturKeterangan());
+$('#btn-keterangan').setAttribute('aria-pressed', String(KET.tampil));
 $('#btn-iris-datar').addEventListener('click', () => aturIrisDatar());
 
 /* ============ Keyboard ============ */
@@ -20959,7 +21126,8 @@ window.rancangUji = Object.freeze({
     if (!ad) return null;
     const rc = canvas.getBoundingClientRect(), v = V(), N = ad.nodes(d);
     const px = q => { v.set(q.x, q.y, q.z).project(camera); return {x: rc.left + (v.x + 1) / 2 * rc.width, y: rc.top + (1 - v.y) / 2 * rc.height}; };
-    return {node: N.map(px), rusuk: ad.rusuk(d, N).map(([a, b]) => px({x: (N[a].x + N[b].x) / 2, y: (N[a].y + N[b].y) / 2, z: (N[a].z + N[b].z) / 2})), dunia: N};
+    const R = ad.rusuk(d, N);
+    return {node: N.map(px), rusuk: R.map(([a, b]) => px({x: (N[a].x + N[b].x) / 2, y: (N[a].y + N[b].y) / 2, z: (N[a].z + N[b].z) / 2})), dunia: N, namaRusuk: R.map((_, r) => alatNode.namaRusuk(d, N, r))};
   },
   // titik dunia → px klien
   layar: p => { const rc = canvas.getBoundingClientRect(), v = V(p.x, p.y, p.z || 0).project(camera); return {x: rc.left + (v.x + 1) / 2 * rc.width, y: rc.top + (1 - v.y) / 2 * rc.height}; },
