@@ -516,7 +516,7 @@ kbd{font:400 11px var(--font);border-radius:var(--radius-sm);background:transpar
 .lembar-daftar li.aktif{background:var(--color-accent-100);color:var(--color-accent-800);border-color:transparent}
 .pratinjau-2d{background:var(--rc-paper);border:0}
 /* menu dan panel bisa dilipat (v0.31.1) */
-body.rail-tutup .rail,body.panel-tutup #panel,body.panel-tutup #panel-claude{display:none}
+body.rail-tutup .rail,body.panel-tutup .outliner,body.panel-tutup #panel-claude{display:none}
 /* panel dilipat menjadi rel tab tegak (v0.34); rail ringkas: satu kolom tanpa nama kelompok, hanya alat sering dipakai */
 body.panel-tutup{--rc-panel-w:44px}
 .panel-rel{grid-area:panel;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;border-left:1px solid var(--color-divider)}
@@ -559,7 +559,16 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
 }
 
 /* ============ Outliner (v0.48): pohon grup → komponen → elemen, mengambang di kiri kanvas ============ */
-.outliner{position:absolute;left:10px;top:10px;bottom:46px;width:min(300px,calc(100% - 20px));z-index:4;display:flex;flex-direction:column;background:var(--color-bg);border-radius:var(--radius-md);box-shadow:0 6px 22px rgba(0,0,0,.18);font-size:13px;overflow:hidden}
+/* v0.50: Objek menempati kolom kanan (tempat Properti dulu) */
+.outliner{grid-area:panel;display:flex;flex-direction:column;background:var(--color-bg);border-left:1px solid var(--color-divider);font-size:13px;overflow:hidden;min-height:0;min-width:0}
+/* v0.50: Properti menjadi jendela mengambang di atas kanvas; digeser lewat kepalanya, tinggi bisa diubah */
+.prop-apung{position:fixed;z-index:20;width:300px;height:min(560px,calc(100vh - 120px));min-height:180px;max-height:calc(100vh - 16px);display:flex;flex-direction:column;background:var(--color-bg);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;resize:vertical}
+.prop-kepala{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-bottom:1px solid var(--color-divider);cursor:move;user-select:none;touch-action:none;flex:none}
+.prop-kepala b{font-weight:600;font-size:13px;flex:1}
+.prop-kepala button{border:0;background:transparent;color:var(--rc-muted);cursor:pointer;font-size:18px;line-height:1;padding:2px 7px;border-radius:var(--radius-md)}
+.prop-kepala button:hover{background:var(--color-surface);color:var(--color-text)}
+.prop-apung #panel{grid-area:auto;flex:1;min-height:0;overflow:auto}
+@media (max-width:760px){.prop-apung{position:static;width:auto;height:auto;max-height:none;resize:none;box-shadow:none;border-top:1px solid var(--color-divider);border-radius:0}.prop-kepala{cursor:default}.prop-apung #panel{overflow:visible}.outliner{max-height:60vh;border-left:0;border-top:1px solid var(--color-divider)}}
 .outliner[hidden]{display:none}
 .ol-kepala{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 10px;border-bottom:1px solid var(--color-divider)}
 .ol-kepala b{font-weight:600}
@@ -642,8 +651,8 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
   <div class="spasi"></div>
   <div class="kelompok" role="toolbar" aria-label="Tata letak">
     <button class="alat" id="btn-rail" aria-pressed="true" title="Tampilkan atau sembunyikan menu alat (Ctrl+B)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M9 4v16"/></svg><span class="teks">Menu</span></button>
-    <button class="alat" id="btn-objek" aria-pressed="false" title="Daftar objek (outliner): grup, komponen, dan elemen bertingkat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5h6M8 10h8M8 15h8M12 20h8M6 5v10h2M10 15v5h2"/></svg><span class="teks">Objek</span></button>
-    <button class="alat" id="btn-sisi" aria-pressed="true" title="Tampilkan atau sembunyikan panel properti (Ctrl+J)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M15 4v16"/></svg><span class="teks">Properti</span></button>
+    <button class="alat" id="btn-objek" aria-pressed="false" title="Kolom Objek (outliner): grup, komponen, dan elemen bertingkat. Klik untuk menampilkan atau menyembunyikan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 5h6M8 10h8M8 15h8M12 20h8M6 5v10h2M10 15v5h2"/></svg><span class="teks">Objek</span></button>
+    <button class="alat" id="btn-sisi" aria-pressed="true" title="Properti mengambang: tampilkan atau sembunyikan (Ctrl+J)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><path d="M15 4v16"/></svg><span class="teks">Properti</span></button>
     <button class="alat" id="btn-fokus" aria-pressed="false" title="Mode fokus: menu ringkas dan panel jadi rel (Ctrl+Shift+F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span class="teks">Fokus</span></button>
     <button class="alat" id="btn-palet" title="Palet perintah: cari alat, elemen, lembar, perintah (Ctrl+K)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg><span class="teks">Cari</span></button>
   </div>
@@ -718,12 +727,6 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
   <canvas id="c" tabindex="0" aria-label="Kanvas gambar 3D"></canvas>
   <div id="ovl"></div>
   <div class="kursor-info" id="kursor-info" aria-live="polite"></div>
-  <section class="outliner" id="outliner" hidden aria-label="Objek (outliner)">
-    <div class="ol-kepala"><b>Objek</b><span class="ol-jumlah" id="ol-jumlah"></span><button type="button" id="ol-lipat" title="Lipat semua">⊟</button><button type="button" id="ol-tutup" aria-label="Tutup daftar objek" title="Tutup">×</button></div>
-    <input class="ol-cari" id="ol-cari" type="search" placeholder="Cari nama, id, atau jenis…" aria-label="Cari objek" autocomplete="off" spellcheck="false">
-    <div class="ol-konteks" id="ol-konteks"></div>
-    <div class="ol-pohon" id="ol-pohon" role="tree" aria-label="Pohon objek"></div>
-  </section>
   <div class="banner" id="banner" hidden><span id="banner-teks"></span><button type="button" data-aksi="selesai-konteks">Selesai</button></div>
   <div class="kosong" id="kosong" hidden>
     <h2>Mulai gambar bangunan</h2>
@@ -740,7 +743,16 @@ body.rail-ringkas .rail .alat.jarang[aria-pressed="true"]{display:inline-flex}
   <div class="kompas" aria-hidden="true"><i class="x">X timur</i><i class="y">Y utara</i><i class="z">Z atas</i></div>
 </main>
 
-<aside id="panel" aria-label="Properti"></aside>
+<section class="outliner" id="outliner" aria-label="Objek (outliner)">
+    <div class="ol-kepala"><b>Objek</b><span class="ol-jumlah" id="ol-jumlah"></span><button type="button" id="ol-lipat" title="Lipat semua">⊟</button><button type="button" id="ol-tutup" aria-label="Sembunyikan kolom Objek" title="Sembunyikan (tombol Objek)">×</button></div>
+    <input class="ol-cari" id="ol-cari" type="search" placeholder="Cari nama, id, atau jenis…" aria-label="Cari objek" autocomplete="off" spellcheck="false">
+    <div class="ol-konteks" id="ol-konteks"></div>
+    <div class="ol-pohon" id="ol-pohon" role="tree" aria-label="Pohon objek"></div>
+  </section>
+<section class="prop-apung" id="prop-apung" hidden aria-label="Properti (mengambang)">
+  <div class="prop-kepala" id="prop-kepala"><b>Properti</b><button type="button" id="prop-tutup" aria-label="Tutup Properti" title="Tutup (Ctrl+J)">×</button></div>
+  <aside id="panel" aria-label="Properti"></aside>
+</section>
 <script type="text/markdown" id="panduan-data">
 # Panduan data model RANCANG
 
@@ -811,7 +823,7 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
   </div>
 </aside>
 <nav id="panel-rel" class="panel-rel" aria-label="Panel (dilipat)" hidden>
-  <button type="button" id="rel-properti" title="Buka panel Properti (Ctrl+J)">Properti</button>
+  <button type="button" id="rel-properti" title="Tampilkan kolom Objek">Objek</button>
   <button type="button" id="rel-claude" title="Buka panel Claude" hidden>Claude</button>
 </nav>
 
@@ -5895,6 +5907,7 @@ function bukaMenuKonteks(e, tanpaHit = false) {
   if (sel.length) { tambah('k-terhubung', 'Pilih semua terhubung', 'Klik 3×'); tambah('k-sejenis', 'Pilih semua sejenis'); }
   tambah('k-semua', 'Pilih semua', 'Ctrl+A');
   pisah();
+  if (sel.length) tambah('k-properti', 'Properti', 'Ctrl+J');
   if (sel.length) tambah('k-sembunyi', 'Sembunyikan');
   if (SEMBUNYI_TAMPIL.size) tambah('k-tampil', `Tampilkan semua (${SEMBUNYI_TAMPIL.size})`);
   if (sel.length) tambah('k-zoom', 'Zoom ke pilihan');
@@ -5930,6 +5943,7 @@ menuKonteksEl.addEventListener('click', e => {
   else if (k === 'k-terhubung') pilihTerhubung([...S.sel], true);
   else if (k === 'k-sejenis') pilihSejenis();
   else if (k === 'k-semua') { S.sel = new Set(targetKonteks().keys()); segarPilihan(); }
+  else if (k === 'k-properti') { TATA.prop = true; terapkanTata(true); }
   else if (k === 'k-sembunyi') sembunyikanPilihan();
   else if (k === 'k-tampil') tampilkanSemua();
   else if (k === 'k-zoom') zoomPilihan();
@@ -11797,8 +11811,8 @@ function butirPalet(teks) {
     const P = [
       ['Zoom semua', 'Z', () => zoomSemua()], ['Tembus pandang', 'H', () => aturTembus()], ['Iris datar', '', () => aturIrisDatar()], ['Proyeksi paralel', '', () => setParalel(!S.paralel)],
       ['Gambar 2D (Ruang Lembar)', '', () => buka2D()], ['Ekspor volume RAB (.xlsx)', '', () => eksporRAB([...S.elems.keys()])], ['Hitung RAB (Rp)', 'harga', () => bukaRAB()], ['Simpan proyek (.json)', '', () => simpanProyek()], ['Buka proyek (.json)', 'Ctrl+O', () => bukaProyek()], ...Object.entries(CONTOH_PROYEK).map(([k, c]) => [`Buka contoh: ${c.nama}`, 'contoh', () => bukaContoh(k)]),
-      ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Jadikan komponen', 'G', () => jadikanKomponen()], ['Komponen proyek', '', () => { S.sel.clear(); segarPilihan(); if (!TATA.sisi) $('#btn-sisi').click(); setTimeout(() => { const h = [...panel.querySelectorAll('h2')].find(x => x.textContent === 'Komponen proyek'); if (h) h.scrollIntoView({block: 'start'}); else toast('Belum ada komponen di proyek ini. Pilih benda lalu tekan G.'); }, 60); }], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
-      ['Panel properti', 'Ctrl+J', () => $('#btn-sisi').click()], ['Objek (outliner): daftar grup, komponen, elemen', 'objek', () => aturOutliner()], ['Kerangka proyek: jenis, elevasi, tingkat, grid as', 'kerangka', () => bukaKerangka()], ['Keterangan 3D: tampil/sembunyi', 'label', () => aturKeterangan()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
+      ['Buat grup dari pilihan', 'Ctrl+G', () => buatGrup()], ['Jadikan komponen', 'G', () => jadikanKomponen()], ['Komponen proyek', '', () => { S.sel.clear(); segarPilihan(); if (!TATA.prop) $('#btn-sisi').click(); setTimeout(() => { const h = [...panel.querySelectorAll('h2')].find(x => x.textContent === 'Komponen proyek'); if (h) h.scrollIntoView({block: 'start'}); else toast('Belum ada komponen di proyek ini. Pilih benda lalu tekan G.'); }, 60); }], ['Naikkan dinding terpilih sampai atap', 'dinding', () => naikkanDindingKeAtap([...S.sel])], ['Mode fokus', 'Ctrl+Shift+F', () => aturFokus()], ['Lipat/bentangkan menu alat', 'Ctrl+B', () => $('#btn-rail').click()],
+      ['Properti mengambang: tampil/sembunyi', 'Ctrl+J', () => $('#btn-sisi').click()], ['Kolom Objek (outliner): daftar grup, komponen, elemen', 'objek', () => aturOutliner()], ['Kerangka proyek: jenis, elevasi, tingkat, grid as', 'kerangka', () => bukaKerangka()], ['Keterangan 3D: tampil/sembunyi', 'label', () => aturKeterangan()], ['Zoom ke pilihan', '', () => zoomPilihan()], ['Tampilkan semua yang disembunyikan', 'Shift+Z', () => { S.sembunyi.clear(); bangunSemua(); minta(); }]
     ];
     for (const [teks, ket, f] of P) if ((alias === 'zoom' && teks === 'Zoom semua') || cocok(teks)) hasil.push({jenis: 'Perintah', teks, ket, skor: 2, jalankan: f});
     for (const [id, d] of S.elems) if (d.jenis === 'potong' && sah(d) && cocok('potongan ' + d.nama, id)) hasil.push({jenis: 'Potongan', teks: `Potongan ${d.nama}–${d.nama}`, ket: 'irisan 3D', skor: 2, jalankan: () => lihatPotongan(id)});
@@ -11878,6 +11892,9 @@ function setAlat(nama) {
   if (nama === 'pindah') alatPindah.salin = false;
   if (nama === 'cermin') alatCermin.salin = false;
   S.tool = nama;
+  // v0.50: isian Node & rusuk (panjang, koordinat) ada di Properti; dibuka otomatis selama alat Node, ditutup lagi sesudahnya
+  if (nama === 'node' && !TATA.prop) { TATA.prop = true; TATA.propOtomatis = true; terapkanTata(false); }
+  else if (nama !== 'node' && TATA.propOtomatis) { TATA.prop = false; TATA.propOtomatis = false; terapkanTata(false); }
   document.querySelectorAll('[data-alat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alat === ({ringbalk: 'slof', balok: 'slof', lingkaran: 'persegi', busur: 'persegi', offset: 'dorong'}[nama] || nama))));
   tulisPetunjuk();
   $('#vcb-label').textContent = labelVcb();
@@ -13283,7 +13300,8 @@ panel.addEventListener('toggle', e => {
 }, true);
 /* Lipat menu alat, grup alat, dan panel properti; pilihan diingat per peramban */
 // rail: 'penuh' (dua kolom + nama kelompok) | 'ringkas' (satu kolom, hanya alat sering dipakai) | 'tutup'; sisi: panel kanan terbuka atau menjadi rel tab (v0.34)
-const TATA = {rail: 'penuh', sisi: true, grup: [], fokus: false, sebelumFokus: null};
+// v0.50: sisi = kolom kanan Objek tampil; prop = jendela Properti mengambang terbuka; propPos = {x, y, h} terakhir
+const TATA = {rail: 'penuh', sisi: true, prop: false, propOtomatis: false, propPos: /** @type {{x: number, y: number, h?: number} | null} */ (null), grup: [], fokus: false, sebelumFokus: null};
 try { Object.assign(TATA, JSON.parse(localStorage.getItem('rancang-tata') || '{}')); } catch (_) {}
 if (/** @type {any} */ (TATA.rail) === true) TATA.rail = 'penuh'; else if (/** @type {any} */ (TATA.rail) === false) TATA.rail = 'tutup';
 // alat yang tetap tampil saat rail ringkas: yang sering dipakai; sisanya lewat tombol "Alat lain" (palet)
@@ -13295,7 +13313,15 @@ function terapkanTata(simpan) {
   document.body.classList.toggle('fokus', !!TATA.fokus);
   $('#btn-rail').setAttribute('aria-pressed', String(TATA.rail !== 'tutup'));
   $('#btn-rail').title = {penuh: 'Menu alat penuh. Klik: ringkas (Ctrl+B)', ringkas: 'Menu alat ringkas. Klik: sembunyikan (Ctrl+B)', tutup: 'Menu alat tersembunyi. Klik: tampilkan (Ctrl+B)'}[TATA.rail];
-  $('#btn-sisi').setAttribute('aria-pressed', String(TATA.sisi));
+  $('#btn-sisi').setAttribute('aria-pressed', String(!!TATA.prop));
+  // v0.50: kolom kanan berisi Objek, atau panel Claude bila terbuka; Properti mengambang terpisah
+  const olEl = $('#outliner'), olLama = olEl.hidden;
+  olEl.hidden = !TATA.sisi || !$('#panel-claude').hidden;
+  $('#btn-objek').setAttribute('aria-pressed', String(!olEl.hidden));
+  if (olLama && !olEl.hidden) queueMicrotask(() => { OL.selLama = ''; OL.isi = ''; renderOutliner(); });
+  if (!olLama && olEl.hidden) queueMicrotask(() => sorotOutliner(null));
+  $('#prop-apung').hidden = !TATA.prop;
+  if (TATA.prop) letakProperti();
   $('#btn-fokus').setAttribute('aria-pressed', String(!!TATA.fokus));
   document.querySelectorAll('.rail .alat[data-alat]').forEach(b => { b.classList.toggle('jarang', !ALAT_SERING.has(/** @type {HTMLElement} */ (b).dataset.alat)); });
   const rel = $('#panel-rel'); if (rel) { rel.hidden = TATA.sisi; $('#rel-claude').hidden = $('#btn-claude').hidden; }
@@ -13304,7 +13330,50 @@ function terapkanTata(simpan) {
   window.dispatchEvent(new Event('resize'));
 }
 $('#btn-rail').addEventListener('click', () => { TATA.rail = {penuh: 'ringkas', ringkas: 'tutup', tutup: 'penuh'}[TATA.rail] || 'penuh'; terapkanTata(true); });
-$('#btn-sisi').addEventListener('click', () => { TATA.sisi = !TATA.sisi; terapkanTata(true); });
+$('#btn-sisi').addEventListener('click', () => { TATA.prop = !TATA.prop; TATA.propOtomatis = false; terapkanTata(true); });
+$('#prop-tutup').addEventListener('click', () => { TATA.prop = false; terapkanTata(true); canvas.focus({preventScroll: true}); });
+/* Properti mengambang (v0.50): posisi bawaan di pojok kanan atas kanvas (kiri kolom Objek); dijepit agar kepala tetap terjangkau */
+const propSempit = () => matchMedia('(max-width:760px)').matches;
+function letakProperti() {
+  const el = $('#prop-apung');
+  if (propSempit()) { el.style.left = el.style.top = el.style.height = ''; return; }
+  const v = $('#view').getBoundingClientRect(), w = el.offsetWidth || 300;
+  const pos = /** @type {{x: number, y: number, h?: number}} */ (TATA.propPos || {x: v.right - w - 10, y: v.top + 10});
+  const x = Math.max(4, Math.min(pos.x, innerWidth - w - 4)), y = Math.max(4, Math.min(pos.y, innerHeight - 44));
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  if (pos.h) el.style.height = Math.min(pos.h, innerHeight - y - 8) + 'px';
+}
+{
+  const el = $('#prop-apung'), kepala = $('#prop-kepala');
+  let seret = /** @type {{dx: number, dy: number} | null} */ (null);
+  kepala.addEventListener('pointerdown', e => {
+    if (propSempit() || e.button !== 0 || /** @type {HTMLElement} */ (e.target).closest('button')) return;
+    const r = el.getBoundingClientRect(); seret = {dx: e.clientX - r.left, dy: e.clientY - r.top};
+    kepala.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  kepala.addEventListener('pointermove', e => {
+    if (!seret) return;
+    const w = el.offsetWidth;
+    el.style.left = Math.max(4, Math.min(e.clientX - seret.dx, innerWidth - w - 4)) + 'px';
+    el.style.top = Math.max(4, Math.min(e.clientY - seret.dy, innerHeight - 44)) + 'px';
+  });
+  const lepas = () => {
+    if (!seret) return; seret = null;
+    TATA.propPos = {x: parseFloat(el.style.left), y: parseFloat(el.style.top), h: el.offsetHeight};
+    try { localStorage.setItem('rancang-tata', JSON.stringify(TATA)); } catch (_) {}
+  };
+  kepala.addEventListener('pointerup', lepas); kepala.addEventListener('pointercancel', lepas);
+  // tinggi diubah lewat pegangan di pojok bawah: simpan sesudah berhenti
+  let tunda = 0;
+  new ResizeObserver(() => {
+    if (el.hidden || propSempit() || seret) return;
+    clearTimeout(tunda);
+    tunda = window.setTimeout(() => { const r = el.getBoundingClientRect(); if (!r.height) return; TATA.propPos = {x: r.left, y: r.top, h: Math.round(r.height)}; try { localStorage.setItem('rancang-tata', JSON.stringify(TATA)); } catch (_) {} }, 300);
+  }).observe(el);
+  window.addEventListener('resize', () => { if (!el.hidden) letakProperti(); });
+  // ketikan di Properti tidak menjadi pintasan kanvas; klik di jendela tidak memutar kamera
+  for (const ev of ['pointerdown', 'wheel', 'contextmenu']) el.addEventListener(ev, e => e.stopPropagation());
+}
 // Mode fokus (Ctrl+Shift+F): rail ringkas + panel menjadi rel; keluar mengembalikan keadaan sebelumnya
 function aturFokus(v) {
   const nyala = v === undefined ? !TATA.fokus : v;
@@ -13543,12 +13612,12 @@ function sorotOutliner(ids) {
   }
   minta();
 }
+// v0.50: Objek = kolom kanan; menampilkannya menutup panel Claude yang berbagi kolom
 function aturOutliner(buka) {
-  const el = $('#outliner'), nyala = buka === undefined ? el.hidden : !!buka;
-  el.hidden = !nyala;
-  $('#btn-objek').setAttribute('aria-pressed', String(nyala));
-  TATA.objek = nyala; try { localStorage.setItem('rancang-tata', JSON.stringify(TATA)); } catch (_) {}
-  if (nyala) { OL.selLama = ''; renderOutliner(); } else sorotOutliner(null);
+  const nyala = buka === undefined ? !olTerbuka() : !!buka;
+  if (nyala && CLAUDE.terbuka) bukaClaude(false);
+  TATA.sisi = nyala; if (nyala && TATA.fokus) { TATA.fokus = false; TATA.sebelumFokus = null; }
+  terapkanTata(true);
 }
 $('#btn-objek').addEventListener('click', () => aturOutliner());
 $('#ol-tutup').addEventListener('click', () => aturOutliner(false));
@@ -13622,7 +13691,7 @@ $('#ol-cari').addEventListener('keydown', e => {
   // jangan sampai roda/klik di outliner menggerakkan kamera atau memilih di kanvas
   for (const ev of ['pointerdown', 'wheel', 'contextmenu']) $('#outliner').addEventListener(ev, e => e.stopPropagation());
 }
-if (/** @type {any} */ (TATA).objek) requestAnimationFrame(() => aturOutliner(true));
+if (olTerbuka()) queueMicrotask(() => { OL.selLama = ''; renderOutliner(); });
 function renderPanel(paksa) {
   for (const id of [...S.sel]) if (!ambil(id)) S.sel.delete(id);
   const kunci = [...S.sel].sort().join(',') + '|' + S.bisaUbah + '|' + !!S.edit;
@@ -21157,6 +21226,8 @@ window.rancangUji = Object.freeze({
   // alat Tangga: dua klik di titik dunia (pangkal, arah); hasil: elemen tangga yang dibuat
   tangga: (a, b) => { setAlat('tangga'); alatTangga.a = {x: a.x, y: a.y, z: a.z || 0}; alatTangga.pasang({x: b.x, y: b.y}); const id = [...S.sel][0]; return {id, data: id ? ambil(id) : null, ukur: id ? strukturGeom(ambil(id)).ukur : null}; },
   // tata letak: ganti keadaan rail/panel/fokus lalu laporkan kelas body dan lebar panel
+  // v0.50: atur jendela Properti mengambang untuk uji (buka/tutup, posisi {x, y, h})
+  properti: (buka, pos) => { if (pos) TATA.propPos = pos; if (buka !== undefined) TATA.prop = !!buka; terapkanTata(false); const el = $('#prop-apung'); return el.hidden ? null : el.getBoundingClientRect().toJSON(); },
   tata: (rail, sisi, fokus) => { if (rail) TATA.rail = rail; if (sisi !== undefined) TATA.sisi = sisi; if (fokus !== undefined) aturFokus(fokus); else terapkanTata(false); return {kelas: document.body.className, panelW: getComputedStyle(document.body).getPropertyValue('--rc-panel-w').trim(), relTampak: !$('#panel-rel').hidden}; },
   // isi satu medan panel Properti lalu picu 'change' seperti pengguna menekan Enter; hasil: elemen terpilih sesudahnya
   isiMedan: (idMedan, nilai) => {
@@ -21345,7 +21416,7 @@ function segarLampiran() {
 function bukaClaude(buka = !CLAUDE.terbuka) {
   CLAUDE.terbuka = buka;
   if (buka && !TATA.sisi) { TATA.sisi = true; terapkanTata(true); }
-  $('#panel-claude').hidden = !buka; $('#panel').hidden = buka;
+  $('#panel-claude').hidden = !buka; terapkanTata(false);
   $('#btn-claude').setAttribute('aria-pressed', String(buka));
   if (buka) setTimeout(() => $('#cl-input').focus(), 0);
   else canvas.focus({preventScroll: true});
