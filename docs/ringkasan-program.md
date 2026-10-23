@@ -258,6 +258,8 @@ Urutan baru: v0.50 Kerangka proyek · v0.51 Garis → bidang + material → elem
 
 **Keputusan 23 Oktober 2026 (larut malam): aturan snap "yang terlihat di layar", alat Garis, perbaikan Putar (v0.50.2, dikerjakan Minggu).** Pengguna: snap harus mengikuti apa yang terlihat di layar; urutan tangkap node, garis, titik tengah (utama), lalu muka; **larangan keras snap di belakang benda yang terlihat**; grid/bidang kerja hanya bila tombol ditekan (F9), tidak otomatis; alat Garis untuk rusuk memakai **L**, Dinding pindah ke **W**; Putar: pilih benda → titik pusat → titik awal → derajat, pilihan tidak berganti saat titik pusat diklik. Rincian, temuan kode, dan daftar uji: `docs/rencana-v0.50.2.md`.
 
+**Keputusan 24 Oktober 2026: tambahan dari saran teknis pengguna.** Disetujui (LANJUT): (1) **three-mesh-bvh** untuk mempercepat uji keterlihatan snap, masuk v0.50.2, luring di desktop lewat `vendor/`; (2) aksi lokal **Samakan kemiringan atap**, masuk v0.50.2. Dicatat sebagai gagasan sesudah v0.51: ikatan atap ke dinding penopang, dan Manifold3D hanya untuk tampilan (data tetap elemen parametrik karena RAB dan gambar 2D bergantung padanya). Objek parametrik dan tombol aksi lokal (Shift+H, Naikkan dinding sampai atap, got otomatis) sudah menjadi dasar RANCANG. Rincian: `docs/rencana-v0.50.2.md` bagian C2.
+
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
 - Dinding mana yang seharusnya ada pintu ("bidang ini harusnya ada pintu").
