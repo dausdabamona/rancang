@@ -61,6 +61,30 @@ Urutan yang dipahami pengguna: pilih benda → klik titik pusat → klik titik a
 3. **Sudut bebas untuk atap.** Sekarang `kunci90` (±2939) membatasi atap selain denah, kolom, dan pondasi ke kelipatan 90°. Usulan: atap pelana/limas/sandar/datar yang diputar bukan kelipatan 90° otomatis diubah menjadi atap denah. Kolom dan pondasi tetap 90°, kecuali pengguna meminta lain.
 4. Titik pusat ditandai jelas, dan koordinat X/Y/Z-nya tampil di bilah bawah.
 
+## C2. Tambahan 24 Oktober 2026 (disetujui, LANJUT)
+
+Dari empat saran teknis yang dibawa pengguna (objek parametrik, snap + three-mesh-bvh, Manifold3D, tombol aksi lokal):
+
+1. **three-mesh-bvh untuk uji keterlihatan snap (masuk v0.50.2).**
+   - Larangan keras "tidak boleh tangkap di belakang benda" menuntut uji sinar untuk setiap calon titik. Sekarang uji itu dibatasi 8 calon per gerak kursor (`pilihTerlihat`).
+   - Dengan BVH pada geometri tiap elemen, uji sinar jauh lebih cepat, sehingga batas calon bisa dinaikkan dan lebih sedikit titik yang ditolak karena tak sempat diuji.
+   - Syarat:
+     - pilih versi yang cocok dengan Three r149 (periksa `peerDependencies`);
+     - di artifact dimuat dari CDN yang diizinkan (jsDelivr, versi dipatok);
+     - di desktop disalin ke `vendor/` lewat `scripts/build-renderer.mjs`, seperti three/xlsx/jspdf, supaya tetap luring.
+   - BVH dibangun ulang hanya untuk elemen yang berubah (jalur `pasangInti`/`lepas`, sama dengan `cacheSnap`).
+   - Bila pustaka gagal dimuat, kembali ke raycast biasa dengan batas calon lama.
+   - Uji: waktu per gerak kursor di model masjid (±170 elemen) tetap lancar, dan semua uji larangan snap lulus.
+2. **Aksi "Samakan kemiringan atap" (masuk v0.50.2).**
+   - Klik kanan atap (atau palet) → *Samakan kemiringan dengan…* → klik atap atau bidang atap lain.
+   - Kemiringan atap terpilih disamakan.
+   - Atap denah: semua tepi miring disamakan.
+   - Bidang atap bebas: diputar mengikuti kemiringan acuan pada tepi bawahnya.
+   - Satu langkah Undo. Lokal, tanpa Claude.
+3. **Gagasan sesudah v0.51 (dicatat, belum dikerjakan):**
+   - **Ikatan atap ke dinding penopang.** Data parametrik sudah ada; yang belum ada adalah aturan "atap mengikuti dinding" saat dinding digeser. Perlu keputusan kapan atap ikut berubah (otomatis atau dengan konfirmasi) dan apa yang terjadi pada overstek yang diubah manual.
+   - **Manifold3D (boolean 3D WebAssembly)** hanya untuk *tampilan*, misalnya memotong tampilan atap atau gording pada bidang miring. Data tetap elemen parametrik, karena hasil boolean berupa segitiga tak berjenis tidak bisa dihitung RAB-nya dan tidak bisa digambar 2D. Kendala artifact: WebAssembly harus disisipkan ke halaman karena muat dari luar diblokir.
+
 ## D. Catatan kode (temuan pemeriksaan 23 Okt)
 
 | Masalah | Letak (±baris di `app/rancang.html`, main sesudah v0.50.1) |
@@ -89,13 +113,14 @@ Playwright + Electron, pola `/tmp/claude-0/uji/*.mjs` (buat ulang bila hilang; c
 6. Putar: dak terpilih, pusat diklik di sudut dinding (benda lain) → pilihan tetap dak, pusat tepat di sudut, putar 30° berhasil.
 7. Garis: L, gambar persegi 3 × 2 di ketinggian +3,30, tutup → satu bidang; garis diagonal → dua bidang; garis tegak (Z) bisa.
 8. W membuat dinding; L menampilkan pesan pindah satu kali.
-9. Semua uji lama: `RANCANG_UJI_ELECTRON=1 npm test`, uji asap, outliner, node, kerangka, atap, keterangan, tata, lantai, got. `npm run periksa-tipe` tetap 430.
+9. Samakan kemiringan: atap pelana 20° disamakan dengan atap 30° → 30°; satu Ctrl+Z mengembalikan. BVH: uji larangan snap tetap lulus dengan pustaka dan tanpa pustaka (kembali ke raycast biasa).
+10. Semua uji lama: `RANCANG_UJI_ELECTRON=1 npm test`, uji asap, outliner, node, kerangka, atap, keterangan, tata, lantai, got. `npm run periksa-tipe` tetap 430.
 
 ## F. Langkah kerja hari Minggu
 
 1. `git checkout main && git pull`, lalu cabang `snap-garis-v0.50.2`.
 2. Catat keputusan ringkas di `docs/ringkasan-program.md` (rujuk dokumen ini).
-3. Kerjakan berurutan: A (snap) → C (Putar) → B (Garis + pintasan L/W).
+3. Kerjakan berurutan: A (snap, termasuk BVH dari C2.1) → C (Putar) → C2.2 (Samakan kemiringan) → B (Garis + pintasan L/W).
 4. Uji (E), catatan rilis 0.50.2, versi `package.json` 0.50.2 + `npm install --package-lock-only --ignore-scripts`.
 5. PR → CI hijau → merge squash → tunggu Release v0.50.2 (exe Setup, Portable, mcpb).
 6. Perbarui artifact uji: RANCANG Uji v0.50 dan RANCANG Uji Pos Jaga. Terbitkan ulang dari `app/rancang.html` dengan judul masing-masing; data pengguna di sana tetap.
