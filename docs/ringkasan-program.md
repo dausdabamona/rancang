@@ -245,6 +245,12 @@ Urutan baru: v0.50 Kerangka proyek · v0.51 Garis → bidang + material → elem
 - Pengecualian: alat **Node & rusuk** membuka Properti otomatis (isian panjang dan koordinat ada di sana) dan menutupnya lagi saat keluar alat, kecuali Properti memang sudah dibuka pengguna.
 - Layar sempit (≤ 760 px): Objek dan Properti bertumpuk di bawah kanvas, tidak mengambang.
 
+**Keputusan 23 Oktober 2026 (malam): alat Lantai (masuk v0.50).** Pengguna: "sepertinya belum ada menu lantai" — lantai selama ini dibuat dengan Persegi lalu jenisnya diatur di Properti. Disetujui (LANJUT): tombol **Lantai** di kelompok Bangunan, tiga mode di bilah petunjuk (Tab berganti mode):
+- **Per ruang:** klik di dalam ruang (atau dinding dari sisi ruang itu) → lantai mengisi sisi dalam dinding, mengikuti bentuk L dan lubang kolom bebas; ruang yang belum tertutup dinding ditolak dengan pesan; ruang yang sudah berlantai tidak dibuat dobel.
+- **Gabungan:** kumpulkan beberapa ruang lalu Enter → satu lantai; dinding di antara ruang ikut tertutup.
+- **Gambar:** klik titik-titik sudut, klik titik pertama atau klik 2× untuk selesai (teras, selasar).
+- Peil mengikuti dasar dinding, atau angka yang diketik di bilah ukur (tombol *Ikuti dinding* untuk kembali). Jenis lantai dan penutupnya ditebak dari nama ruang (KM/WC → keramik 20 kasar, turun 3 cm; teras → keramik 30); volume diisi dari ±0,00 bila peil di atas tanah, selain itu tebal 11 cm. Keramik langsung masuk RAB.
+
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
 - Dinding mana yang seharusnya ada pintu ("bidang ini harusnya ada pintu").
