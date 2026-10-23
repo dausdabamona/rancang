@@ -1,3 +1,19 @@
+## Yang baru di 0.48.0
+
+Daftar objek (Outliner) dan jalur konteks (23 Oktober 2026), tahap pertama rencana *penyesuaian kecil*: supaya selalu jelas yang sedang dipegang itu grup besar, pecahan grup, atau elemen di dalamnya.
+
+- **Outliner**: tombol **Objek** di bilah atas (atau palet Ctrl+K → *objek*) membuka daftar di kiri kanvas: grup → grup anak → komponen → elemen. Elemen sejenis yang banyak dikumpulkan dalam satu map (*Dinding 22*, *Plafon 4*), pintu dan jendela tampil di bawah dindingnya. Keadaan buka/tutup diingat per komputer.
+- **Klik baris = pilih**, sama dengan klik di kanvas: grup induknya otomatis dibuka, benda terpilih, dan panel Properti langsung menampilkan isiannya. Ctrl/Shift+klik menambah atau mengurangi pilihan. Klik nama map memilih semua elemen sejenis di grup itu.
+- **Klik 2×**: grup → masuk grup, komponen → edit komponen, elemen → zoom ke benda.
+- **Sorotan 3D**: kursor di atas baris memberi kotak merah muda di sekeliling bendanya, jadi letaknya terlihat tanpa memilih.
+- **Ikon mata** menyembunyikan/menampilkan di 3D saja (tetap dihitung di RAB dan gambar 2D), sama dengan klik kanan → Sembunyikan.
+- **Klik kanan baris** membuka menu yang sama dengan kanvas (Pecah grup, Buat komponen, Hapus, …).
+- **F2** mengganti nama grup atau elemen langsung di daftar (Enter simpan, Esc batal, Ctrl+Z mengembalikan). Panah atas/bawah berpindah baris, kanan/kiri membentangkan/melipat.
+- **Cari**: ketik nama, id, atau jenis (mis. *pintu*, *B12*, *gording*); hasilnya daftar datar beserta grupnya. Klik hasil memilih dan membentangkan pohon sampai benda itu.
+- **Pilihan di kanvas ikut tersorot di daftar**: pohon terbentang sampai benda terpilih dan baris induknya berwarna aksen.
+- **Jalur konteks yang bisa diklik**: kotak di kanan atas kanvas kini menampilkan `Model › Grup A › Grup B` (atau `… › Komponen X` saat mengedit komponen). Klik salah satu bagian untuk naik langsung ke tingkat itu; Esc tetap naik satu tingkat.
+- Pasang **RANCANG-Setup-0.48.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.48.0 dari rilis yang sama.
+
 ## Yang baru di 0.47.1
 
 Perbaikan garis bantu dan Pindah + Salin (22 Oktober 2026).
