@@ -256,6 +256,8 @@ Urutan baru: v0.50 Kerangka proyek · v0.51 Garis → bidang + material → elem
 - **Profil got**: Parit U pasangan bata plester (tetap bawaan, karena pengguna belum menyebut jenis setempat), U-ditch beton pracetak, parit pasangan batu kali. **Tutup got**: tanpa, plat beton, atau roster/grill.
 - **RAB got per profil** (divisi *Pekerjaan saluran / got*): galian (ruang kerja 10 cm tiap sisi), lantai kerja, pasangan bata/batu kali atau U-ditch per buah (1,20 m), plat dasar, plester + acian sisi dalam, tutup per m', urugan kembali.
 
+**Keputusan 23 Oktober 2026 (larut malam): aturan snap "yang terlihat di layar", alat Garis, perbaikan Putar (v0.50.2, dikerjakan Minggu).** Pengguna: snap harus mengikuti apa yang terlihat di layar; urutan tangkap node, garis, titik tengah (utama), lalu muka; **larangan keras snap di belakang benda yang terlihat**; grid/bidang kerja hanya bila tombol ditekan (F9), tidak otomatis; alat Garis untuk rusuk memakai **L**, Dinding pindah ke **W**; Putar: pilih benda → titik pusat → titik awal → derajat, pilihan tidak berganti saat titik pusat diklik. Rincian, temuan kode, dan daftar uji: `docs/rencana-v0.50.2.md`.
+
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
 - Dinding mana yang seharusnya ada pintu ("bidang ini harusnya ada pintu").
