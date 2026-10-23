@@ -776,7 +776,7 @@ Isian `diubahOleh` / `diubahPada` diisi aplikasi; tidak perlu dikirim.
 | A | atap | bentuk 'pelana'/'limas'/'sandar'/'datar'/'denah' (denah bebas: alas [{x,y}…] as dinding berlawanan jarum jam, tepi [{miring: true/false, overstek}] sejajar alas — tepi i = alas[i]→alas[i+1], miring = tritisan, false = dinding/gunungan; x0..y1 = kotak pembatas alas; satu kemiringan untuk semua tritisan; Fase 1: sudut cekung di antara dua tritisan belum didukung), x0,y0,x1,y1 (batas dinding luar, tanpa overstek), z0 (dudukan), kemiringan, overstek, arah ('x'/'y' untuk pelana = arah bubungan; mata angin untuk sandar = arah turun), penutup ('spandek','gelombang','genteng','datar'), rangka ('bajaringan','kayu','tanpa'), jarakKuda, tebal. Opsional: lisplang ('papan'/'grc'), plafonMiring ('tanpa'/'penuh'/'tritisan'; bila bukan tanpa: plafonBahan dan plafonRangka seperti elemen P) ('tanpa','penuh','tritisan'), kuda{kaki,tarik,makelar,tiang,sokong,skor,gording,bubungan,klos: [lebar,tinggi] m; lisMundur (jarak ujung spandek ke lisplang, m), jarakGording, …}, lisplangSisi{kunciSisi:{pasang,bahan,tebal,tinggi,mundur,awal,akhir (m; + perpanjang, − pangkas ujung papan)}}, satukan (false = atap tidak dipangkas dan tidak memangkas atap lain di pertemuan; bawaan otomatis, bagian di atas denah dinding sendiri menang atas overstek atap lain), overstekSisi{utara,selatan,timur,barat} (overstek tiap sisi; kosong = ikut overstek; 0 = berhenti di muka dinding, mis. kanopi bersandar ke dinding; tidak berlaku untuk limas) | `{"jenis":"atap","bentuk":"pelana","arah":"y","x0":0,"x1":7,"y0":0,"y1":9,"z0":3.72,"kemiringan":30,"overstek":0.9,"tebal":0.12,"penutup":"spandek","rangka":"kayu","jarakKuda":1.5}` |
 | H | bidang | Bidang 3D bebas (hasil Pecah atap atau dibuat sendiri): titik [{x,y,z}…] ≥ 3 berurutan mengelilingi bidang, peran ('atap'/'gunung'/'lisplang'/'plafon'). Plafon (peran 'plafon'): bahan, rangka, lis seperti elemen P, turun (jarak di bawah penutup atap, m), mundurSeng (jarak tepi plafon dari ujung seng, m; bawaan 0,225); RAB-nya menyatu dengan plafon datar. Atap: penutup, rangka (untuk RAB rangka baja ringan per m²), dinding {x0,y0,x1,y1} opsional (batas dinding asal; atap lain yang menyelip di bawahnya hanya dipotong di dalam batas ini). Lisplang: bahan ('papan'/'grc'), tebal, tinggi; tebal ke arah berlawanan normal (titik[0]→titik[1] = tepi atas, panjang RAB). Plafon: bahan, tebal. Gunung: tebal + tebalTengah:true | `{"jenis":"bidang","peran":"atap","titik":[{"x":0,"y":-0.8,"z":3.1},{"x":8,"y":-0.8,"z":3.1},{"x":8,"y":3,"z":5.1},{"x":0,"y":3,"z":5.1}],"penutup":"spandek","rangka":"kayu"}` |
 | J | batang | Batang lurus 3D (kuda-kuda, gording, usuk, reng, klos): awal{x,y,z}, akhir{x,y,z}, b (lebar), h (tinggi penampang), bahan ('kayu'/'bajaringan'/'baja'; baja = baja profil, opsional profil: WF150, WF200, WF250, WF300, H150, C125, C150, L50, L60, L2x60, P76, P114, HB100, HB50 — b dan h mengikuti profil; RAB per kg di divisi Struktur Baja), peran ('kaki','tarik','makelar','tiang','sokong','skor','klos','gording','nok','usuk','reng','skor','rangka','lain'; v0.50: 'kolom' dan 'balok' = kolom/balok baja berat portal, mis. bahan 'baja' profil 'WF300'). Opsional: atas [x,y,z] (arah tinggi penampang), jangkar ('tengah' = sumbu di tengah penampang; 'atas' = sumbu di sisi atas) | `{"jenis":"batang","peran":"kaki","bahan":"kayu","awal":{"x":0,"y":0,"z":3.6},"akhir":{"x":0,"y":3,"z":5.2},"b":0.06,"h":0.12,"jangkar":"tengah"}` |
-| U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
+| U | sapuan | profil (talangKotak, talangU, lisplangPapan, lisplangGrc, listPlafon, plint, pipa, paritU, uditch, paritBatu; v0.50.1: got berperan 'parit' boleh diberi tutupGot 'plat'/'roster' dan masuk RAB divisi Saluran/got), lintasan [{x,y,z}…] (≥2 titik), opsional: tertutup, ukuran {…} (kunci sesuai profil: lebar, tinggi, tebal, diameter, dalam), balik (profil ke kiri lintasan), geser {u, v}, peran | `{"jenis":"sapuan","profil":"talangKotak","lintasan":[{"x":0,"y":-0.6,"z":3.2},{"x":8,"y":-0.6,"z":3.2}],"ukuran":{"lebar":0.15,"tinggi":0.12,"tebal":0.005}}` |
 | U | timbunan | Causeway/timbunan batu (v0.41; id U dipakai bersama sapuan, dibedakan dari jenis): awal{x,y}, akhir{x,y} (as), lebarAtas, zAtas (elevasi puncak), talud (1:talud, mendatar per tegak), opsional zDasar (bila kosong mengikuti profil dasar laut). RAB DM-301 timbunan m³, DM-302 armour talud m² | `{"jenis":"timbunan","awal":{"x":0,"y":1.5},"akhir":{"x":30,"y":1.5},"lebarAtas":5.4,"zAtas":3.5,"talud":2}` |
 | P | plafon | alas [{x,y}…], z0 (permukaan bawah plafon), bahan ('grc'/'gypsum'/'tripleks4'/'tripleks6'/'pvc' = plafon sunda), rangka ('hollow'/'kayu'/'bajaringan'), lis ('tanpa'/'kayu'/'gypsum'/'pvc'; kosong = hanya dihitung PL-010). Opsional lubang [[{x,y}…]…] seperti volume | `{"jenis":"plafon","alas":[…],"z0":3.36,"bahan":"gypsum","rangka":"hollow"}` |
 | X | potong | nama (huruf A, B, …), awal, akhir, pandang (1 = melihat ke kiri dari awal ke akhir, −1 sebaliknya). Opsional dalam (m, v0.41) = kedalaman pandang: benda yang seluruhnya lebih jauh dari bidang potong tidak digambar | `{"jenis":"potong","nama":"A","awal":{"x":-2,"y":2.5},"akhir":{"x":9,"y":2.5},"pandang":1}` |
@@ -1028,6 +1028,23 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
     </div>
   </div>
 </div>
+<div class="modal" id="modalGot" hidden role="dialog" aria-modal="true" aria-labelledby="mg-judul">
+  <div class="modal-isi" style="width:min(480px,100%)">
+    <div class="modal-kepala"><h2 id="mg-judul">Got di tepi luar lantai</h2><button type="button" id="mg-tutup" aria-label="Tutup">×</button></div>
+    <div class="isian-komp">
+      <p class="meta" id="mg-info"></p>
+      <div id="mg-sisi" style="display:grid;gap:6px" role="group" aria-label="Sisi lantai yang diberi got"></div>
+      <label>Jenis got<select id="mg-profil"></select></label>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+        <label>Lebar dalam (m)<input type="text" id="mg-lebar" inputmode="decimal"></label>
+        <label>Kedalaman (m)<input type="text" id="mg-dalam" inputmode="decimal"></label>
+        <label>Tebal dinding (m)<input type="text" id="mg-tebal" inputmode="decimal"></label>
+      </div>
+      <label>Tutup got<select id="mg-tutupgot"></select></label>
+    </div>
+    <div class="modal-kaki"><p class="meta">Dinding dalam got menempel di tepi lantai; puncak got di muka tanah. Sisi bersambung menjadi satu got.</p><button class="tombol" type="button" id="mg-batal">Batal</button><button class="tombol utama" type="button" id="mg-buat">Buat got</button></div>
+  </div>
+</div>
 <div class="modal" id="modalKerangka" hidden role="dialog" aria-modal="true" aria-labelledby="kr-judul">
   <div class="modal-isi" style="width:min(1000px,100%)">
     <div class="modal-kepala"><h2 id="kr-judul">Kerangka proyek</h2><button type="button" id="kr-tutup" aria-label="Tutup">×</button></div>
@@ -1239,12 +1256,12 @@ Pintu: `bukaKe` = 1 / −1 (sisi kiri / kanan dinding dilihat dari awal ke akhir
  *   bahan?: 'kayu' | 'bajaringan' | string, atas?: [number, number, number], jangkar?: 'tengah' | 'atas'}} Batang
  */
 
-/** @typedef {'talangKotak' | 'talangU' | 'lisplangPapan' | 'lisplangGrc' | 'listPlafon' | 'plint' | 'pipa' | 'paritU'} ProfilSapuan */
+/** @typedef {'talangKotak' | 'talangU' | 'lisplangPapan' | 'lisplangGrc' | 'listPlafon' | 'plint' | 'pipa' | 'paritU' | 'uditch' | 'paritBatu'} ProfilSapuan */
 /**
  * U — sapuan (Follow Me yang tetap bisa diedit): profil penampang disapukan sepanjang lintasan.
  * @typedef {DasarElemen & {jenis: 'sapuan', profil: ProfilSapuan, lintasan: Titik3[],
  *   ukuran?: {lebar?: number, tinggi?: number, tebal?: number, diameter?: number, dalam?: number},
- *   tertutup?: boolean, balik?: boolean, geser?: {u: number, v: number}, peran?: string}} Sapuan
+ *   tertutup?: boolean, balik?: boolean, geser?: {u: number, v: number}, peran?: string, tutupGot?: 'tanpa' | 'plat' | 'roster'}} Sapuan
  */
 
 /**
@@ -1957,8 +1974,17 @@ const PROFIL_SAPUAN = {
     bentuk: ({diameter: D, tebal: t}) => cincinUV(D / 2, Math.max(0.001, D / 2 - t), 0, 2 * Math.PI, 16)},
   paritU: {nama: 'Parit U pasangan bata plester', peran: 'parit', bahan: 'dinding', warna: '#C9C2B6',
     ukuran: {lebar: 0.30, dalam: 0.40, tebal: 0.10},
+    bentuk: ({lebar: L, dalam: D, tebal: t}) => [kotakUV(-L / 2 - t, -D - t, -L / 2, 0), kotakUV(L / 2, -D - t, L / 2 + t, 0), kotakUV(-L / 2, -D - t, L / 2, -D)]},
+  // v0.50.1: got pracetak dan pasangan batu kali; ukuran = lebar dan dalam bersih saluran
+  uditch: {nama: 'U-ditch beton pracetak', peran: 'parit', bahan: 'beton', warna: '#B9BEC0',
+    ukuran: {lebar: 0.30, dalam: 0.30, tebal: 0.06},
+    bentuk: ({lebar: L, dalam: D, tebal: t}) => [kotakUV(-L / 2 - t, -D - t, -L / 2, 0), kotakUV(L / 2, -D - t, L / 2 + t, 0), kotakUV(-L / 2, -D - t, L / 2, -D)]},
+  paritBatu: {nama: 'Parit pasangan batu kali plester', peran: 'parit', bahan: 'dinding', warna: '#A89F92',
+    ukuran: {lebar: 0.30, dalam: 0.40, tebal: 0.25},
     bentuk: ({lebar: L, dalam: D, tebal: t}) => [kotakUV(-L / 2 - t, -D - t, -L / 2, 0), kotakUV(L / 2, -D - t, L / 2 + t, 0), kotakUV(-L / 2, -D - t, L / 2, -D)]}
 };
+// v0.50.1: tutup got (isian tutupGot pada sapuan berperan parit); duduk di atas dinding got
+const TUTUP_GOT = {tanpa: {nama: 'Tanpa tutup', tebal: 0}, plat: {nama: 'Plat beton pracetak t 8 cm', tebal: 0.08}, roster: {nama: 'Roster / grill beton t 6 cm', tebal: 0.06}};
 const NAMA_UKURAN_SAPUAN = {lebar: 'Lebar', tinggi: 'Tinggi', tebal: 'Tebal', diameter: 'Diameter luar', dalam: 'Kedalaman'};
 const profilSapuan = d => PROFIL_SAPUAN[d && d.profil] || null;
 const ukuranSapuan = d => { const p = profilSapuan(d); return p ? {...p.ukuran, ...(d.ukuran || {})} : {}; };
@@ -1976,7 +2002,10 @@ function poligonProfil(d) {
   const p = profilSapuan(d);
   if (!p) return [];
   const gu = (d.geser && d.geser.u) || 0, gv = (d.geser && d.geser.v) || 0, sb = d.balik ? -1 : 1;
-  return p.bentuk(ukuranSapuan(d)).map(pl => {
+  const uk = ukuranSapuan(d), tg = p.peran === 'parit' && d.tutupGot && TUTUP_GOT[d.tutupGot] ? TUTUP_GOT[d.tutupGot].tebal : 0;
+  const bentuk = p.bentuk(uk);
+  if (tg > 0) bentuk.push(kotakUV(-uk.lebar / 2 - uk.tebal, 0, uk.lebar / 2 + uk.tebal, tg));
+  return bentuk.map(pl => {
     const q = pl.map(([u, v]) => [sb * u + gu, v + gv]);
     return luasBertanda(q) < 0 ? q.reverse() : q;
   });
@@ -5893,6 +5922,7 @@ function bukaMenuKonteks(e, tanpaHit = false) {
   }
   if (ubah && sel.some(x => { const e = /** @type {any} */ (ambil(x)); return e && (e.jenis === 'dinding' || kodeOf(x) === 'G'); })) { pisah(); tambah('k-dinding-atap', 'Naikkan dinding sampai atap'); }
   if (ubah && satu && adapterNode(d)) { pisah(); tambah('k-node', 'Sunting node & rusuk', 'N'); }
+  if (ubah && satu && (v => v && v.jenis === 'volume' && v.lantai && !v.bentuk)(/** @type {any} */ (d))) tambah('k-got', 'Buat got di tepi luar…');
   if (ubah && pilihanSolid()) {
     pisah();
     const pem = sel[0];
@@ -5944,6 +5974,7 @@ menuKonteksEl.addEventListener('click', e => {
   else if (k === 'k-terhubung') pilihTerhubung([...S.sel], true);
   else if (k === 'k-sejenis') pilihSejenis();
   else if (k === 'k-semua') { S.sel = new Set(targetKonteks().keys()); segarPilihan(); }
+  else if (k === 'k-got') bukaGotLantai(id);
   else if (k === 'k-properti') { TATA.prop = true; terapkanTata(true); }
   else if (k === 'k-sembunyi') sembunyikanPilihan();
   else if (k === 'k-tampil') tampilkanSemua();
@@ -10746,6 +10777,105 @@ const alatLantai = {
     this.kumpul = []; this.titik = []; this.hover = null; reset(); tulisPetunjuk();
   }
 };
+/* ============ Got di tepi luar lantai (v0.50.1) ============
+   Sisi lantai yang dipilih → sapuan berprofil parit, sumbunya digeser keluar setengah lebar luar got sehingga dinding dalam
+   got menempel di tepi lantai. Sisi yang bersambung menjadi satu got dengan sudut rapat; semua sisi = got keliling. */
+const ARAH_8 = ['timur', 'timur laut', 'utara', 'barat laut', 'barat', 'barat daya', 'selatan', 'tenggara'];
+function sisiLantai(d) {
+  const p = poligon(d), ccw = luasBertanda(p) > 0, n = p.length;
+  const dinding = /** @type {any[]} */ ([...S.elems.values()]).filter(w => w.jenis === 'dinding' && sah(w)).map(w => poligon(w));
+  return p.map((a, i) => {
+    const b = p[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
+    const nx = ccw ? dy / L : -dy / L, ny = ccw ? -dx / L : dx / L;   // normal keluar
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    const tempel = dinding.some(w => titikDalam(mx + nx * 0.02, my + ny * 0.02, w) || jarakKeCincin(mx, my, w) < 0.03);
+    const sudut = (Math.atan2(ny, nx) * 180 / Math.PI + 360) % 360;
+    return {i, a, b, L, nx, ny, tempel, arah: ARAH_8[Math.round(sudut / 45) % 8]};
+  });
+}
+function lintasanGot(sisi, pilih, o, z) {
+  const n = sisi.length, semua = pilih.length === n;
+  const titikOffset = (s, q) => [q[0] + s.nx * o, q[1] + s.ny * o];
+  // perpotongan dua garis offset (sudut rapat); sejajar → titik offset biasa
+  const sudut = (s1, s2) => {
+    const p1 = titikOffset(s1, s1.b), p2 = titikOffset(s2, s2.a), d1 = [s1.b[0] - s1.a[0], s1.b[1] - s1.a[1]], d2 = [s2.b[0] - s2.a[0], s2.b[1] - s2.a[1]];
+    const den = d1[0] * d2[1] - d1[1] * d2[0];
+    if (Math.abs(den) < 1e-9) return p1;
+    const t = ((p2[0] - p1[0]) * d2[1] - (p2[1] - p1[1]) * d2[0]) / den;
+    return [p1[0] + d1[0] * t, p1[1] + d1[1] * t];
+  };
+  const ke = q => ({x: r2(q[0]), y: r2(q[1]), z: r2(z)});
+  if (semua) return [{lintasan: sisi.map((s, i) => ke(sudut(sisi[(i - 1 + n) % n], s))), tertutup: true}];
+  // rantai sisi bersebelahan; mulai dari sisi terpilih yang sisi sebelumnya tidak terpilih
+  const ada = new Set(pilih), rantai = [];
+  for (const i of pilih) {
+    if (ada.has((i - 1 + n) % n)) continue;
+    const r = [i]; let j = (i + 1) % n;
+    while (ada.has(j) && j !== i) { r.push(j); j = (j + 1) % n; }
+    rantai.push(r);
+  }
+  return rantai.map(r => {
+    const t = [ke(titikOffset(sisi[r[0]], sisi[r[0]].a))];
+    for (let k = 1; k < r.length; k++) t.push(ke(sudut(sisi[r[k - 1]], sisi[r[k]])));
+    t.push(ke(titikOffset(sisi[r[r.length - 1]], sisi[r[r.length - 1]].b)));
+    return {lintasan: t, tertutup: false};
+  });
+}
+const GOT_UI = {id: /** @type {string | null} */ (null), sisi: /** @type {any[]} */ ([])};
+function bukaGotLantai(id) {
+  const d = /** @type {any} */ (S.elems.get(id));
+  if (!d || d.jenis !== 'volume' || d.bentuk) return toast('Pilih satu lantai dulu.');
+  GOT_UI.id = id; GOT_UI.sisi = sisiLantai(d);
+  $('#mg-info').textContent = `${d.nama || id} · ${GOT_UI.sisi.length} sisi. Sisi yang menempel dinding tidak dicentang.`;
+  $('#mg-sisi').innerHTML = GOT_UI.sisi.map(s => `<label class="cek"><input type="checkbox" data-sisi="${s.i}" ${s.tempel ? '' : 'checked'}> Sisi ${s.i + 1} · ${s.arah} · ${fmt(s.L)} m${s.tempel ? ' <small>(menempel dinding)</small>' : ''}</label>`).join('');
+  $('#mg-profil').innerHTML = opsiDari('paritU', Object.fromEntries(Object.entries(PROFIL_SAPUAN).filter(([, p]) => p.peran === 'parit').map(([k, p]) => [k, p.nama])));
+  $('#mg-tutupgot').innerHTML = opsiDari('tanpa', Object.fromEntries(Object.entries(TUTUP_GOT).map(([k, v]) => [k, v.nama])));
+  isiUkuranGot();
+  $('#modalGot').hidden = false;
+  /** @type {HTMLElement} */ ($('#mg-buat')).focus();
+}
+function isiUkuranGot() {
+  const u = PROFIL_SAPUAN[/** @type {HTMLSelectElement} */ ($('#mg-profil')).value].ukuran;
+  /** @type {HTMLInputElement} */ ($('#mg-lebar')).value = fmtIsi(u.lebar); /** @type {HTMLInputElement} */ ($('#mg-dalam')).value = fmtIsi(u.dalam); /** @type {HTMLInputElement} */ ($('#mg-tebal')).value = fmtIsi(u.tebal);
+}
+function tutupGotLantai() { $('#modalGot').hidden = true; GOT_UI.id = null; canvas.focus({preventScroll: true}); }
+function buatGotLantai(id, opsi) {
+  const d = /** @type {any} */ (S.elems.get(id));
+  if (!d) return null;
+  const sisi = sisiLantai(d), pilih = (opsi.sisi || sisi.filter(s => !s.tempel).map(s => s.i)).filter(i => i >= 0 && i < sisi.length).sort((a, b) => a - b);
+  if (!pilih.length) { toast('Centang paling sedikit satu sisi.'); return null; }
+  const pr = PROFIL_SAPUAN[opsi.profil] && PROFIL_SAPUAN[opsi.profil].peran === 'parit' ? opsi.profil : 'paritU';
+  const uk = {...PROFIL_SAPUAN[pr].ukuran, ...(opsi.lebar > 0 ? {lebar: opsi.lebar} : {}), ...(opsi.dalam > 0 ? {dalam: opsi.dalam} : {}), ...(opsi.tebal > 0 ? {tebal: opsi.tebal} : {})};
+  // puncak got = muka tanah di bawah lantai (lantai yang diisi dari tanah), atau muka lantai tipis di ±0,00
+  const z = (d.tinggi || 0) > 0.12 ? (d.z0 || 0) : (d.z0 || 0) + (d.tinggi || 0);
+  const nid = pemberiId(), tulis = lintasanGot(sisi, pilih, uk.lebar / 2 + uk.tebal, z).map((g, k, semua) => {
+    const v = /** @type {any} */ ({jenis: 'sapuan', nama: `Got ${PROFIL_SAPUAN[pr].nama.split(' ')[0].toLowerCase()} ${d.nama ? d.nama.replace(/^Lantai\s*/i, '') : ''}${semua.length > 1 ? ' ' + (k + 1) : ''}`.replace(/\s+/g, ' ').trim(),
+      profil: pr, peran: 'parit', ukuran: uk, lintasan: g.lintasan, tertutup: g.tertutup, balik: false, geser: {u: 0, v: 0}, catatan: ''});
+    if (opsi.tutupGot && opsi.tutupGot !== 'tanpa' && TUTUP_GOT[opsi.tutupGot]) v.tutupGot = opsi.tutupGot;
+    if (d.grup) v.grup = d.grup;
+    return {id: nid('U'), sesudah: v};
+  });
+  terapkan(tulis);
+  S.sel = new Set(tulis.map(x => x.id)); segarPilihan();
+  const L = tulis.reduce((a, x) => a + ukurSapuan(x.sesudah).panjang, 0);
+  toast(`${tulis.length > 1 ? tulis.length + ' got' : 'Got'} dibuat: ${fmt(L)} m', ${PROFIL_SAPUAN[pr].nama} ${fmt(uk.lebar * 100, 0)} × ${fmt(uk.dalam * 100, 0)} cm.`);
+  return tulis.map(x => x.id);
+}
+$('#mg-profil').addEventListener('change', isiUkuranGot);
+$('#mg-tutup').addEventListener('click', tutupGotLantai);
+$('#mg-batal').addEventListener('click', tutupGotLantai);
+$('#modalGot').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') tutupGotLantai(); });
+$('#mg-buat').addEventListener('click', () => {
+  if (!GOT_UI.id) return;
+  const nilai = s => angka(/** @type {HTMLInputElement} */ ($(s)).value);
+  const lebar = nilai('#mg-lebar'), dalam = nilai('#mg-dalam'), tebal = nilai('#mg-tebal');
+  if (![lebar, dalam, tebal].every(v => v > 0 && v < 3)) return toast('Isi lebar, dalam, dan tebal got antara 0 dan 3 m.');
+  const sisi = [...document.querySelectorAll('#mg-sisi input[data-sisi]')].filter(c => /** @type {HTMLInputElement} */ (c).checked).map(c => +(/** @type {HTMLElement} */ (c).dataset.sisi));
+  const id = GOT_UI.id;
+  if (!sisi.length) return toast('Centang paling sedikit satu sisi.');
+  tutupGotLantai();
+  buatGotLantai(id, {sisi, profil: /** @type {HTMLSelectElement} */ ($('#mg-profil')).value, lebar, dalam, tebal, tutupGot: /** @type {HTMLSelectElement} */ ($('#mg-tutupgot')).value});
+});
 // Panel bidang dan batang bebas (hasil pecah atap)
 const opsiDari = (nilai, obj) => Object.entries(obj).map(([v, t]) => `<option value="${v}" ${v === nilai ? 'selected' : ''}>${esc(t)}</option>`).join('');
 const isianXYZ = (awalan, kunci, q, label) => ['x', 'y', 'z'].map(k => `<input id="${awalan}-${kunci}${k}" type="text" inputmode="decimal" value="${esc(fmtIsi(q[k]))}" aria-label="${label} ${k.toUpperCase()}" ${dis()}>`).join('');
@@ -10887,6 +11017,7 @@ function htmlSapuan(id, d) {
     <label for="u-profil">Profil</label><select id="u-profil" ${dis()}>${opsiDari(d.profil, opsiProfilSapuan())}</select>
     <label for="u-peran">Peran</label><select id="u-peran" ${dis()}>${opsiDari(d.peran || pr.peran, PERAN_SAPUAN)}</select>
     ${Object.keys(pr.ukuran).map(k => medanAngka('u-uk' + k, `${NAMA_UKURAN_SAPUAN[k] || k} (m)`, uk[k])).join('')}
+    ${pr.peran === 'parit' ? `<label for="u-tutupGot">Tutup got</label><select id="u-tutupGot" ${dis()}>${opsiDari(d.tutupGot || 'tanpa', Object.fromEntries(Object.entries(TUTUP_GOT).map(([k, v]) => [k, v.nama])))}</select>` : ''}
   </div></section>
   <section><h2>Posisi profil terhadap lintasan</h2><div class="medan">
     <label for="u-balik">Sisi</label><select id="u-balik" ${dis()}>${opsiDari(d.balik ? 'kiri' : 'kanan', {kanan: 'Kanan arah lintasan', kiri: 'Kiri arah lintasan (dibalik)'})}</select>
@@ -10909,6 +11040,7 @@ function ubahSapuan(id, d, f, t) {
   else if (f === 'peran') b.peran = t.value;
   else if (f === 'balik') b.balik = t.value === 'kiri';
   else if (f === 'tutup') b.tertutup = t.value === 'ya';
+  else if (f === 'tutupGot') { if (!TUTUP_GOT[t.value]) return; if (t.value === 'tanpa') delete b.tutupGot; else b.tutupGot = /** @type {any} */ (t.value); }
   else if (f === 'gu' || f === 'gv') { const v = angka(t.value); if (!Number.isFinite(v)) return tolakAngka('Isi angka geser.'); b.geser = {u: 0, v: 0, ...(d.geser || {}), [f === 'gu' ? 'u' : 'v']: r2(v)}; }
   else if (f.startsWith('uk')) { const k = f.slice(2), v = angka(t.value); if (!(v > 0 && v < 5)) return tolakAngka('Ukuran profil antara 0 dan 5 m.'); b.ukuran = {...ukuranSapuan(d), [k]: Math.round(v * 10000) / 10000}; }
   else {
@@ -18749,6 +18881,41 @@ function dataRAB(ids) {
   const san = {};
   for (const [, g] of geos) if (g.jenis === 'volume' && g.sanitair && SANITAIR[g.sanitair]) san[g.sanitair] = (san[g.sanitair] || 0) + 1;
   for (const [k, n] of Object.entries(san)) tambah(dS, SANITAIR[k].kode, SANITAIR[k].uraian, 'unit', n, 'Sanitair dari pustaka RANCANG; samakan kode dan harga dengan HSP');
+  // VIII-b. Saluran / got (v0.50.1): sapuan berperan parit, dikelompokkan per profil, ukuran, dan tutup
+  {
+    const got = new Map();
+    for (const [, g] of geos) {
+      if (g.jenis !== 'sapuan' || (g.peran || (profilSapuan(g) || {}).peran) !== 'parit' || !profilSapuan(g)) continue;
+      const u = ukuranSapuan(g), P = ukurSapuan(g).panjang, k = [g.profil, u.lebar, u.dalam, u.tebal, g.tutupGot || 'tanpa'].join('|');
+      const x = got.get(k) || {profil: g.profil, u, tutup: g.tutupGot || 'tanpa', P: 0};
+      x.P += P; got.set(k, x);
+    }
+    if (got.size) {
+      const dG = div('PEKERJAAN SALURAN / GOT');
+      for (const x of got.values()) {
+        const {lebar: L, dalam: D, tebal: t} = x.u, P = x.P, B = L + 2 * t, H = D + t, uk = `${fmt(L * 100, 0)}×${fmt(D * 100, 0)} cm`, nama = PROFIL_SAPUAN[x.profil].nama;
+        const ket = `${nama} ${uk}, panjang ${fmt(P)} m'`;
+        const galian = (B + 0.2) * (H + 0.05) * P, lk = B * 0.05 * P;
+        tambah(dG, 'TK-001', `Galian tanah saluran ${uk} (ruang kerja 10 cm tiap sisi)`, 'm³', galian, ket);
+        if (x.profil === 'uditch') {
+          tambah(dG, 'TK-002', `Urugan pasir alas U-ditch t 5 cm`, 'm³', lk, ket);
+          tambah(dG, 'SL-001', `U-ditch beton pracetak ${uk}, panjang 1,20 m per buah, termasuk pasang`, 'buah', Math.ceil(P / 1.2 - 1e-6), ket);
+        } else {
+          tambah(dG, 'ST-K100', `Lantai kerja beton fc' 7,4 MPa (K-100) bawah saluran t 5 cm`, 'm³', lk, ket);
+          if (x.profil === 'paritBatu') tambah(dG, 'BT-002', `Pasangan batu kali 1PC:4PS dinding dan dasar saluran`, 'm³', (2 * H * t + L * t) * P, ket);
+          else {
+            tambah(dG, 'BT-010', `Pasangan dinding bata 1PC:4PS saluran (dua sisi)`, 'm²', 2 * H * P, ket);
+            tambah(dG, 'ST-K175', `Plat dasar saluran beton tumbuk 1:2:3 t ${fmt(t * 100, 0)} cm`, 'm³', L * t * P, ket);
+          }
+          tambah(dG, 'BT-011', `Plesteran 1PC:4PS sisi dalam dan atas dinding saluran`, 'm²', (2 * D + L + 2 * t) * P, ket);
+          tambah(dG, 'BT-012', `Acian sisi dalam saluran`, 'm²', (2 * D + L) * P, ket);
+        }
+        if (x.tutup === 'plat') tambah(dG, 'SL-010', `Tutup saluran plat beton bertulang pracetak t 8 cm, lebar ${fmt(B * 100, 0)} cm`, "m'", P, ket);
+        if (x.tutup === 'roster') tambah(dG, 'SL-011', `Tutup saluran roster / grill beton t 6 cm, lebar ${fmt(B * 100, 0)} cm`, "m'", P, ket);
+        tambah(dG, 'TK-003', `Urugan tanah kembali samping saluran`, 'm³', Math.max(0, galian - B * H * P - lk), ket);
+      }
+    }
+  }
   // IX. Lain-lain dari bidang/volume bernama
   const d8 = div('PEKERJAAN LAIN-LAIN (DARI BIDANG DAN VOLUME)');
   const lain = new Map();

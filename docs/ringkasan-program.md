@@ -251,6 +251,11 @@ Urutan baru: v0.50 Kerangka proyek · v0.51 Garis → bidang + material → elem
 - **Gambar:** klik titik-titik sudut, klik titik pertama atau klik 2× untuk selesai (teras, selasar).
 - Peil mengikuti dasar dinding, atau angka yang diketik di bilah ukur (tombol *Ikuti dinding* untuk kembali). Jenis lantai dan penutupnya ditebak dari nama ruang (KM/WC → keramik 20 kasar, turun 3 cm; teras → keramik 30); volume diisi dari ±0,00 bila peil di atas tanah, selain itu tebal 11 cm. Keramik langsung masuk RAB.
 
+**Keputusan 23 Oktober 2026 (malam): got di tepi luar teras (v0.50.1).** Pengguna bertanya apakah got pembuangan air di sisi luar teras perlu menu sendiri atau cukup digambar. Disetujui (LANJUT): tidak ada menu baru, karena got adalah lintasan + penampang (alat Sapuan, profil parit). Isi v0.50.1:
+- **Got otomatis di tepi lantai**: klik kanan lantai → *Buat got di tepi luar…*; kotak pilihan menampilkan tiap sisi lantai (arah mata angin, panjang); sisi yang menempel dinding tidak dicentang. Sisi bersambung dijadikan satu got dengan sudut rapat; semua sisi = got keliling.
+- **Profil got**: Parit U pasangan bata plester (tetap bawaan, karena pengguna belum menyebut jenis setempat), U-ditch beton pracetak, parit pasangan batu kali. **Tutup got**: tanpa, plat beton, atau roster/grill.
+- **RAB got per profil** (divisi *Pekerjaan saluran / got*): galian (ruang kerja 10 cm tiap sisi), lantai kerja, pasangan bata/batu kali atau U-ditch per buah (1,20 m), plat dasar, plester + acian sisi dalam, tutup per m', urugan kembali.
+
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
 - Dinding mana yang seharusnya ada pintu ("bidang ini harusnya ada pintu").

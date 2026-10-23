@@ -1,3 +1,12 @@
+## Yang baru di 0.50.1
+
+Got di tepi luar teras dan lantai (23 Oktober 2026).
+
+- **Buat got di tepi luar…**: klik kanan lantai (di kanvas atau di daftar Objek). Kotak pilihan menampilkan tiap sisi lantai dengan arah mata angin dan panjangnya; sisi yang menempel dinding tidak dicentang. Sisi yang bersambung menjadi satu got dengan sudut rapat; bila semua sisi dicentang, got mengelilingi lantai. Dinding dalam got menempel di tepi lantai dan puncak got di muka tanah.
+- **Jenis got**: Parit U pasangan bata plester (bawaan), **U-ditch beton pracetak**, dan **parit pasangan batu kali**; lebar, kedalaman, dan tebal dinding bisa diatur. **Tutup got**: tanpa, plat beton pracetak, atau roster/grill. Semua juga bisa digambar bebas dengan alat Sapuan dan diubah di Properti.
+- **RAB got** di divisi baru *Pekerjaan saluran / got*, per jenis dan ukuran: galian (ruang kerja 10 cm tiap sisi), lantai kerja atau pasir alas, pasangan bata dan plat dasar / pasangan batu kali / U-ditch per buah (1,20 m), plester dan acian sisi dalam, tutup per m', urugan kembali.
+- Pasang **RANCANG-Setup-0.50.1.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.50.1 dari rilis yang sama.
+
 ## Yang baru di 0.50.0
 
 Kerangka proyek, alat Lantai, tata letak Objek/Properti baru, node atap, keterangan 3D yang tidak ramai, dan baja berat (23 Oktober 2026).
