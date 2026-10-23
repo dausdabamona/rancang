@@ -207,16 +207,25 @@ Sunting Alas ditempatkan di tahap 2 karena disebut langsung sebagai hambatan nya
 - Papan lisplang diterima sebagai batas alat Perpanjang/Pangkas (sisi dalam papan).
 - Uji asap 26 langkah: kayu, baja ringan, atap terpecah, isian jarak (0,225 → 0,40 = geser 15 cm mendatar pada 30°).
 
-**Keputusan 23 Oktober 2026: rencana "penyesuaian kecil" (v0.48 → v0.50).** Keluhan pengguna: memperbaiki hal kecil pada model buatan Claude (spandek kurang panjang beberapa cm, dinding kurang tinggi sampai gording, atap miring berbentuk segitiga, gording melewati lisplang, DXF yang garis tertutupnya tidak terpangkas) mudah di SketchUp/AutoCAD tetapi sulit di RANCANG; tanpa tampilan seperti Outliner pengguna tidak tahu yang diklik itu grup besar, pecahan grup, atau elemen. Diagnosis: (1) konteks pilihan tidak terlihat, (2) belum ada alat umum "X sampai/berhenti di Y" — Shift+H baru untuk lisplang dan plafon, (3) ekspor DXF tanpa penghapusan garis tersembunyi. Urutan baru (Outliner dinaikkan ke depan, sebelum Sunting Alas dan Properti per jenis):
+**Keputusan 23 Oktober 2026: rencana "penyesuaian kecil" (v0.48 → v0.50).** Keluhan pengguna: memperbaiki hal kecil pada model buatan Claude (spandek kurang panjang beberapa cm, dinding kurang tinggi sampai gording, atap miring berbentuk segitiga, gording melewati lisplang, DXF yang garis tertutupnya tidak terpangkas) mudah di SketchUp/AutoCAD tetapi sulit di RANCANG; tanpa tampilan seperti Outliner pengguna tidak tahu yang diklik itu grup besar, pecahan grup, atau elemen. Diagnosis: (1) konteks pilihan tidak terlihat, (2) belum ada alat umum "X sampai/berhenti di Y" — Shift+H baru untuk lisplang dan plafon, (3) ekspor DXF tanpa penghapusan garis tersembunyi. Urutan baru (Outliner dinaikkan ke depan, sebelum Sunting Alas dan Properti per jenis; diperbarui malam 23 Oktober):
 
 | Urutan | Versi | Isi |
 |---|---|---|
-| 1 | v0.48 | Outliner (tombol *Objek*, mengambang di kiri kanvas) + jalur konteks yang bisa diklik — **selesai, PR menunggu uji artifact** |
-| 2 | v0.49 | Shift+H umum: tepi atas dinding sampai gording/ring balk, tepi/overstek atap sampai lisplang/talang, ujung batang J dipangkas di bidang lisplang, sisi bidang H; angka tiap sisi di Properti |
-| 3 | v0.50 | DXF hidden-line: tepi dipotong di titik tertutup, bagian tersembunyi dibuang atau ke layer `TERSEMBUNYI` putus-putus |
-| 4 | v0.51 | APK hanya untuk melihat (view-only): buka `.rancang`, 3D, ukur, irisan, Outliner, PDF |
+| 1 | v0.48 | Outliner (tombol *Objek*, mengambang di kiri kanvas) + jalur konteks yang bisa diklik — **selesai, PR #51 digabung** |
+| 2 | v0.49 | Node & rusuk X/Y/Z untuk semua elemen + Shift+H umum (lihat keputusan malam di bawah) — **selesai, PR menunggu uji artifact** |
+| 3 | v0.50 | Node & rusuk untuk pintu/jendela, kolom, pondasi footplat/umpak, tangga, tiang |
+| 4 | v0.51 | DXF hidden-line: tepi dipotong di titik tertutup, bagian tersembunyi dibuang atau ke layer `TERSEMBUNYI` putus-putus |
+| 5 | v0.52 | APK hanya untuk melihat (view-only): buka `.rancang`, 3D, ukur, irisan, Outliner, PDF |
 
 Outliner ditempatkan mengambang di kiri kanvas (bukan tab di panel kanan seperti Tahap B v0.34) supaya pohon dan panel Properti terlihat bersamaan, seperti Outliner + Entity Info di SketchUp; bisa ditutup kapan saja.
+
+**Keputusan 23 Oktober 2026 (malam): v0.49 Node & rusuk — perubahan dari rencana Shift+H.** Pengguna menegaskan: Push/Pull sudah ada, yang belum ada adalah mengubah **rusuk, titik sudut, dan panjang garis** pada semua elemen (spandek, kayu, kaca, beton, dinding, dll.), termasuk bentuk 2D dan **sumbu Z** (sekarang hanya X/Y), serta **memecah satu garis menjadi beberapa node**. Pekerjaan kecil seperti geser 15 cm harus bisa dengan alat, tidak lewat Claude. Isi v0.49 (satu alat *Node & rusuk*, pintasan N):
+- Sorotan node/rusuk di bawah kursor; klik node atau rusuk, geser X/Y/Z dengan inferensi dan kunci sumbu (panah), ketik jarak lalu Enter.
+- Tambah node (klik 2× pada rusuk), bagi rusuk (ketik /n), hapus node (Delete); panjang rusuk dan koordinat node bisa diketik di Properti.
+- Shift+H dengan node/rusuk terpilih: node bergerak sampai menyentuh benda yang diklik (dinding naik sampai gording, gording dipangkas di lisplang, spandek sampai lisplang).
+- Berlaku untuk bidang 3D, lantai/plafon/plat, dinding (as bawah dan tepi atas), batang kayu/baja, balok/slof/ring balk, sapuan. Node baru pada as dinding, batang, atau balok memecah elemen menjadi dua (RAB tetap). Pintu/jendela, kolom, pondasi, tangga, tiang menyusul di v0.50.
+- Plafon datar yang dimiringkan (Z) otomatis menjadi plafon miring (bidang H peran plafon, RAB menyatu). Lantai dan plat beton yang dimiringkan **ditolak dengan pesan** (RAB dihitung datar); bisa diubah bila pengguna memilih lain.
+- Salinan komponen dibuka dulu; atap parametrik dipecah dulu (Pecah atap) agar rusuknya bisa dipegang.
 
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
