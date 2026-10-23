@@ -1,3 +1,23 @@
+## Yang baru di 0.49.0
+
+Alat **Node & rusuk** (23 Oktober 2026): pekerjaan kecil seperti "spandek kurang 15 cm di sebagian sisi", "dinding kurang tinggi sampai gording", atau "gording lewat lisplang" kini dikerjakan dengan alat, seperti memindah titik dan garis di SketchUp, tanpa perlu meminta Claude.
+
+- **Alat Node (N)** di kelompok Ubah (juga palet Ctrl+K: *node*, *titik*, *rusuk*; klik kanan elemen → *Sunting node & rusuk*). Klik elemen untuk menampilkan titik sudut (kotak) dan garis tepinya (rusuk). Node/rusuk di bawah kursor menyala oranye, dan bilah bawah menyebut namanya, mis. *Tepi atas · Dinding D1 · panjang 6,00 m*.
+- **Geser node atau rusuk ke X, Y, maupun Z**: klik, geser, klik lagi; atau ketik jarak lalu Enter. Panah → ← ↑ mengunci sumbu X/Y/Z. Titik tangkap (ujung, tengah, tepi, bidang benda lain) dan garis lacak sama dengan alat Pindah. Shift+klik menambah node ke pilihan.
+- **Node baru**: klik 2× pada rusuk (dekat tengah = tepat di tengah). **Bagi rusuk**: pilih rusuk, ketik **/4** lalu Enter (node berjarak sama). **Buang node**: Delete.
+- **Sampai benda lain (Shift+H)**: pilih node/rusuk, tekan Shift+H, lalu klik bendanya. Tepi atas dinding naik sampai bawah gording; ujung gording dipangkas di papan lisplang; tepi spandek turun menyusuri kemiringan sampai lisplang. Tiap node bergerak sendiri, sehingga tepi miring tetap mengikuti benda batasnya.
+- **Properti node/rusuk**: panjang rusuk bisa diketik (pilih ujung yang tetap), koordinat X/Y/Z node bisa diketik, tombol *Node di tengah*, *Bagi rusuk…*, *Sampai benda…*, *Buang node*.
+- Berlaku untuk:
+  - **Bidang 3D** (spandek hasil Pecah atap, gunungan, lisplang, plafon miring): semua node bebas X/Y/Z. Spandek bisa dipanjangkan **sebagian**: bagi tepi bawahnya, lalu tarik rusuk tengahnya saja.
+  - **Lantai, plafon, plat beton**: alas berubah bentuk di X/Y; naik/turun semua node = elevasi. **Plafon** yang sebagian node-nya dinaikkan otomatis menjadi **plafon miring** (bahan, rangka, RAB tetap). **Lantai dan plat beton** yang dimiringkan ditolak dengan pesan, karena RAB-nya dihitung datar.
+  - **Dinding**: ujung bawah menggeser ujung as (pintu/jendela tetap di tempatnya); as bawah naik/turun = dasar dinding; node tepi atas naik/turun (tepi atas miring atau bertangga, `profilAtas`); node baru di tepi atas; node baru di as bawah **memecah dinding menjadi dua** (pintu/jendela ikut ke potongannya).
+  - **Batang kayu/baja** (gording, kuda-kuda, usuk, tiang): kedua ujung bebas X/Y/Z; node baru memecah batang menjadi dua.
+  - **Slof, ring balk, balok lantai, pondasi batu kali**: ujung bergeser datar; rusuk as naik/turun = elevasi; node baru memecah menjadi dua (RAB tetap).
+  - **Sapuan** (talang, lisplang papan, list, pipa, parit): titik lintasan bebas X/Y/Z, tambah/buang titik.
+- Belum: pintu/jendela, kolom, pondasi footplat/umpak, tangga, tiang (v0.50). Atap parametrik dipecah dulu (klik kanan → Pecah atap); salinan komponen dibuka dulu (klik 2×).
+- Daftar Objek menampilkan node/rusuk yang sedang dipegang.
+- Pasang **RANCANG-Setup-0.49.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.49.0 dari rilis yang sama.
+
 ## Yang baru di 0.48.0
 
 Daftar objek (Outliner) dan jalur konteks (23 Oktober 2026), tahap pertama rencana *penyesuaian kecil*: supaya selalu jelas yang sedang dipegang itu grup besar, pecahan grup, atau elemen di dalamnya.
