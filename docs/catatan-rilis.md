@@ -1,3 +1,20 @@
+## Yang baru di 0.50.0
+
+Kerangka proyek, alat Lantai, tata letak Objek/Properti baru, node atap, keterangan 3D yang tidak ramai, dan baja berat (23 Oktober 2026).
+
+- **Kerangka proyek**: tombol *Mulai dari kerangka proyek* di layar kosong (atau palet Ctrl+K → *kerangka*). Pilih jenis **Gedung**, **Dermaga**, atau **Jembatan**; atur jumlah tingkat dan tinggi tingkat; elevasi (dasar pondasi, lantai, ring balk, nok; untuk dermaga dasar laut, LWS, MSL, HWL, pile cap, lantai dermaga) tampil di **tampak samping** dan bisa diseret atau diketik; tambah elevasi bebas. **Grid as** diketik seperti *4x5* atau *3;4*. Terapkan membuat level dan garis as; tinggi dinding baru mengikuti kerangka. Ctrl+Z mengembalikan.
+- **Alat Lantai** di kelompok Bangunan, tiga mode (Tab berganti mode):
+  - *Per ruang*: klik di dalam ruang (atau dindingnya), lantai mengisi sisi dalam dinding, termasuk ruang bentuk L dan lubang kolom bebas. Ruang yang sudah berlantai tidak dibuat dobel.
+  - *Gabungan*: klik beberapa ruang lalu Enter, menjadi satu lantai; dinding di antaranya ikut tertutup.
+  - *Gambar*: klik titik-titik sudut (teras, selasar), klik titik pertama atau klik 2× untuk selesai.
+  - Peil mengikuti dasar dinding, atau ketik angka (tombol *Ikuti dinding* untuk kembali). Jenis lantai dan penutup ditebak dari nama ruang (KM/WC → keramik 20 kasar, turun 3 cm). Keramik langsung masuk RAB.
+- **Tata letak baru**: kolom kanan kini berisi **Objek** (outliner) sejak aplikasi dibuka. **Properti** tersembunyi; tombol Properti (Ctrl+J) memunculkannya sebagai **jendela mengambang** yang bisa digeser dan diubah tingginya; posisinya diingat. Klik kanan benda atau baris Objek → *Properti*. Alat Node membuka Properti otomatis selama dipakai. Di layar sempit keduanya bertumpuk di bawah kanvas.
+- **Node pada atap utuh**: pilih atap lalu N, tanpa Pecah atap dulu. Seret **tepi teritis** untuk mengubah overstek satu sisi saja (atap limas: semua sisi), seret **nok** untuk mengubah kemiringan. Node baru di tepi atap memecah atap secara otomatis lalu memegang node itu.
+- **Keterangan 3D tidak ramai**: nama ruang dan keterangan lain tersembunyi otomatis bila tertutup benda (mis. di bawah atap) atau bertumpuk; ukurannya tetap kecil saat zoom. Tombol **Keterangan** (atau palet → *label*) menyembunyikan semuanya.
+- **Baja berat**: batang bahan *Baja berat (profil WF/H)* dengan peran baru **Kolom baja** dan **Balok baja** untuk portal bentang lebar; RAB per kg di divisi Struktur Baja.
+- Perbaikan RAB: volume bertanda *tanpa RAB* (badan jalan, bak taman, garis saf, penanda) tidak lagi terhitung sebagai keramik lantai.
+- Pasang **RANCANG-Setup-0.50.0.exe** dan ganti ekstensi Claude desktop dengan **RANCANG.mcpb** 0.50.0 dari rilis yang sama.
+
 ## Yang baru di 0.49.0
 
 Alat **Node & rusuk** (23 Oktober 2026): pekerjaan kecil seperti "spandek kurang 15 cm di sebagian sisi", "dinding kurang tinggi sampai gording", atau "gording lewat lisplang" kini dikerjakan dengan alat, seperti memindah titik dan garis di SketchUp, tanpa perlu meminta Claude.

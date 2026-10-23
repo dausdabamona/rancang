@@ -238,6 +238,19 @@ Outliner ditempatkan mengambang di kiri kanvas (bukan tab di panel kanan seperti
 
 Urutan baru: v0.50 Kerangka proyek · v0.51 Garis → bidang + material → elemen (+ union per material) · v0.52 Node untuk pintu/jendela, kolom, pondasi footplat/umpak, tangga, tiang · v0.53 DXF hidden-line · v0.54 APK view-only.
 
+**Keputusan 23 Oktober 2026 (malam): tata letak Objek dan Properti (masuk v0.50).** Pengguna meminta: Objek ditaruh di tempat Properti, Properti disembunyikan, dan bila tombol Properti ditekan Properti menjadi mengambang. Disetujui (LANJUT):
+- Kolom kanan berisi **Objek** (outliner) dan tampil sejak awal; tombol Objek menampilkan/menyembunyikan kolom itu. Panel Claude bergantian dengan Objek di kolom yang sama. Bila kolom dilipat, rel tab berisi Objek dan Claude.
+- **Properti** tersembunyi sejak awal; tombol Properti (Ctrl+J) memunculkannya sebagai jendela mengambang di atas kanvas, di kiri kolom Objek. Bisa digeser lewat kepalanya, tingginya bisa diubah, ditutup dengan × atau Ctrl+J. Posisi dan tinggi diingat per peramban.
+- Isi Properti mengikuti pilihan; Properti tidak muncul sendiri saat memilih benda. Menu klik kanan (kanvas dan baris Objek) mendapat butir *Properti*.
+- Pengecualian: alat **Node & rusuk** membuka Properti otomatis (isian panjang dan koordinat ada di sana) dan menutupnya lagi saat keluar alat, kecuali Properti memang sudah dibuka pengguna.
+- Layar sempit (≤ 760 px): Objek dan Properti bertumpuk di bawah kanvas, tidak mengambang.
+
+**Keputusan 23 Oktober 2026 (malam): alat Lantai (masuk v0.50).** Pengguna: "sepertinya belum ada menu lantai" — lantai selama ini dibuat dengan Persegi lalu jenisnya diatur di Properti. Disetujui (LANJUT): tombol **Lantai** di kelompok Bangunan, tiga mode di bilah petunjuk (Tab berganti mode):
+- **Per ruang:** klik di dalam ruang (atau dinding dari sisi ruang itu) → lantai mengisi sisi dalam dinding, mengikuti bentuk L dan lubang kolom bebas; ruang yang belum tertutup dinding ditolak dengan pesan; ruang yang sudah berlantai tidak dibuat dobel.
+- **Gabungan:** kumpulkan beberapa ruang lalu Enter → satu lantai; dinding di antara ruang ikut tertutup.
+- **Gambar:** klik titik-titik sudut, klik titik pertama atau klik 2× untuk selesai (teras, selasar).
+- Peil mengikuti dasar dinding, atau angka yang diketik di bilah ukur (tombol *Ikuti dinding* untuk kembali). Jenis lantai dan penutupnya ditebak dari nama ruang (KM/WC → keramik 20 kasar, turun 3 cm; teras → keramik 30); volume diisi dari ±0,00 bila peil di atas tanah, selain itu tebal 11 cm. Keramik langsung masuk RAB.
+
 **Pertanyaan yang masih terbuka**
 - Pekerjaan kecil yang paling sering dibutuhkan (menentukan urutan isi tahap 4).
 - Dinding mana yang seharusnya ada pintu ("bidang ini harusnya ada pintu").
